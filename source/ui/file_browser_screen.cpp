@@ -1,4 +1,5 @@
 #include "ui/file_browser_screen.h"
+#include "core/config.h"
 #include "core/i18n.h"
 #include "log.h"
 #include "ui/screen_manager.h"
