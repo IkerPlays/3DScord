@@ -7,6 +7,7 @@
 #include "network/network_manager.h"
 #include "ui/file_browser_screen.h"
 #include "ui/image_viewer_screen.h"
+#include "utils/color_utils.h"
 #include "ui/message_screen.h"
 #include "ui/profile_screen.h"
 #include "discord/social.h"
@@ -35,6 +36,33 @@ namespace {
 constexpr float ROW_HEIGHT = 36.0f;
 constexpr float LIST_TOP = 30.0f;
 constexpr int VISIBLE_ROWS = 5;
+
+struct ThemeField {
+	const char *label;
+	u32 Theme::*color;
+};
+
+const ThemeField THEME_FIELDS[] = {
+    {"theme.bg", &Theme::bg},
+    {"theme.bg_dark", &Theme::bg_dark},
+    {"theme.bg_light", &Theme::bg_light},
+    {"theme.accent", &Theme::accent},
+    {"theme.selection", &Theme::selection},
+    {"theme.separator", &Theme::separator},
+    {"theme.header_border", &Theme::header_border},
+    {"theme.overlay", &Theme::overlay},
+    {"theme.pure_white", &Theme::pure_white},
+    {"theme.text", &Theme::text},
+    {"theme.text_muted", &Theme::text_muted},
+    {"theme.link", &Theme::link},
+    {"theme.embed_bg", &Theme::embed_bg},
+    {"theme.embed_media_bg", &Theme::embed_media_bg},
+    {"theme.reaction_bg", &Theme::reaction_bg},
+    {"theme.reaction_me_bg", &Theme::reaction_me_bg},
+    {"theme.input_bg", &Theme::input_bg},
+    {"theme.success", &Theme::success},
+    {"theme.error", &Theme::error},
+};
 
 std::string singleLine(std::string text) {
 	if (text.size() > 160) {
@@ -155,6 +183,9 @@ ListScreen::ListScreen()
 	channelId = Discord::DiscordClient::getInstance().getSelectedChannelId();
 	soundTarget = pendingSoundTarget;
 	soundTargetName = pendingSoundName;
+	if (mode == Mode::THEME_EDIT) {
+		editTheme = Config::getInstance().getTheme();
+	}
 }
 
 ListScreen::~ListScreen() {}
@@ -251,6 +282,16 @@ void ListScreen::loadLocal() {
 			list.push_back({"", channelId, "", r});
 		}
 		break;
+	case Mode::THEME_EDIT: {
+		int index = 0;
+		for (const auto &field : THEME_FIELDS) {
+			const u32 value = editTheme.*(field.color);
+			Entry e{std::to_string(index++), "", TR(field.label), Utils::Color::colorToHex(value)};
+			e.kind = (int)value;
+			list.push_back(e);
+		}
+		break;
+	}
 	case Mode::VOICE_CHANNELS: {
 		auto &client = Discord::DiscordClient::getInstance();
 		auto &voice = Discord::VoiceClient::getInstance();
@@ -706,6 +747,8 @@ std::string ListScreen::headerTitle() const {
 		return query.empty() ? TR("list.members") : TR("list.members") + ": " + query;
 	case Mode::THREADS:
 		return TR("list.threads");
+	case Mode::THEME_EDIT:
+		return TR("settings.theme_editor");
 	case Mode::GALLERY:
 		return TR("list.gallery");
 	case Mode::VOICE_CHANNELS:
@@ -752,6 +795,8 @@ std::string ListScreen::hintLine() const {
 		return TR("list.hint.members");
 	case Mode::THREADS:
 		return TR("list.hint.threads");
+	case Mode::THEME_EDIT:
+		return TR("theme.hint");
 	case Mode::GALLERY:
 		return TR("list.hint.gallery");
 	case Mode::VOICE_CHANNELS:
@@ -823,6 +868,34 @@ void ListScreen::primaryAction(const Entry &entry) {
 	case Mode::VOICE_PEOPLE:
 		changePersonVolume(entry.id, +10);
 		break;
+	case Mode::THEME_EDIT: {
+		const int index = atoi(entry.id.c_str());
+		if (index < 0 || index >= (int)(sizeof(THEME_FIELDS) / sizeof(THEME_FIELDS[0]))) {
+			break;
+		}
+		std::string text;
+		if (!askText(TR("theme.color_hint"), entry.body, text, 9, false)) {
+			break;
+		}
+		if (!text.empty() && text[0] != '#') {
+			text = "#" + text;
+		}
+		bool valid = text.size() == 7 || text.size() == 9;
+		for (size_t i = 1; valid && i < text.size(); i++) {
+			valid = isxdigit((unsigned char)text[i]) != 0;
+		}
+		if (!valid) {
+			sm.showToast(TR("theme.invalid_color"));
+			break;
+		}
+		editTheme.*(THEME_FIELDS[index].color) = Utils::Color::hexToColor(text);
+		// Shown at once, so the colors can be judged on the real screens.
+		Config::getInstance().setCustomTheme(editTheme);
+		Config::getInstance().setCustomThemeEnabled(true);
+		Utils::requestRedraw();
+		load();
+		break;
+	}
 	case Mode::GALLERY:
 		if (entry.kind == 1) {
 			ImageViewerScreen::open(entry.id, entry.title);
@@ -1084,6 +1157,13 @@ void ListScreen::secondaryAction(const Entry &entry) {
 	case Mode::GALLERY:
 		Utils::Transfers::getInstance().saveAttachment(entry.id, entry.title, 0);
 		break;
+	case Mode::THEME_EDIT:
+		editTheme = Config::presetTheme(Config::getInstance().getThemeType());
+		Config::getInstance().setCustomTheme(editTheme);
+		Config::getInstance().setCustomThemeEnabled(true);
+		Utils::requestRedraw();
+		load();
+		break;
 	case Mode::FRIENDS: {
 		// Removing someone needs a second press on the same row.
 		if (confirmId != entry.id) {
@@ -1134,6 +1214,21 @@ void ListScreen::tertiaryAction() {
 			changePersonVolume(entries[selected].id, 0);
 		}
 		break;
+	case Mode::THEME_EDIT: {
+		std::string name;
+		if (askText(TR("theme.name_hint"), editTheme.name == "Custom Theme" ? "" : editTheme.name, name, 40, false) &&
+		    !name.empty()) {
+			editTheme.name = name;
+			if (Config::getInstance().saveThemeToFile(name, editTheme)) {
+				Config::getInstance().loadThemeFromFile(name);
+				Config::getInstance().setCustomThemeEnabled(true);
+				ScreenManager::getInstance().showToast(TR("theme.saved"));
+			} else {
+				ScreenManager::getInstance().showToast(TR("theme.save_failed"));
+			}
+		}
+		break;
+	}
 	case Mode::FRIENDS:
 		friendFilter = (friendFilter + 1) % 3;
 		confirmId.clear();
@@ -1320,6 +1415,9 @@ void ListScreen::renderBottom(C3D_RenderTarget *target) {
 		}
 		if (index == selected) {
 			C2D_DrawRectSolid(4.0f, y, 0.4f, 312.0f, ROW_HEIGHT - 2.0f, ScreenManager::colorSelection());
+		}
+		if (mode == Mode::THEME_EDIT) {
+			C2D_DrawRectSolid(280.0f, y + 6.0f, 0.5f, 30.0f, ROW_HEIGHT - 12.0f, (u32)e.kind);
 		}
 		if (!e.title.empty()) {
 			drawText(10.0f, y + 2.0f, 0.5f, 0.38f, 0.38f, ScreenManager::colorAccent(), fitLine(e.title, 296.0f, 0.38f));

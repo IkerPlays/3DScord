@@ -32,6 +32,7 @@
 
 #include "core/i18n.h"
 #include <3ds.h>
+#include "utils/key_map.h"
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -144,6 +145,16 @@ class Config {
 	int getImageCacheLevel() const { return imageCache; }
 	void setImageCacheLevel(int level);
 
+	bool isLeftHanded() const { return leftHanded; }
+	void setLeftHanded(bool enabled);
+	bool isBatterySaver() const { return batterySaver; }
+	void setBatterySaver(bool enabled);
+	// Themes built into the app: 0 dark, 1 light, 2 AMOLED, 3 Nintendo, 4 Retro, 5 Midnight.
+	static constexpr int THEME_PRESET_COUNT = 6;
+	static Theme presetTheme(int type) { return getPreset(type); }
+	// Writes a custom theme to sdmc:/3ds/3DScord/themes/<name>.json and returns whether it worked.
+	bool saveThemeToFile(const std::string &name, const Theme &theme);
+
 	bool isQuietHoursEnabled() const { return quietHours; }
 	void setQuietHoursEnabled(bool enabled);
 	int getQuietStart() const { return quietStart; }
@@ -191,6 +202,8 @@ class Config {
 	bool autoUpdate;
 	bool replyPing;
 	bool quietHours;
+	bool leftHanded;
+	bool batterySaver;
 	int imageCache;
 	int pushToTalk;
 	int noiseGate;
@@ -211,6 +224,7 @@ class Config {
 
 	static Theme getDarkPreset();
 	static Theme getLightPreset();
+	static Theme getPreset(int type);
 };
 
 #endif // CONFIG_H

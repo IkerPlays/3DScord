@@ -24,7 +24,8 @@ constexpr s64 ANIMATION_POLL_NS = 16 * 1000000LL;
 // still decoded on time, so playback speed does not change.
 int minFrameMs() {
 	static const int ms = Utils::System::isNew3DS() ? 33 : 66;
-	return ms;
+	// Battery saver: animations step less often.
+	return Config::getInstance().isBatterySaver() ? 100 : ms;
 }
 
 bool isDiscordMedia(const std::string &url) {

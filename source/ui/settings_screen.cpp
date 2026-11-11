@@ -169,15 +169,22 @@ void SettingsScreen::onEnter() {
 	theme.type = SettingItemType::STEPPER;
 	theme.value = Config::getInstance().getThemeType();
 	theme.min = 0;
-	theme.max = 1;
-	theme.valueFormatter = [](int val) {
-		if (val == 0) {
-			return TR("settings.theme.dark");
-		}
-		return TR("settings.theme.light");
+	theme.max = Config::THEME_PRESET_COUNT - 1;
+	theme.valueFormatter = [](int val) -> std::string {
+		static const char *names[Config::THEME_PRESET_COUNT] = {"settings.theme.dark",     "settings.theme.light",
+		                                                         "settings.theme.amoled",   "settings.theme.nintendo",
+		                                                         "settings.theme.retro",    "settings.theme.midnight"};
+		return TR(names[std::clamp(val, 0, Config::THEME_PRESET_COUNT - 1)]);
 	};
 	theme.onUpdate = [](int val) { Config::getInstance().setThemeType(val); };
 	allItems.push_back(theme);
+
+	SettingItem themeEditor;
+	themeEditor.label = TR("settings.theme_editor");
+	themeEditor.description = TR("settings.desc.theme_editor");
+	themeEditor.type = SettingItemType::ACTION;
+	themeEditor.action = []() { ListScreen::open(ListScreen::Mode::THEME_EDIT); };
+	allItems.push_back(themeEditor);
 
 	SettingItem customThemeManager;
 	customThemeManager.label = TR("settings.manage_themes");
@@ -332,6 +339,31 @@ void SettingsScreen::onEnter() {
 
 	addAccountItems();
 	addUpdateItems();
+
+	// CONTROLS AND BATTERY
+	allItems.push_back({TR("settings.section.controls"), "", SettingItemType::SECTION_HEADER});
+
+	SettingItem lefty;
+	lefty.label = TR("settings.left_handed");
+	lefty.description = TR("settings.desc.left_handed");
+	lefty.type = SettingItemType::TOGGLE;
+	lefty.value = Config::getInstance().isLeftHanded() ? 1 : 0;
+	lefty.min = 0;
+	lefty.max = 1;
+	lefty.valueFormatter = [](int val) { return (val == 1) ? TR("common.enabled") : TR("common.disabled"); };
+	lefty.onUpdate = [](int val) { Config::getInstance().setLeftHanded(val == 1); };
+	allItems.push_back(lefty);
+
+	SettingItem saver;
+	saver.label = TR("settings.battery_saver");
+	saver.description = TR("settings.desc.battery_saver");
+	saver.type = SettingItemType::TOGGLE;
+	saver.value = Config::getInstance().isBatterySaver() ? 1 : 0;
+	saver.min = 0;
+	saver.max = 1;
+	saver.valueFormatter = [](int val) { return (val == 1) ? TR("common.enabled") : TR("common.disabled"); };
+	saver.onUpdate = [](int val) { Config::getInstance().setBatterySaver(val == 1); };
+	allItems.push_back(saver);
 
 	// VOICE
 	allItems.push_back({TR("settings.section.voice"), "", SettingItemType::SECTION_HEADER});

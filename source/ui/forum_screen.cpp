@@ -1,3 +1,4 @@
+#include "utils/key_map.h"
 #include "ui/forum_screen.h"
 #include "core/i18n.h"
 #include "discord/discord_client.h"

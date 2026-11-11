@@ -116,6 +116,9 @@ int main(int argc, char **argv) {
 
 	Utils::Updater::getInstance().setLaunchPath(argc > 0 ? argv[0] : nullptr);
 	Config::getInstance().load();
+	if (Config::getInstance().isBatterySaver()) {
+		osSetSpeedupEnable(false);
+	}
 	if (Utils::System::isNew3DS()) {
 		Network::NetworkManager::getInstance().init(3, 2);
 	} else {

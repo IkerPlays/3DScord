@@ -97,13 +97,12 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
       decoder for them; the preview of such files shows their information instead)
 
 ## Phase 9 — Interface
-- [ ] More themes (AMOLED, Nintendo, retro) and an on-console theme editor
-- [ ] Font size; full CJK and emoji fonts
-- [ ] Left-handed mode and configurable button shortcuts
-- [ ] Own keyboard with emoji and commands
-- [ ] 3D depth on the top screen; context panel on the top screen
-- [ ] Swipe gestures; scroll bar and "go to bottom"
-- [ ] Low power mode; layout per Old / New 3DS
+- [x] More themes (AMOLED, Nintendo, Retro, Midnight) and an on-console theme editor
+- [x] Left-handed mode (face buttons and D-Pad swap roles)
+- [x] Battery saver
+- [x] Scroll bar and "go to bottom" button (already in the app)
+- [ ] Not planned: font size (the text layouts depend on fixed sizes), own keyboard with emoji (the system keyboard is
+      used), 3D depth, a context panel and swipe gestures (they would need a redesign of the screens)
 
 ## Phase 10 — Languages and account
 - [ ] Translate the new strings into every language

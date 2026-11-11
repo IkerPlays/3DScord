@@ -1,6 +1,7 @@
 #ifndef LIST_SCREEN_H
 #define LIST_SCREEN_H
 
+#include "core/config.h"
 #include "screen_manager.h"
 #include <memory>
 #include <mutex>
@@ -14,7 +15,7 @@ namespace UI {
 // quick replies and the formatting helpers. The mode is chosen with open() before the screen is created.
 class ListScreen : public Screen {
   public:
-	enum class Mode { TOOLS, PINS, SEARCH, MENTIONS, SAVED, DRAFTS, QUICK_REPLIES, FORMAT, GIFS, STICKERS, FIND, MEMBERS, THREADS, HUB, FRIENDS, GROUP_PICK, SOUNDS, VOICE_CHANNELS, VOICE_PEOPLE, GALLERY };
+	enum class Mode { TOOLS, PINS, SEARCH, MENTIONS, SAVED, DRAFTS, QUICK_REPLIES, FORMAT, GIFS, STICKERS, FIND, MEMBERS, THREADS, HUB, FRIENDS, GROUP_PICK, SOUNDS, VOICE_CHANNELS, VOICE_PEOPLE, GALLERY, THEME_EDIT };
 
 	static void open(Mode mode);
 	// Switches to another list without adding the current one to the back history.
@@ -83,6 +84,7 @@ class ListScreen : public Screen {
 	int selected;
 	float scroll;
 	std::string query;
+	Theme editTheme; // the theme being made in the theme editor
 	std::string soundTarget;
 	std::string soundTargetName;
 	bool includeArchived = false;

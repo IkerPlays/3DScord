@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+- **More themes:** AMOLED (real black), Nintendo (white and red), Retro (green terminal) and Midnight (deep blue), next to
+  Dark and Light (Settings > Appearance > Theme).
+- **Theme Editor** (Settings > Appearance): change any color of the app by typing its hex code, see it on the real screens
+  at once, reset it (X) or save it as your own theme (Y). Saved themes appear in the Theme Manager and are normal theme
+  files you can share.
+- **Left-Handed Mode** (Settings > Controls and Battery): A, B, X and Y swap places with the D-Pad (A is Right, B is Down,
+  X is Up, Y is Left), so you can press the action buttons with your left hand.
+- **Battery Saver** (same place): turns off the faster New 3DS mode and slows animations down.
+
 ## 0.5.0
 Voice features, buttons in the chat and file previews.
 
