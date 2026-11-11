@@ -3,6 +3,7 @@
 #include "core/i18n.h"
 #include "discord/avatar_cache.h"
 #include "discord/discord_client.h"
+#include "discord/social.h"
 #include "log.h"
 #include "network/network_manager.h"
 #include "ui/image_manager.h"
@@ -103,6 +104,25 @@ void ProfileScreen::onEnter() {
 		    state->changed = true;
 	    },
 	    {{"Authorization", token}});
+
+	// The private note you keep about this person.
+	auto noteState = shared;
+	Network::NetworkManager::getInstance().enqueue(
+	    "https://discord.com/api/v10/users/@me/notes/" + userId, "GET", "", Network::RequestPriority::INTERACTIVE,
+	    [noteState](Network::HttpResponse &resp) {
+		    std::string text;
+		    if (resp.success) {
+			    rapidjson::Document doc;
+			    doc.Parse(resp.body.c_str());
+			    if (!doc.HasParseError() && doc.IsObject()) {
+				    text = str(doc, "note");
+			    }
+		    }
+		    std::lock_guard<std::mutex> lock(noteState->mutex);
+		    noteState->note = text;
+		    noteState->noteChanged = true;
+	    },
+	    {{"Authorization", token}});
 }
 
 std::string ProfileScreen::displayName() const {
@@ -138,6 +158,12 @@ void ProfileScreen::buildBodyLines() {
 		add(datePart(profile.joinedAt));
 	}
 
+	if (!note.empty()) {
+		bodyLines.push_back("");
+		bodyLines.push_back("# " + TR("profile.note"));
+		add(note);
+	}
+
 	if (!profile.roleIds.empty() && !guildId.empty()) {
 		std::string names;
 		const Discord::Guild *guild = Discord::DiscordClient::getInstance().getGuildPtr(guildId);
@@ -169,6 +195,14 @@ void ProfileScreen::update() {
 			loading = shared->loading;
 		}
 	}
+	{
+		std::lock_guard<std::mutex> lock(shared->mutex);
+		if (shared->noteChanged) {
+			shared->noteChanged = false;
+			note = shared->note;
+			bodyLines.clear();
+		}
+	}
 	if (!loading && bodyLines.empty() && error.empty()) {
 		buildBodyLines();
 		Utils::requestRedraw();
@@ -180,6 +214,50 @@ void ProfileScreen::update() {
 		ScreenManager::getInstance().returnToPreviousScreen();
 		return;
 	}
+	if (!loading && error.empty()) {
+		auto &sm = ScreenManager::getInstance();
+		if (kDown & KEY_A) {
+			const auto dm = Discord::Social::openDm(userId);
+			if (dm.result.ok && !dm.channelId.empty()) {
+				Discord::DiscordClient::getInstance().setSelectedChannelId(dm.channelId);
+				sm.setScreen(ScreenType::MESSAGES);
+				return;
+			}
+			sm.showToast(dm.result.message);
+		} else if (kDown & KEY_Y) {
+			const auto r = Discord::Social::sendFriendRequestToId(userId);
+			sm.showToast(r.ok ? TR("friends.sent") : r.message);
+		} else if (kDown & KEY_X) {
+			// Blocking takes a second press.
+			if (!confirmBlock) {
+				confirmBlock = true;
+				sm.showToast(TR("profile.confirm_block"));
+			} else {
+				confirmBlock = false;
+				const auto r = Discord::Social::block(userId);
+				sm.showToast(r.ok ? TR("profile.blocked") : r.message);
+			}
+		} else if (kDown & KEY_R) {
+			SwkbdState swkbd;
+			swkbdInit(&swkbd, SWKBD_TYPE_NORMAL, 2, 256);
+			swkbdSetFeatures(&swkbd, SWKBD_DARKEN_TOP_SCREEN | SWKBD_MULTILINE);
+			swkbdSetValidation(&swkbd, SWKBD_ANYTHING, 0, 0);
+			swkbdSetHintText(&swkbd, TR("profile.note").c_str());
+			if (!note.empty()) {
+				swkbdSetInitialText(&swkbd, note.c_str());
+			}
+			std::vector<char> buffer(256 * 4 + 8, 0);
+			if (swkbdInputText(&swkbd, buffer.data(), buffer.size()) == SWKBD_BUTTON_CONFIRM) {
+				const auto r = Discord::Social::setNote(userId, buffer.data());
+				if (r.ok) {
+					note = buffer.data();
+					bodyLines.clear();
+				}
+				sm.showToast(r.ok ? TR("account.saved") : r.message);
+			}
+		}
+	}
+
 	const float maxScroll = std::max(0.0f, (float)bodyLines.size() - BODY_ROWS);
 	if (kHeld & KEY_DOWN) {
 		scroll = std::min(maxScroll, scroll + 0.25f);

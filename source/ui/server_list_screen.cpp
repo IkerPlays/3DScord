@@ -1,6 +1,7 @@
 #include "ui/server_list_screen.h"
 #include "core/config.h"
 #include "core/i18n.h"
+#include "core/local_store.h"
 #include "discord/avatar_cache.h"
 #include "discord/discord_client.h"
 #include "discord/voice_client.h"
@@ -282,6 +283,12 @@ void ServerListScreen::refreshChannels() {
 		sortedChannels = Discord::DiscordClient::getInstance().getPrivateChannels();
 		std::sort(sortedChannels.begin(), sortedChannels.end(),
 		          [](const Discord::Channel &a, const Discord::Channel &b) {
+			          // Pinned conversations stay on top, the rest is ordered by the latest message.
+			          const bool pinA = Core::LocalStore::getInstance().isDmPinned(a.id);
+			          const bool pinB = Core::LocalStore::getInstance().isDmPinned(b.id);
+			          if (pinA != pinB) {
+				          return pinA;
+			          }
 			          if (a.last_message_id.length() != b.last_message_id.length()) {
 				          return a.last_message_id.length() > b.last_message_id.length();
 			          }
@@ -1342,6 +1349,13 @@ void ServerListScreen::update() {
 				// DMs have no entry in the guild notification tree, so the menu has nothing to act on.
 				if (ch.type != 4 && ch.type != 1 && ch.type != 3) {
 					openChannelMuteMenu(ch.id, ch.type);
+				} else if (ch.type == 1 || ch.type == 3) {
+					// DMs have no mute menu: X pins or unpins the conversation instead.
+					const bool pinned = Core::LocalStore::getInstance().toggleDmPinned(ch.id);
+					sm.showToast(TR(pinned ? "dm.pinned" : "dm.unpinned"));
+					refreshChannels();
+					selectedChannelIndex = 0;
+					channelScrollOffset = 0;
 				}
 			}
 		} else if (kDown & KEY_B) {

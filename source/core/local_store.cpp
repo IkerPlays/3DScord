@@ -62,6 +62,13 @@ void LocalStore::ensureLoaded() {
 					}
 				}
 			}
+			if (doc.HasMember("pinned_dms") && doc["pinned_dms"].IsArray()) {
+				for (const auto &r : doc["pinned_dms"].GetArray()) {
+					if (r.IsString()) {
+						pinnedDms.push_back(r.GetString());
+					}
+				}
+			}
 			if (!doc.HasMember("quick_replies")) {
 				replies = {"On my way!", "Be right back", "Thanks!", "Can't talk now"};
 			}
@@ -101,6 +108,12 @@ void LocalStore::save() {
 		w.Key("channel_id");
 		w.String(d.channelId.c_str());
 		w.EndObject();
+	}
+	w.EndArray();
+	w.Key("pinned_dms");
+	w.StartArray();
+	for (const auto &id : pinnedDms) {
+		w.String(id.c_str());
 	}
 	w.EndArray();
 	w.Key("quick_replies");
@@ -170,6 +183,24 @@ void LocalStore::removeDraft(size_t index) {
 		draftList.erase(draftList.begin() + index);
 		save();
 	}
+}
+
+bool LocalStore::isDmPinned(const std::string &channelId) {
+	ensureLoaded();
+	return std::find(pinnedDms.begin(), pinnedDms.end(), channelId) != pinnedDms.end();
+}
+
+bool LocalStore::toggleDmPinned(const std::string &channelId) {
+	ensureLoaded();
+	auto it = std::find(pinnedDms.begin(), pinnedDms.end(), channelId);
+	const bool nowPinned = (it == pinnedDms.end());
+	if (nowPinned) {
+		pinnedDms.push_back(channelId);
+	} else {
+		pinnedDms.erase(it);
+	}
+	save();
+	return nowPinned;
 }
 
 const std::vector<std::string> &LocalStore::quickReplies() {

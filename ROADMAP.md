@@ -50,12 +50,15 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
 - [x] The update check can no longer slow down the start
 
 ## Phase 5 — Friends and DMs
-- [ ] Friends list with pending requests; send and accept requests
-- [ ] Block and unblock users
-- [ ] Create group DMs
-- [ ] Private notes on users; per-server nicknames
-- [ ] Pinned DMs on top; unread-first DM view
-- [ ] Search in DMs; typing indicator in the list
+- [x] Friends list with pending requests; send and accept requests
+- [x] Block people (from their profile) and unblock them (friends list)
+- [x] Create group DMs
+- [x] Private notes on users
+- [x] Your own nickname in each server (Channel Tools)
+- [x] Pinned DMs on top of the list (X on a DM)
+- [x] Search in DMs (Channel Tools > Search works in DMs; Find jumps to a DM by name)
+- [x] Quick Access in the side menu (Find, Friends, New Group DM, Saved, Mentions)
+- [ ] Unread-first DM view; typing indicator in the DM list
 - [ ] Carried over: upload photos from the 3DS camera
 - [ ] Carried over: compress big images before uploading
 - [ ] Carried over: voice messages recorded with the microphone

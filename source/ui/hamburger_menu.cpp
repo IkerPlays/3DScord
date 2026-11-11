@@ -28,9 +28,7 @@ void HamburgerMenu::refreshStrings() {
 	if (inMessages) {
 		items.push_back({TR("menu.channel_tools"), MenuItemType::CHANNEL_TOOLS});
 	}
-	items.push_back({TR("menu.find"), MenuItemType::FIND});
-	items.push_back({TR("menu.saved"), MenuItemType::SAVED});
-	items.push_back({TR("menu.mentions"), MenuItemType::MENTIONS});
+	items.push_back({TR("menu.quick_access"), MenuItemType::QUICK_ACCESS});
 	items.push_back({TR("menu.settings"), MenuItemType::SETTINGS});
 	items.push_back({TR("menu.about"), MenuItemType::ABOUT});
 	if (selectedIndex >= (int)items.size()) {
@@ -141,16 +139,8 @@ void HamburgerMenu::update() {
 					ListScreen::open(ListScreen::Mode::TOOLS);
 					close();
 					return;
-				case MenuItemType::FIND:
-					ListScreen::open(ListScreen::Mode::FIND);
-					close();
-					return;
-				case MenuItemType::SAVED:
-					ListScreen::open(ListScreen::Mode::SAVED);
-					close();
-					return;
-				case MenuItemType::MENTIONS:
-					ListScreen::open(ListScreen::Mode::MENTIONS);
+				case MenuItemType::QUICK_ACCESS:
+					ListScreen::open(ListScreen::Mode::HUB);
 					close();
 					return;
 				case MenuItemType::ABOUT:

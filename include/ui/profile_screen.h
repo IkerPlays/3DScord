@@ -46,6 +46,8 @@ class ProfileScreen : public Screen {
 		std::string error;
 		bool loading = true;
 		bool changed = false;
+		std::string note;
+		bool noteChanged = false;
 	};
 
 	void buildBodyLines();
@@ -59,6 +61,8 @@ class ProfileScreen : public Screen {
 	std::shared_ptr<Shared> shared;
 	Profile profile;
 	std::string error;
+	std::string note;
+	bool confirmBlock = false;
 	bool loading;
 	std::vector<std::string> bodyLines;
 	float scroll;

@@ -7,7 +7,7 @@
 
 namespace UI {
 
-enum class MenuItemType { SERVER_LIST, SETTINGS, HOME, ACCOUNT_SWITCH, ABOUT, CHANNEL_TOOLS, FIND, SAVED, MENTIONS };
+enum class MenuItemType { SERVER_LIST, SETTINGS, HOME, ACCOUNT_SWITCH, ABOUT, CHANNEL_TOOLS, QUICK_ACCESS };
 
 struct MenuItem {
 	std::string label;

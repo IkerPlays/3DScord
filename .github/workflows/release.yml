@@ -16,6 +16,10 @@ on:
         required: false
         default: false
         type: boolean
+      ref:
+        description: "Commit to build (empty: the latest commit of main). The notes always come from CHANGELOG.md of main"
+        required: false
+        type: string
       draft:
         description: "Publish as a draft first"
         required: false
@@ -53,6 +57,8 @@ jobs:
     container: devkitpro/devkitarm:latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
 
       - name: System tools
         run: |

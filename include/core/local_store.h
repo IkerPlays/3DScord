@@ -33,6 +33,10 @@ class LocalStore {
 	void addDraft(const Draft &draft);
 	void removeDraft(size_t index);
 
+	// Direct-message channels kept at the top of the DM list.
+	bool isDmPinned(const std::string &channelId);
+	bool toggleDmPinned(const std::string &channelId); // returns the new state
+
 	const std::vector<std::string> &quickReplies();
 	void addQuickReply(const std::string &text);
 	void setQuickReply(size_t index, const std::string &text); // empty text deletes it
@@ -46,6 +50,7 @@ class LocalStore {
 	std::vector<SavedMessage> saved;
 	std::vector<Draft> draftList;
 	std::vector<std::string> replies;
+	std::vector<std::string> pinnedDms;
 };
 
 } // namespace Core

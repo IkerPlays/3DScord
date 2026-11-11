@@ -1,5 +1,14 @@
 # Changelog
 
+## Next devbuild
+- **Quick Access** in the side menu groups Find, Friends, New Group DM, Saved Messages and Mentions.
+- **Friends:** list of friends, pending requests and blocked people (Y changes the list). A messages a friend or accepts
+  a request, X removes (press twice), R adds a friend by username.
+- **Group DMs:** pick two or more friends and start a group chat.
+- **Profiles:** A sends a message, Y adds a friend, X blocks (press twice) and R edits your private note about them.
+- **Pinned DMs:** press X on a direct message to keep it at the top of the list.
+- **My Nickname Here** in Channel Tools changes your nickname in the current server.
+
 ## Unreleased
 - **Profiles:** open anyone's profile from the message menu (View Profile): banner, avatar, names, pronouns,
   About Me, account age and, in servers, join date and roles.

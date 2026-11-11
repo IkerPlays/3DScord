@@ -8,6 +8,7 @@
 #include "ui/file_browser_screen.h"
 #include "ui/message_screen.h"
 #include "ui/profile_screen.h"
+#include "discord/social.h"
 #include "discord/threads.h"
 #include "utils/message_utils.h"
 #include "utils/redraw.h"
@@ -17,6 +18,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
+#include <strings.h>
 #include <rapidjson/document.h>
 
 namespace UI {
@@ -173,6 +175,10 @@ void ListScreen::load() {
 	case Mode::FIND:
 		startFind();
 		break;
+	case Mode::FRIENDS:
+	case Mode::GROUP_PICK:
+		fetch("/users/@me/relationships");
+		break;
 	case Mode::MEMBERS:
 		startMembers();
 		break;
@@ -228,6 +234,13 @@ void ListScreen::loadLocal() {
 			list.push_back({"", channelId, "", r});
 		}
 		break;
+	case Mode::HUB:
+		list = {{"find", channelId, TR("list.find"), TR("list.hub.find")},
+		        {"friends", channelId, TR("list.friends"), TR("list.hub.friends")},
+		        {"group", channelId, TR("list.new_group"), TR("list.hub.group")},
+		        {"saved", channelId, TR("list.saved"), TR("list.hub.saved")},
+		        {"mentions", channelId, TR("list.mentions"), TR("list.hub.mentions")}};
+		break;
 	case Mode::TOOLS:
 		list = {{"pins", channelId, TR("list.pins"), TR("list.tools.pins")},
 		        {"search", channelId, TR("list.search"), TR("list.tools.search")},
@@ -236,6 +249,7 @@ void ListScreen::loadLocal() {
 		        {"stickers", channelId, TR("list.stickers"), TR("list.tools.stickers")},
 		        {"threads", channelId, TR("list.threads"), TR("list.tools.threads")},
 		        {"members", channelId, TR("list.members"), TR("list.tools.members")},
+		        {"nick", channelId, TR("list.my_nick"), TR("list.tools.nick")},
 		        {"quick", channelId, TR("list.quick_replies"), TR("list.tools.quick")},
 		        {"drafts", channelId, TR("list.drafts"), TR("list.tools.drafts")},
 		        {"format", channelId, TR("list.format"), TR("list.tools.format")},
@@ -274,10 +288,11 @@ void ListScreen::fetch(const std::string &path) {
 
 	const bool searching = (mode == Mode::SEARCH);
 	const Mode fetchMode = mode;
+	const int filterNow = friendFilter;
 	auto state = shared;
 	Network::NetworkManager::getInstance().enqueue(
 	    "https://discord.com/api/v10" + path, "GET", "", Network::RequestPriority::INTERACTIVE,
-	    [state, searching, fetchMode](Network::HttpResponse &resp) {
+	    [state, searching, fetchMode, filterNow](Network::HttpResponse &resp) {
 		    std::vector<Entry> list;
 		    std::string err;
 
@@ -303,6 +318,44 @@ void ListScreen::fetch(const std::string &path) {
 					    std::string title = str(g, "title");
 					    list.push_back({link, "", title.empty() ? "GIF" : title, link});
 				    }
+			    }
+		    } else if (fetchMode == Mode::FRIENDS || fetchMode == Mode::GROUP_PICK) {
+			    // type: 1 friend, 2 blocked, 3 incoming request, 4 outgoing request
+			    if (doc.IsArray()) {
+				    for (const auto &r : doc.GetArray()) {
+					    if (!r.IsObject() || !r.HasMember("user") || !r["user"].IsObject() || !r.HasMember("type") ||
+					        !r["type"].IsInt()) {
+						    continue;
+					    }
+					    const int type = r["type"].GetInt();
+					    const bool wanted = fetchMode == Mode::GROUP_PICK  ? type == 1
+					                        : filterNow == 0 ? type == 1
+					                        : filterNow == 1 ? (type == 3 || type == 4)
+					                                         : type == 2;
+					    if (!wanted) {
+						    continue;
+					    }
+					    const auto &u = r["user"];
+					    std::string name = str(r, "nickname");
+					    if (name.empty()) {
+						    name = str(u, "global_name");
+					    }
+					    if (name.empty()) {
+						    name = str(u, "username");
+					    }
+					    std::string note = "@" + str(u, "username");
+					    if (type == 3) {
+						    note += "  - " + TR("friends.incoming");
+					    } else if (type == 4) {
+						    note += "  - " + TR("friends.outgoing");
+					    }
+					    Entry e{str(u, "id"), "", fetchMode == Mode::GROUP_PICK ? "[ ] " + name : name, note};
+					    e.kind = type;
+					    list.push_back(e);
+				    }
+				    std::sort(list.begin(), list.end(), [](const Entry &a, const Entry &b) {
+					    return strcasecmp(a.title.c_str(), b.title.c_str()) < 0;
+				    });
 			    }
 		    } else if (fetchMode == Mode::THREADS) {
 			    if (doc.IsObject() && doc.HasMember("threads") && doc["threads"].IsArray()) {
@@ -532,6 +585,12 @@ std::string ListScreen::headerTitle() const {
 		return query.empty() ? TR("list.members") : TR("list.members") + ": " + query;
 	case Mode::THREADS:
 		return TR("list.threads");
+	case Mode::HUB:
+		return TR("menu.quick_access");
+	case Mode::FRIENDS:
+		return TR(friendFilter == 0 ? "friends.title" : friendFilter == 1 ? "friends.pending" : "friends.blocked");
+	case Mode::GROUP_PICK:
+		return TR("list.new_group");
 	case Mode::PINS:
 		return TR("list.pins");
 	case Mode::SEARCH:
@@ -564,6 +623,12 @@ std::string ListScreen::hintLine() const {
 		return TR("list.hint.members");
 	case Mode::THREADS:
 		return TR("list.hint.threads");
+	case Mode::HUB:
+		return TR("list.hint.tools");
+	case Mode::FRIENDS:
+		return TR("list.hint.friends");
+	case Mode::GROUP_PICK:
+		return TR("list.hint.group");
 	case Mode::SEARCH:
 		return TR("list.hint.search");
 	case Mode::MENTIONS:
@@ -595,6 +660,48 @@ void ListScreen::primaryAction(const Entry &entry) {
 	auto &client = Discord::DiscordClient::getInstance();
 	auto &sm = ScreenManager::getInstance();
 	switch (mode) {
+	case Mode::HUB:
+		if (entry.id == "find") {
+			openReplacing(Mode::FIND);
+		} else if (entry.id == "friends") {
+			openReplacing(Mode::FRIENDS);
+		} else if (entry.id == "group") {
+			openReplacing(Mode::GROUP_PICK);
+		} else if (entry.id == "saved") {
+			openReplacing(Mode::SAVED);
+		} else if (entry.id == "mentions") {
+			openReplacing(Mode::MENTIONS);
+		}
+		break;
+	case Mode::FRIENDS:
+		if (entry.kind == 1) {
+			const auto dm = Discord::Social::openDm(entry.id);
+			if (dm.result.ok && !dm.channelId.empty()) {
+				client.setSelectedChannelId(dm.channelId);
+				sm.setScreen(ScreenType::MESSAGES);
+			} else {
+				sm.showToast(dm.result.message);
+			}
+		} else if (entry.kind == 3) {
+			const auto r = Discord::Social::acceptRequest(entry.id);
+			sm.showToast(r.ok ? TR("friends.accepted") : r.message);
+			load();
+		} else if (entry.kind == 4) {
+			sm.showToast(TR("friends.waiting"));
+		}
+		break;
+	case Mode::GROUP_PICK: {
+		if (selected >= 0 && selected < (int)entries.size()) {
+			Entry &row = entries[selected];
+			if (groupIds.erase(row.id)) {
+				row.title = "[ ] " + row.title.substr(4);
+			} else {
+				groupIds.insert(row.id);
+				row.title = "[x] " + row.title.substr(4);
+			}
+		}
+		break;
+	}
 	case Mode::TOOLS:
 		if (entry.id == "pins") {
 			openReplacing(Mode::PINS);
@@ -625,6 +732,17 @@ void ListScreen::primaryAction(const Entry &entry) {
 			openReplacing(Mode::THREADS);
 		} else if (entry.id == "members") {
 			openReplacing(Mode::MEMBERS);
+		} else if (entry.id == "nick") {
+			const std::string guildId = client.getGuildIdFromChannel(channelId);
+			if (guildId.empty() || guildId == "DM") {
+				sm.showToast(TR("list.members_need_server"));
+			} else {
+				std::string nick;
+				if (askText(TR("list.nick_hint"), "", nick, 32, false)) {
+					const auto r = Discord::Social::setMyNickname(guildId, nick);
+					sm.showToast(r.ok ? TR("account.saved") : r.message);
+				}
+			}
 		} else if (entry.id == "archive") {
 			const auto r = Discord::Threads::setArchived(channelId, true);
 			sm.showToast(r.ok ? TR("list.archived_done") : r.message);
@@ -772,6 +890,19 @@ void ListScreen::secondaryAction(const Entry &entry) {
 		store.removeDraft((size_t)selected);
 		load();
 		break;
+	case Mode::FRIENDS: {
+		// Removing someone needs a second press on the same row.
+		if (confirmId != entry.id) {
+			confirmId = entry.id;
+			ScreenManager::getInstance().showToast(TR("friends.confirm"));
+			break;
+		}
+		confirmId.clear();
+		const auto r = Discord::Social::removeRelationship(entry.id);
+		ScreenManager::getInstance().showToast(r.ok ? TR("friends.done") : r.message);
+		load();
+		break;
+	}
 	case Mode::THREADS: {
 		const auto r = Discord::Threads::join(entry.id);
 		ScreenManager::getInstance().showToast(r.ok ? TR("list.thread_joined") : r.message);
@@ -804,6 +935,26 @@ void ListScreen::tertiaryAction() {
 		includeArchived = !includeArchived;
 		load();
 		break;
+	case Mode::FRIENDS:
+		friendFilter = (friendFilter + 1) % 3;
+		confirmId.clear();
+		load();
+		break;
+	case Mode::GROUP_PICK: {
+		if (groupIds.size() < 2) {
+			ScreenManager::getInstance().showToast(TR("friends.pick_two"));
+			break;
+		}
+		const std::vector<std::string> ids(groupIds.begin(), groupIds.end());
+		const auto dm = Discord::Social::createGroupDm(ids);
+		if (dm.result.ok && !dm.channelId.empty()) {
+			Discord::DiscordClient::getInstance().setSelectedChannelId(dm.channelId);
+			ScreenManager::getInstance().setScreen(ScreenType::MESSAGES);
+		} else {
+			ScreenManager::getInstance().showToast(dm.result.message);
+		}
+		break;
+	}
 	case Mode::QUICK_REPLIES:
 		if (askText(TR("list.new_reply"), "", text, 200, false)) {
 			store.addQuickReply(text);
@@ -819,6 +970,20 @@ void ListScreen::tertiaryAction() {
 		break;
 	default:
 		break;
+	}
+}
+
+void ListScreen::quaternaryAction() {
+	if (mode != Mode::FRIENDS) {
+		return;
+	}
+	std::string name;
+	if (askText(TR("friends.add_hint"), "", name, 40, false) && !name.empty()) {
+		const auto r = Discord::Social::sendFriendRequest(name);
+		ScreenManager::getInstance().showToast(r.ok ? TR("friends.sent") : r.message);
+		if (r.ok) {
+			load();
+		}
 	}
 }
 
@@ -876,6 +1041,9 @@ void ListScreen::update() {
 	}
 	if (kDown & KEY_Y) {
 		tertiaryAction();
+	}
+	if (kDown & KEY_R) {
+		quaternaryAction();
 	}
 	clampSelection();
 }

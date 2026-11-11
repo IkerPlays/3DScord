@@ -4,6 +4,7 @@
 #include "screen_manager.h"
 #include <memory>
 #include <mutex>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -13,7 +14,7 @@ namespace UI {
 // quick replies and the formatting helpers. The mode is chosen with open() before the screen is created.
 class ListScreen : public Screen {
   public:
-	enum class Mode { TOOLS, PINS, SEARCH, MENTIONS, SAVED, DRAFTS, QUICK_REPLIES, FORMAT, GIFS, STICKERS, FIND, MEMBERS, THREADS };
+	enum class Mode { TOOLS, PINS, SEARCH, MENTIONS, SAVED, DRAFTS, QUICK_REPLIES, FORMAT, GIFS, STICKERS, FIND, MEMBERS, THREADS, HUB, FRIENDS, GROUP_PICK };
 
 	static void open(Mode mode);
 	// Switches to another list without adding the current one to the back history.
@@ -34,6 +35,7 @@ class ListScreen : public Screen {
 		std::string channelId;
 		std::string title;
 		std::string body;
+		int kind = 0; // relationship type for the friends list
 	};
 
 	// Filled by network callbacks, which may outlive the screen.
@@ -55,6 +57,7 @@ class ListScreen : public Screen {
 	void primaryAction(const Entry &entry);
 	void secondaryAction(const Entry &entry);
 	void tertiaryAction();
+	void quaternaryAction();
 	std::string channelLabel(const std::string &channelId) const;
 	std::string headerTitle() const;
 	std::string hintLine() const;
@@ -73,6 +76,9 @@ class ListScreen : public Screen {
 	float scroll;
 	std::string query;
 	bool includeArchived = false;
+	int friendFilter = 0; // 0 friends, 1 pending, 2 blocked
+	std::set<std::string> groupIds;
+	std::string confirmId; // entry waiting for a second press to confirm removing it
 };
 
 } // namespace UI
