@@ -1,4 +1,5 @@
 #include "utils/sha256.h"
+#include <algorithm>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -60,25 +61,52 @@ void block(uint32_t state[8], const uint8_t chunk[64]) {
 
 } // namespace
 
-std::string sha256Hex(const std::string &data) {
-	uint32_t state[8] = {0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19};
-	std::string padded = data;
-	padded += (char)0x80;
-	while (padded.size() % 64 != 56) {
-		padded += (char)0;
+Sha256::Sha256() : bufferSize(0), totalBytes(0) {
+	static const uint32_t init[8] = {0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
+	                                 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19};
+	memcpy(state, init, sizeof(state));
+}
+
+void Sha256::update(const void *data, size_t size) {
+	const uint8_t *bytes = static_cast<const uint8_t *>(data);
+	totalBytes += size;
+	while (size > 0) {
+		const size_t take = std::min(size, sizeof(buffer) - bufferSize);
+		memcpy(buffer + bufferSize, bytes, take);
+		bufferSize += take;
+		bytes += take;
+		size -= take;
+		if (bufferSize == sizeof(buffer)) {
+			block(state, buffer);
+			bufferSize = 0;
+		}
 	}
-	const uint64_t bits = (uint64_t)data.size() * 8;
-	for (int i = 7; i >= 0; i--) {
-		padded += (char)((bits >> (8 * i)) & 0xFF);
+}
+
+std::string Sha256::finishHex() {
+	const uint64_t bits = totalBytes * 8;
+	const uint8_t one = 0x80;
+	update(&one, 1);
+	const uint8_t zero = 0;
+	while (bufferSize != 56) {
+		update(&zero, 1);
 	}
-	for (size_t off = 0; off < padded.size(); off += 64) {
-		block(state, reinterpret_cast<const uint8_t *>(padded.data()) + off);
+	uint8_t length[8];
+	for (int i = 0; i < 8; i++) {
+		length[i] = (uint8_t)((bits >> (56 - 8 * i)) & 0xFF);
 	}
+	update(length, 8);
 	char out[65];
 	for (int i = 0; i < 8; i++) {
 		snprintf(out + i * 8, 9, "%08x", state[i]);
 	}
 	return std::string(out, 64);
+}
+
+std::string sha256Hex(const std::string &data) {
+	Sha256 hash;
+	hash.update(data.data(), data.size());
+	return hash.finishHex();
 }
 
 } // namespace Utils

@@ -22,6 +22,8 @@ class UpdaterScreen : public Screen {
 
 	// Set by the settings screen so that "already up to date" is reported instead of silently continuing.
 	static bool manualCheck;
+	// Set by Settings > Install Previous Version: looks for the version before this one instead of a newer one.
+	static bool downgrade;
 
   private:
 	float angle;

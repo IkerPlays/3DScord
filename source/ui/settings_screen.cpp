@@ -762,10 +762,29 @@ void SettingsScreen::addUpdateItems() {
 	check.description = TR("updater.desc.check_now");
 	check.type = SettingItemType::ACTION;
 	check.action = []() {
+		UpdaterScreen::downgrade = false;
 		UpdaterScreen::manualCheck = true;
 		ScreenManager::getInstance().setScreen(ScreenType::UPDATER);
 	};
 	allItems.push_back(check);
+
+	SettingItem previous;
+	previous.label = TR("updater.previous");
+	previous.description = TR("updater.desc.previous");
+	previous.type = SettingItemType::ACTION;
+	previous.action = []() {
+		UpdaterScreen::manualCheck = true;
+		UpdaterScreen::downgrade = true;
+		ScreenManager::getInstance().setScreen(ScreenType::UPDATER);
+	};
+	allItems.push_back(previous);
+
+	SettingItem diagnostics;
+	diagnostics.label = TR("settings.diagnostics");
+	diagnostics.description = TR("settings.desc.diagnostics");
+	diagnostics.type = SettingItemType::ACTION;
+	diagnostics.action = []() { ListScreen::open(ListScreen::Mode::DIAG); };
+	allItems.push_back(diagnostics);
 
 	SettingItem autoUpdate;
 	autoUpdate.label = TR("updater.auto");

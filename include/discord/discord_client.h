@@ -247,6 +247,9 @@ class DiscordClient {
 
 	bool canSendMessage(const std::string &channelId);
 	bool canManageMessages(const std::string &channelId);
+	// All permission bits you have in a channel / in a whole server (administrators and owners have every bit).
+	uint64_t getChannelPermissions(const std::string &channelId);
+	uint64_t getGuildPermissions(const std::string &guildId);
 	bool isUserMentioned(const Message &msg);
 
 	void markChannelRead(const std::string &channelId, const std::string &messageId);

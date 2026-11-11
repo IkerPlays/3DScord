@@ -15,6 +15,7 @@ namespace UI {
 using Utils::Updater;
 
 bool UpdaterScreen::manualCheck = false;
+bool UpdaterScreen::downgrade = false;
 
 namespace {
 
@@ -74,11 +75,12 @@ UpdaterScreen::~UpdaterScreen() {
 	// The worker belongs to the Updater singleton, which outlives this screen: only ask it to stop. Waiting for it
 	// here would hold the app on a slow network.
 	Updater::getInstance().cancel();
+	downgrade = false;
 }
 
 void UpdaterScreen::onEnter() {
 	Logger::log("[UpdaterScreen] Checking for updates (current %s)", Updater::currentVersionString().c_str());
-	Updater::getInstance().startCheck(Config::getInstance().isDevBuildUpdatesEnabled());
+	Updater::getInstance().startCheck(Config::getInstance().isDevBuildUpdatesEnabled(), downgrade);
 }
 
 void UpdaterScreen::update() {
@@ -102,8 +104,9 @@ void UpdaterScreen::update() {
 	case Updater::State::UP_TO_DATE:
 		if (manualCheck) {
 			manualCheck = false;
-			ScreenManager::getInstance().showToast(TR("updater.up_to_date"));
+			ScreenManager::getInstance().showToast(TR(downgrade ? "updater.no_previous" : "updater.up_to_date"));
 		}
+		downgrade = false;
 		ScreenManager::getInstance().enterMainScreen();
 		break;
 	case Updater::State::AVAILABLE: {
@@ -199,7 +202,8 @@ void UpdaterScreen::renderTop(C3D_RenderTarget *target) {
 		line = TR("updater.checking");
 		break;
 	case Updater::State::AVAILABLE:
-		line = Core::I18n::format(TR("updater.available"), updater.getRelease().tag);
+		line = Core::I18n::format(TR(downgrade ? "updater.previous_available" : "updater.available"),
+		                          updater.getRelease().tag);
 		break;
 	case Updater::State::DOWNLOADING:
 		line = Core::I18n::format(TR("updater.downloading"), updater.getRelease().tag);

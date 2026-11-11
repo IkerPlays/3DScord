@@ -4,14 +4,20 @@
 #include "core/local_store.h"
 #include "discord/discord_client.h"
 #include "log.h"
+#include "network/http_client.h"
 #include "network/network_manager.h"
 #include "ui/file_browser_screen.h"
 #include "ui/image_manager.h"
 #include "ui/image_viewer_screen.h"
 #include "utils/color_utils.h"
+#include "utils/file_utils.h"
+#include "utils/system_utils.h"
+#include "utils/updater.h"
+#include <sys/statvfs.h>
 #include "ui/message_screen.h"
 #include "ui/profile_screen.h"
 #include "discord/social.h"
+#include "discord/guild_tools.h"
 #include "discord/threads.h"
 #include "discord/voice_client.h"
 #include "utils/message_utils.h"
@@ -21,6 +27,7 @@
 #include "utils/utf8_utils.h"
 #include <3ds.h>
 #include <algorithm>
+#include <map>
 #include <cctype>
 #include <cstdlib>
 #include <strings.h>
@@ -31,6 +38,8 @@ namespace UI {
 ListScreen::Mode ListScreen::pendingMode = ListScreen::Mode::PINS;
 std::string ListScreen::pendingSoundTarget;
 std::string ListScreen::pendingSoundName;
+std::string ListScreen::pendingModUser;
+std::string ListScreen::pendingModGuild;
 
 namespace {
 
@@ -162,6 +171,14 @@ bool messageToEntry(const rapidjson::Value &m, std::string &id, std::string &cha
 
 } // namespace
 
+void ListScreen::openModeration(const std::string &userId, const std::string &guildId, const std::string &name) {
+	pendingModUser = userId;
+	pendingModGuild = guildId;
+	pendingSoundName = name;
+	pendingMode = Mode::MOD;
+	ScreenManager::getInstance().pushScreen(ScreenType::LIST);
+}
+
 void ListScreen::openSounds(const std::string &targetId, const std::string &targetName) {
 	pendingSoundTarget = targetId;
 	pendingSoundName = targetName;
@@ -184,6 +201,8 @@ ListScreen::ListScreen()
 	channelId = Discord::DiscordClient::getInstance().getSelectedChannelId();
 	soundTarget = pendingSoundTarget;
 	soundTargetName = pendingSoundName;
+	modUser = pendingModUser;
+	modGuild = pendingModGuild;
 	if (mode == Mode::THEME_EDIT) {
 		editTheme = Config::getInstance().getTheme();
 	}
@@ -227,6 +246,22 @@ void ListScreen::load() {
 	case Mode::SESSIONS:
 		fetch("/auth/sessions");
 		break;
+	case Mode::EVENTS:
+	case Mode::AUDIT: {
+		const std::string guildId = currentGuild();
+		const bool allowed = mode == Mode::EVENTS || (Discord::DiscordClient::getInstance().getGuildPermissions(guildId) & (1ULL << 7));
+		if (guildId.empty() || !allowed) {
+			std::lock_guard<std::mutex> lock(shared->mutex);
+			shared->error = TR(guildId.empty() ? "list.members_need_server" : "audit.no_permission");
+			shared->loading = false;
+			shared->version++;
+		} else if (mode == Mode::EVENTS) {
+			fetch("/guilds/" + guildId + "/scheduled-events?with_user_count=true");
+		} else {
+			fetch("/guilds/" + guildId + "/audit-logs?limit=30");
+		}
+		break;
+	}
 	case Mode::FRIENDS:
 	case Mode::GROUP_PICK:
 		fetch("/users/@me/relationships");
@@ -286,6 +321,68 @@ void ListScreen::loadLocal() {
 			list.push_back({"", channelId, "", r});
 		}
 		break;
+	case Mode::PERMISSIONS: {
+		struct Perm {
+			int bit;
+			const char *key;
+		};
+		static const Perm perms[] = {
+		    {0, "perm.invite"},          {1, "perm.kick"},          {2, "perm.ban"},
+		    {3, "perm.admin"},           {4, "perm.channels"},      {5, "perm.server"},
+		    {6, "perm.reactions"},       {7, "perm.audit"},         {10, "perm.view"},
+		    {11, "perm.send"},           {13, "perm.manage_messages"}, {14, "perm.embeds"},
+		    {15, "perm.files"},          {16, "perm.history"},      {17, "perm.mention_all"},
+		    {18, "perm.ext_emoji"},      {20, "perm.connect"},      {21, "perm.speak"},
+		    {22, "perm.mute"},           {23, "perm.deafen"},       {24, "perm.move"},
+		    {26, "perm.nick"},           {27, "perm.manage_nicks"}, {28, "perm.roles"},
+		    {29, "perm.webhooks"},       {33, "perm.events"},       {34, "perm.threads"},
+		    {35, "perm.create_threads"}, {38, "perm.send_in_threads"}, {40, "perm.timeout"},
+		    {46, "perm.voice_messages"}};
+		const uint64_t have = Discord::DiscordClient::getInstance().getChannelPermissions(channelId);
+		for (const auto &p : perms) {
+			list.push_back({"", "", TR(p.key), TR((have >> p.bit) & 1ULL ? "perm.yes" : "perm.no")});
+		}
+		break;
+	}
+	case Mode::MOD: {
+		const uint64_t have = Discord::DiscordClient::getInstance().getGuildPermissions(modGuild);
+		if (have & (1ULL << 40)) {
+			list.push_back({"timeout:600", "", TR("mod.timeout_10m"), TR("mod.timeout_desc")});
+			list.push_back({"timeout:3600", "", TR("mod.timeout_1h"), TR("mod.timeout_desc")});
+			list.push_back({"timeout:86400", "", TR("mod.timeout_1d"), TR("mod.timeout_desc")});
+			list.push_back({"timeout:604800", "", TR("mod.timeout_1w"), TR("mod.timeout_desc")});
+			list.push_back({"timeout:0", "", TR("mod.timeout_off"), TR("mod.timeout_off_desc")});
+		}
+		if (have & (1ULL << 1)) {
+			list.push_back({"kick", "", TR("mod.kick"), TR("mod.kick_desc")});
+		}
+		if (have & (1ULL << 2)) {
+			list.push_back({"ban", "", TR("mod.ban"), TR("mod.ban_desc")});
+		}
+		break;
+	}
+	case Mode::DIAG: {
+		auto add = [&](const std::string &title, const std::string &body) { list.push_back({"", "", title, body}); };
+		add(TR("diag.version"), Utils::Updater::currentVersionString() +
+		                            (Utils::Updater::isCiaInstall() ? " (CIA)" : " (3DSX)"));
+		add(TR("diag.console"), Utils::System::getDeviceModelName());
+		add(TR("diag.memory"), std::to_string(Utils::System::heapFreeBytes() / 1024) + " KB heap, " +
+		                           std::to_string(linearSpaceFree() / 1024) + " KB linear");
+		add(TR("diag.wifi"), std::to_string((int)osGetWifiStrength()) + " / 3");
+		u8 battery = 0;
+		if (R_SUCCEEDED(ptmuInit())) {
+			PTMU_GetBatteryLevel(&battery);
+			ptmuExit();
+		}
+		add(TR("diag.battery"), std::to_string((int)battery) + " / 5");
+		struct statvfs sd;
+		if (statvfs("sdmc:/", &sd) == 0) {
+			add(TR("diag.sd"), std::to_string((unsigned long long)sd.f_bsize * sd.f_bavail / (1024 * 1024)) + " MB");
+		}
+		add(TR("diag.latency"), diagLatencyMs < 0 ? TR("diag.press_x") : std::to_string(diagLatencyMs) + " ms");
+		add(TR("diag.report"), TR("diag.press_y"));
+		break;
+	}
 	case Mode::THEME_EDIT: {
 		int index = 0;
 		for (const auto &field : THEME_FIELDS) {
@@ -370,6 +467,7 @@ void ListScreen::loadLocal() {
 		list = {{"find", channelId, TR("list.find"), TR("list.hub.find")},
 		        {"friends", channelId, TR("list.friends"), TR("list.hub.friends")},
 		        {"group", channelId, TR("list.new_group"), TR("list.hub.group")},
+		        {"join", channelId, TR("list.join_server"), TR("list.hub.join")},
 		        {"voice", channelId, TR("list.voice_channels"), TR("list.hub.voice")},
 		        {"people", channelId, TR("list.voice_people"), TR("list.hub.people")},
 		        {"saved", channelId, TR("list.saved"), TR("list.hub.saved")},
@@ -387,7 +485,11 @@ void ListScreen::loadLocal() {
 		        {"format", channelId, TR("list.format"), TR("list.tools.format")},
 		        {"read", channelId, TR("list.mark_read"), TR("list.tools.read")},
 		        {"readserver", channelId, TR("list.mark_server_read"), TR("list.tools.read_server")},
-		        {"archive", channelId, TR("list.archive_thread"), TR("list.tools.archive")}};
+		        {"archive", channelId, TR("list.archive_thread"), TR("list.tools.archive")},
+		        {"events", channelId, TR("list.events"), TR("list.tools.events")},
+		        {"audit", channelId, TR("list.audit"), TR("list.tools.audit")},
+		        {"perms", channelId, TR("list.permissions"), TR("list.tools.permissions")},
+		        {"leave", channelId, TR("list.leave_server"), TR("list.tools.leave")}};
 		break;
 	case Mode::FORMAT:
 		list = {{"quote", channelId, TR("format.quote"), "> text"},
@@ -495,6 +597,58 @@ void ListScreen::fetch(const std::string &path) {
 				    std::sort(list.begin(), list.end(), [](const Entry &a, const Entry &b) {
 					    return strcasecmp(a.title.c_str(), b.title.c_str()) < 0;
 				    });
+			    }
+		    } else if (fetchMode == Mode::EVENTS) {
+			    if (doc.IsArray()) {
+				    for (const auto &ev : doc.GetArray()) {
+					    if (!ev.IsObject() || str(ev, "id").empty()) {
+						    continue;
+					    }
+					    std::string title = str(ev, "name");
+					    if (ev.HasMember("user_count") && ev["user_count"].IsInt()) {
+						    title += "  (" + std::to_string(ev["user_count"].GetInt()) + ")";
+					    }
+					    std::string when = UI::MessageUtils::formatTimestamp(str(ev, "scheduled_start_time"));
+					    const std::string description = str(ev, "description");
+					    if (!description.empty()) {
+						    when += "  " + description;
+					    }
+					    Entry e{str(ev, "id"), str(ev, "guild_id"), title, when};
+					    list.push_back(e);
+				    }
+			    }
+		    } else if (fetchMode == Mode::AUDIT) {
+			    if (doc.IsObject() && doc.HasMember("audit_log_entries") && doc["audit_log_entries"].IsArray()) {
+				    std::map<std::string, std::string> names;
+				    if (doc.HasMember("users") && doc["users"].IsArray()) {
+					    for (const auto &u : doc["users"].GetArray()) {
+						    if (u.IsObject()) {
+							    names[str(u, "id")] = str(u, "global_name").empty() ? str(u, "username") : str(u, "global_name");
+						    }
+					    }
+				    }
+				    for (const auto &en : doc["audit_log_entries"].GetArray()) {
+					    if (!en.IsObject()) {
+						    continue;
+					    }
+					    const int type = (en.HasMember("action_type") && en["action_type"].IsInt()) ? en["action_type"].GetInt() : 0;
+					    const std::string key = "audit." + std::to_string(type);
+					    std::string action = TR(key);
+					    if (action == key) {
+						    action = TR("audit.other") + " " + std::to_string(type);
+					    }
+					    const std::string who = names.count(str(en, "user_id")) ? names[str(en, "user_id")] : str(en, "user_id");
+					    const std::string target = names.count(str(en, "target_id")) ? names[str(en, "target_id")] : "";
+					    std::string info = TR("audit.by") + " " + who;
+					    if (!target.empty()) {
+						    info += "  > " + target;
+					    }
+					    const std::string reason = str(en, "reason");
+					    if (!reason.empty()) {
+						    info += "  \"" + reason + "\"";
+					    }
+					    list.push_back({str(en, "id"), "", action, info});
+				    }
 			    }
 		    } else if (fetchMode == Mode::SESSIONS) {
 			    if (doc.IsObject() && doc.HasMember("user_sessions") && doc["user_sessions"].IsArray()) {
@@ -745,6 +899,11 @@ void ListScreen::startSearch() {
 	}
 }
 
+std::string ListScreen::currentGuild() const {
+	const std::string guild = Discord::DiscordClient::getInstance().getGuildIdFromChannel(channelId);
+	return guild == "DM" ? "" : guild;
+}
+
 std::string ListScreen::channelLabel(const std::string &id) const {
 	auto &client = Discord::DiscordClient::getInstance();
 	for (const auto &g : client.getGuilds()) {
@@ -782,6 +941,16 @@ std::string ListScreen::headerTitle() const {
 		return query.empty() ? TR("list.members") : TR("list.members") + ": " + query;
 	case Mode::THREADS:
 		return TR("list.threads");
+	case Mode::EVENTS:
+		return TR("list.events");
+	case Mode::AUDIT:
+		return TR("list.audit");
+	case Mode::PERMISSIONS:
+		return TR("list.permissions");
+	case Mode::MOD:
+		return TR("mod.title") + (soundTargetName.empty() ? "" : ": " + soundTargetName);
+	case Mode::DIAG:
+		return TR("settings.diagnostics");
 	case Mode::SESSIONS:
 		return TR("sessions.title");
 	case Mode::THEME_EDIT:
@@ -832,6 +1001,12 @@ std::string ListScreen::hintLine() const {
 		return TR("list.hint.members");
 	case Mode::THREADS:
 		return TR("list.hint.threads");
+	case Mode::EVENTS:
+		return TR("events.hint");
+	case Mode::MOD:
+		return TR("mod.hint");
+	case Mode::DIAG:
+		return TR("diag.hint");
 	case Mode::SESSIONS:
 		return TR("sessions.hint");
 	case Mode::THEME_EDIT:
@@ -907,6 +1082,34 @@ void ListScreen::primaryAction(const Entry &entry) {
 	case Mode::VOICE_PEOPLE:
 		changePersonVolume(entry.id, +10);
 		break;
+	case Mode::EVENTS: {
+		const auto r = Discord::GuildTools::setEventInterest(entry.channelId.empty() ? currentGuild() : entry.channelId,
+		                                                     entry.id, true);
+		sm.showToast(r.ok ? TR("events.interested") : r.message);
+		break;
+	}
+	case Mode::MOD: {
+		// Every action takes a second press on the same row: these cannot be undone by the app.
+		if (confirmId != entry.id) {
+			confirmId = entry.id;
+			sm.showToast(TR("friends.confirm"));
+			break;
+		}
+		confirmId.clear();
+		Discord::GuildTools::Result r;
+		if (entry.id == "kick") {
+			r = Discord::GuildTools::kick(modGuild, modUser);
+		} else if (entry.id == "ban") {
+			r = Discord::GuildTools::ban(modGuild, modUser);
+		} else if (entry.id.rfind("timeout:", 0) == 0) {
+			r = Discord::GuildTools::timeout(modGuild, modUser, atol(entry.id.c_str() + 8));
+		}
+		sm.showToast(r.ok ? TR("mod.done") : r.message);
+		if (r.ok) {
+			sm.returnToPreviousScreen();
+		}
+		break;
+	}
 	case Mode::SESSIONS: {
 		// Logging a device out takes a second press on the same row.
 		if (confirmId != entry.id) {
@@ -989,6 +1192,15 @@ void ListScreen::primaryAction(const Entry &entry) {
 			openReplacing(Mode::FRIENDS);
 		} else if (entry.id == "group") {
 			openReplacing(Mode::GROUP_PICK);
+		} else if (entry.id == "join") {
+			std::string link;
+			if (askText(TR("join.hint"), "", link, 100, false) && !link.empty()) {
+				const auto r = Discord::GuildTools::joinInvite(link);
+				sm.showToast(r.ok ? TR("join.done") : r.message);
+				if (r.ok) {
+					sm.setScreen(ScreenType::GUILD_LIST);
+				}
+			}
 		} else if (entry.id == "voice") {
 			openReplacing(Mode::VOICE_CHANNELS);
 		} else if (entry.id == "people") {
@@ -1044,6 +1256,27 @@ void ListScreen::primaryAction(const Entry &entry) {
 			} else {
 				const Discord::Guild *g = client.getGuildPtr(guildId);
 				openSounds(guildId, g ? g->name : "");
+			}
+		} else if (entry.id == "events") {
+			openReplacing(Mode::EVENTS);
+		} else if (entry.id == "audit") {
+			openReplacing(Mode::AUDIT);
+		} else if (entry.id == "perms") {
+			openReplacing(Mode::PERMISSIONS);
+		} else if (entry.id == "leave") {
+			const std::string guildId = currentGuild();
+			if (guildId.empty()) {
+				sm.showToast(TR("list.members_need_server"));
+			} else if (confirmId != "leave") {
+				confirmId = "leave";
+				sm.showToast(TR("leave.confirm"));
+			} else {
+				confirmId.clear();
+				const auto r = Discord::GuildTools::leaveGuild(guildId);
+				sm.showToast(r.ok ? TR("leave.done") : r.message);
+				if (r.ok) {
+					sm.setScreen(ScreenType::GUILD_LIST);
+				}
 			}
 		} else if (entry.id == "nick") {
 			const std::string guildId = client.getGuildIdFromChannel(channelId);
@@ -1194,6 +1427,7 @@ void ListScreen::primaryAction(const Entry &entry) {
 
 void ListScreen::secondaryAction(const Entry &entry) {
 	auto &store = Core::LocalStore::getInstance();
+	auto &sm = ScreenManager::getInstance();
 	switch (mode) {
 	case Mode::SAVED:
 		store.removeSaved(entry.id);
@@ -1206,6 +1440,24 @@ void ListScreen::secondaryAction(const Entry &entry) {
 	case Mode::VOICE_PEOPLE:
 		changePersonVolume(entry.id, -10);
 		break;
+	case Mode::EVENTS: {
+		const auto r = Discord::GuildTools::setEventInterest(entry.channelId.empty() ? currentGuild() : entry.channelId,
+		                                                     entry.id, false);
+		sm.showToast(r.ok ? TR("events.not_interested") : r.message);
+		break;
+	}
+	case Mode::DIAG: {
+		Network::HttpClient http;
+		http.setTimeout(10);
+		const u64 start = osGetTime();
+		const auto resp = http.get("https://discord.com/api/v10/gateway");
+		diagLatencyMs = resp.success ? (long)(osGetTime() - start) : -1;
+		if (!resp.success) {
+			sm.showToast(TR("diag.no_network"));
+		}
+		load();
+		break;
+	}
 	case Mode::GALLERY:
 		Utils::Transfers::getInstance().saveAttachment(entry.id, entry.title, 0);
 		break;
@@ -1265,6 +1517,9 @@ void ListScreen::tertiaryAction() {
 		if (selected >= 0 && selected < (int)entries.size()) {
 			changePersonVolume(entries[selected].id, 0);
 		}
+		break;
+	case Mode::DIAG:
+		writeDiagnosticsReport();
 		break;
 	case Mode::THEME_EDIT: {
 		std::string name;
@@ -1331,6 +1586,28 @@ void ListScreen::changePersonVolume(const std::string &userId, int delta) {
 		voice.setUserVolume(userId, next);
 	}
 	load();
+}
+
+// A text file with the state of the console and the app, plus the end of the logs, to send when something fails.
+void ListScreen::writeDiagnosticsReport() {
+	std::string report = "3DScord diagnostics\n";
+	for (const auto &e : entries) {
+		if (!e.title.empty()) {
+			report += e.title + ": " + e.body + "\n";
+		}
+	}
+	auto tail = [](const std::string &path, size_t bytes) {
+		std::vector<char> data = Utils::File::readFile(path);
+		if (data.empty()) {
+			return std::string("(none)\n");
+		}
+		std::string text(data.data());
+		return text.size() > bytes ? text.substr(text.size() - bytes) : text;
+	};
+	report += "\n--- updater.log ---\n" + tail(std::string(CONFIG_DIR_PATH) + "/updater.log", 3000);
+	report += "\n--- 3dscord.log ---\n" + tail(std::string(CONFIG_DIR_PATH) + "/3dscord.log", 3000);
+	const std::string path = std::string(CONFIG_DIR_PATH) + "/diagnostics.txt";
+	ScreenManager::getInstance().showToast(Utils::File::writeFile(path, report) ? TR("diag.saved") : TR("diag.save_failed"));
 }
 
 void ListScreen::quaternaryAction() {

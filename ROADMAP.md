@@ -117,14 +117,14 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
       system (the 3DS does not tell the app its time zone; it is set by hand in Settings)
 
 ## Phase 11 — Server tools
-- [ ] Scheduled events
-- [ ] Join with an invite link; leave a server
-- [ ] See your permissions in a channel
-- [ ] Basic audit log
-- [ ] Moderation: kick, ban, timeout
-- [ ] Roll back to the previous version if an update fails
-- [ ] Integrity (hash) check of downloads
-- [ ] Error log you can send; diagnostics screen (memory, network, gateway latency)
+- [x] Scheduled events
+- [x] Join with an invite link or code; leave a server
+- [x] See your permissions in a channel
+- [x] Basic audit log
+- [x] Moderation: kick, ban, timeout
+- [x] Go back to the previous version (Settings > Updates > Install Previous Version)
+- [x] Integrity (SHA-256) check of every downloaded update
+- [x] Diagnostics screen (memory, network, battery, SD space, Discord latency) and a report to send
 
 ## Phase 12 — Extras
 - [ ] Spotify: see what you are listening to

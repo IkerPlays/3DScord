@@ -4882,6 +4882,50 @@ bool DiscordClient::canSendMessage(const std::string &channelId) {
 	return false;
 }
 
+uint64_t DiscordClient::getChannelPermissions(const std::string &channelId) {
+	std::lock_guard<std::recursive_mutex> lock(clientMutex);
+	const std::string guildId = getGuildIdFromChannel(channelId);
+	if (guildId.empty() || guildId == "DM") {
+		return 0;
+	}
+	for (const auto &guild : guilds) {
+		if (guild.id != guildId) {
+			continue;
+		}
+		if (guild.ownerId == currentUser.id) {
+			return ~0ULL;
+		}
+		for (const auto &channel : guild.channels) {
+			if (channel.id == channelId) {
+				const uint64_t perms = computeChannelPermissions(guild, channel, currentUser.id, guild.myRoles);
+				return (perms & Permissions::ADMINISTRATOR) ? ~0ULL : perms;
+			}
+		}
+	}
+	return 0;
+}
+
+uint64_t DiscordClient::getGuildPermissions(const std::string &guildId) {
+	std::lock_guard<std::recursive_mutex> lock(clientMutex);
+	for (const auto &guild : guilds) {
+		if (guild.id != guildId) {
+			continue;
+		}
+		if (guild.ownerId == currentUser.id) {
+			return ~0ULL;
+		}
+		uint64_t perms = 0;
+		for (const auto &role : guild.roles) {
+			const bool mine = role.id == guild.id || std::find(guild.myRoles.begin(), guild.myRoles.end(), role.id) != guild.myRoles.end();
+			if (mine) {
+				perms |= role.permissions;
+			}
+		}
+		return (perms & Permissions::ADMINISTRATOR) ? ~0ULL : perms;
+	}
+	return 0;
+}
+
 bool DiscordClient::canManageMessages(const std::string &channelId) {
 	std::lock_guard<std::recursive_mutex> lock(clientMutex);
 

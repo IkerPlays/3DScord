@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+- **Events** (Channel Tools > Events): the scheduled events of the server with how many are interested; A marks you as
+  interested, X removes it.
+- **Audit Log** (Channel Tools > Audit Log): the latest 30 actions of the moderators (needs the View Audit Log permission).
+- **My Permissions** (Channel Tools): what you can and cannot do in the channel, bit by bit.
+- **Moderation:** in a member's profile (inside a server) press L to time them out (10 minutes, 1 hour, 1 day, 1 week, or
+  remove it), kick or ban. Only the actions you are allowed to do are shown, and each needs a second press.
+- **Join a Server** (side menu > Quick Access) with an invite link or code, and **Leave This Server** (Channel Tools).
+  Discord can refuse joins that ask for a captcha; the app then shows its message.
+- **Safer updates:** every download is checked against the SHA-256 that GitHub publishes for it, and a damaged file is
+  never installed. **Install Previous Version** (Settings > Updates) goes back to the version before this one.
+- **Diagnostics** (Settings > Updates): memory, Wi-Fi signal, battery, free space on the SD card and the latency to
+  Discord, and a report (`diagnostics.txt` with the end of the logs) to send when something fails.
+
 ## 0.6.0
 Themes, voice messages, PIN lock and a Spanish translation.
 

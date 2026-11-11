@@ -7,6 +7,7 @@
 #include "log.h"
 #include "network/network_manager.h"
 #include "ui/image_manager.h"
+#include "ui/list_screen.h"
 #include "utils/message_utils.h"
 #include "utils/redraw.h"
 #include "utils/utf8_utils.h"
@@ -237,6 +238,8 @@ void ProfileScreen::update() {
 				const auto r = Discord::Social::block(userId);
 				sm.showToast(r.ok ? TR("profile.blocked") : r.message);
 			}
+		} else if ((kDown & KEY_L) && !guildId.empty()) {
+			ListScreen::openModeration(userId, guildId, displayName());
 		} else if (kDown & KEY_R) {
 			SwkbdState swkbd;
 			swkbdInit(&swkbd, SWKBD_TYPE_NORMAL, 2, 256);

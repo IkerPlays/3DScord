@@ -2,6 +2,7 @@
 #include "core/config.h"
 #include "log.h"
 #include "network/download.h"
+#include "utils/sha256.h"
 #include "network/http_client.h"
 #include <3ds.h>
 #include <algorithm>
@@ -164,12 +165,12 @@ void Updater::join() {
 	}
 }
 
-void Updater::startCheck(bool includeDevBuilds) {
+void Updater::startCheck(bool includeDevBuilds, bool downgrade) {
 	join();
 	cancelRequested = false;
 	state = State::CHECKING;
 	setStatus("");
-	worker.start([this, includeDevBuilds] { runCheck(includeDevBuilds); }, 1, 64 * 1024);
+	worker.start([this, includeDevBuilds, downgrade] { runCheck(includeDevBuilds, downgrade); }, 1, 64 * 1024);
 }
 
 void Updater::startInstall() {
@@ -181,7 +182,7 @@ void Updater::startInstall() {
 	worker.start([this] { runInstall(); }, 1, 64 * 1024);
 }
 
-void Updater::runCheck(bool includeDevBuilds) {
+void Updater::runCheck(bool includeDevBuilds, bool downgrade) {
 	Network::HttpClient http;
 	http.setTimeout(8);
 	writeLog("Checking " + versionString(currentVersion()) + (isCiaInstall() ? " (CIA)" : " (3DSX)") +
@@ -225,7 +226,12 @@ void Updater::runCheck(bool includeDevBuilds) {
 		if (v.dev > 0 && !includeDevBuilds) {
 			continue;
 		}
-		if (!isNewer(v, current) || (found && !isNewer(v, best.version))) {
+		if (downgrade) {
+			// The newest version that is older than this one.
+			if (!isNewer(current, v) || (found && !isNewer(v, best.version))) {
+				continue;
+			}
+		} else if (!isNewer(v, current) || (found && !isNewer(v, best.version))) {
 			continue;
 		}
 		if (!r.HasMember("assets") || !r["assets"].IsArray()) {
@@ -239,6 +245,7 @@ void Updater::runCheck(bool includeDevBuilds) {
 				best.assetUrl = a["browser_download_url"].GetString();
 				best.assetSize = (a.HasMember("size") && a["size"].IsInt64()) ? a["size"].GetInt64() : 0;
 				best.notes = (r.HasMember("body") && r["body"].IsString()) ? r["body"].GetString() : "";
+				best.digest = (a.HasMember("digest") && a["digest"].IsString()) ? a["digest"].GetString() : "";
 				found = true;
 				break;
 			}
@@ -271,6 +278,33 @@ bool Updater::download(const Release &rel, const std::string &dest) {
 		downloaded = 0;
 		writeLog("Downloading " + rel.tag + " (attempt " + std::to_string(attempt) + ")");
 		if (Network::downloadToFile(rel.assetUrl, dest, control, error, rel.assetSize)) {
+			// GitHub reports a SHA-256 for every asset: a file that does not match it is never installed.
+			if (rel.digest.rfind("sha256:", 0) == 0) {
+				setStatus("Checking " + rel.tag);
+				Sha256 hash;
+				if (FILE *f = fopen(dest.c_str(), "rb")) {
+					std::vector<unsigned char> chunk(64 * 1024);
+					size_t n;
+					while ((n = fread(chunk.data(), 1, chunk.size(), f)) > 0) {
+						hash.update(chunk.data(), n);
+					}
+					fclose(f);
+				}
+				const std::string got = hash.finishHex();
+				if (got != rel.digest.substr(7)) {
+					writeLog("Integrity check FAILED: expected " + rel.digest.substr(7) + " got " + got);
+					remove(dest.c_str());
+					error = "The downloaded file is damaged (checksum does not match)";
+					if (attempt < 3 && !cancelRequested) {
+						svcSleepThread(2000000000LL);
+						continue;
+					}
+					break;
+				}
+				writeLog("Integrity check passed");
+			} else {
+				writeLog("No checksum published for this file");
+			}
 			return true;
 		}
 		writeLog("Download error: " + error);

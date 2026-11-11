@@ -37,6 +37,7 @@ class Updater {
 		std::string assetUrl;
 		long long assetSize = 0;
 		std::string notes;
+		std::string digest; // "sha256:<hex>" as GitHub reports it for the asset, empty when it does not
 	};
 
 	static Updater &getInstance();
@@ -51,7 +52,8 @@ class Updater {
 	void setLaunchPath(const char *path);
 	static bool isCiaInstall();
 
-	void startCheck(bool includeDevBuilds);
+	// downgrade looks for the newest version OLDER than the one running (to go back after a bad update).
+	void startCheck(bool includeDevBuilds, bool downgrade = false);
 	void startInstall();
 	void cancel() { cancelRequested = true; }
 	void join();
@@ -65,7 +67,7 @@ class Updater {
   private:
 	Updater() = default;
 
-	void runCheck(bool includeDevBuilds);
+	void runCheck(bool includeDevBuilds, bool downgrade);
 	void runInstall();
 	bool download(const Release &rel, const std::string &dest);
 	bool installCia(const std::string &file);
