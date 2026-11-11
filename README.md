@@ -31,6 +31,7 @@ This software is provided **"as is"**, and you use it at your own risk. The use 
 - Multi-account support
 - Server, channel, and forum thread navigation
 - Customizable [themes](THEME_FORMAT.md) and internationalization (EN/JA)
+- And More!
 
 ## Custom Themes
 TriCord supports custom themes. You can create your own theme by following the **[Theme Format Specification](THEME_FORMAT.md)**.
