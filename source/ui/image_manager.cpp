@@ -1,4 +1,5 @@
 #include "ui/image_manager.h"
+#include "core/config.h"
 #include "log.h"
 #include "network/network_manager.h"
 #include "utils/apng_decoder.h"
@@ -79,7 +80,15 @@ ImageManager &ImageManager::getInstance() {
 size_t ImageManager::getCacheBudget() {
 	static const size_t budget =
 	    Utils::System::linearHeapSize() >= 32 * 1024 * 1024 ? 12 * 1024 * 1024 : 8 * 1024 * 1024;
-	return budget;
+	// Settings > Appearance > Image Cache.
+	switch (Config::getInstance().getImageCacheLevel()) {
+	case 0:
+		return budget / 2;
+	case 2:
+		return budget + budget / 4;
+	default:
+		return budget;
+	}
 }
 
 ImageManager::~ImageManager() {
@@ -313,6 +322,20 @@ C3D_Tex *ImageManager::getLocalImage(std::string_view path, bool noResize) {
 	}
 
 	return nullptr;
+}
+
+void ImageManager::releaseLocal(const std::string &path) {
+	ImageInfo info;
+	{
+		std::lock_guard<std::mutex> lock(cacheMutex);
+		auto it = textureCache.find(path);
+		if (it == textureCache.end()) {
+			return;
+		}
+		info = it->second;
+		textureCache.erase(it);
+	}
+	releaseTexture(info);
 }
 
 void ImageManager::prefetch(const std::string &url, int origW, int origH, Network::RequestPriority priority) {

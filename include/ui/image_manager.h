@@ -47,6 +47,8 @@ class ImageManager {
 	ImageInfo getImageInfo(std::string_view url);
 
 	C3D_Tex *getLocalImage(std::string_view path, bool noResize = false);
+	// Frees a picture loaded with getLocalImage that will not be shown again (previews of files on the SD card).
+	void releaseLocal(const std::string &path);
 
 	void prefetch(const std::string &url, int origW = 0, int origH = 0,
 	              Network::RequestPriority priority = Network::RequestPriority::BACKGROUND);

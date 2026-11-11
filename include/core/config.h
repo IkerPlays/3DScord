@@ -140,6 +140,10 @@ class Config {
 	bool isKeepCallsAwake() const { return keepCallsAwake; }
 	void setKeepCallsAwake(bool enabled);
 
+	// How many pictures are kept in memory: 0 few (saves memory), 1 normal, 2 many.
+	int getImageCacheLevel() const { return imageCache; }
+	void setImageCacheLevel(int level);
+
 	bool isQuietHoursEnabled() const { return quietHours; }
 	void setQuietHoursEnabled(bool enabled);
 	int getQuietStart() const { return quietStart; }
@@ -187,6 +191,7 @@ class Config {
 	bool autoUpdate;
 	bool replyPing;
 	bool quietHours;
+	int imageCache;
 	int pushToTalk;
 	int noiseGate;
 	bool keepCallsAwake;

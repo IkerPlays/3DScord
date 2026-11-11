@@ -1,6 +1,19 @@
 # Changelog
 
 ## Unreleased
+- **Buttons right in the chat:** under the channel name there is now a row with File, GIF, Sticker, Pins, Search, Voice and
+  More. Nothing else to open: tap and go. (They are no longer inside Channel Tools; More opens the rest of the tools.)
+- **Preview before sending:** after choosing a file you see it first. Pictures are drawn, text files show their first
+  lines, and videos, music and other files show their name, type and size. A sends it, B chooses another file. The same
+  preview is used for avatars and banners.
+- **Voice** button: shows who is in each voice channel of the server (or the people in your call) and joins one.
+- **Gallery** (Channel Tools > Gallery): the pictures and files sent in the channel; A views a picture or saves a file,
+  X saves to the SD card.
+- **Image Cache** (Settings > Appearance): Small, Normal or Large amount of pictures kept in memory.
+
+## Pending 0.5.0
+These changes already shipped in a devbuild and will be part of the 0.5.0 release notes.
+
 - **Voice Channels** (side menu > Quick Access): see who is in each voice channel of the server and join or leave with A.
 - **People in the Call** (Quick Access): change how loud each person sounds with A (+10%), X (-10%) and Y (100%); your own
   row changes your microphone volume. The list shows who is speaking.

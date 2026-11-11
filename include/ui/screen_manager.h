@@ -29,7 +29,8 @@ enum class ScreenType {
 	LIST,
 	IMAGE_VIEWER,
 	FILE_BROWSER,
-	PROFILE
+	PROFILE,
+	FILE_PREVIEW
 };
 
 class Screen {

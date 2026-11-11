@@ -16,7 +16,9 @@ class FileBrowserScreen : public Screen {
 	using PickCallback = std::function<void(const std::string &path)>;
 
 	// replaceCurrent skips the back history so that leaving returns to the screen before the current one.
-	static void open(const std::string &title, Filter filter, PickCallback onPick, bool replaceCurrent = false);
+	// maxBytes is the biggest file the destination accepts; the preview refuses anything bigger.
+	static void open(const std::string &title, Filter filter, PickCallback onPick, bool replaceCurrent = false,
+	                 long long maxBytes = 4LL * 1024 * 1024);
 
 	FileBrowserScreen();
 
@@ -43,10 +45,12 @@ class FileBrowserScreen : public Screen {
 	static Filter pendingFilter;
 	static PickCallback pendingCallback;
 	static std::string lastDirectory;
+	static long long pendingMax;
 
 	std::string title;
 	Filter filter;
 	PickCallback onPick;
+	long long maxBytes;
 	std::string directory;
 	std::vector<Entry> entries;
 	int selected;

@@ -10,6 +10,7 @@
 #include "ui/emoji_manager.h"
 #include "ui/forum_screen.h"
 #include "ui/file_browser_screen.h"
+#include "ui/file_preview_screen.h"
 #include "ui/image_manager.h"
 #include "ui/image_viewer_screen.h"
 #include "ui/list_screen.h"
@@ -404,6 +405,9 @@ void ScreenManager::setScreen(ScreenType type) {
 		break;
 	case ScreenType::PROFILE:
 		currentScreen = std::make_unique<ProfileScreen>();
+		break;
+	case ScreenType::FILE_PREVIEW:
+		currentScreen = std::make_unique<FilePreviewScreen>();
 		break;
 	}
 

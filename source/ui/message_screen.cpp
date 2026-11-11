@@ -2,6 +2,8 @@
 #include "core/local_store.h"
 #include "discord/threads.h"
 #include "ui/image_viewer_screen.h"
+#include "ui/list_screen.h"
+#include "ui/upload_flow.h"
 #include "ui/profile_screen.h"
 #include "utils/transfers.h"
 #include "core/config.h"
@@ -97,6 +99,18 @@ namespace UI {
 namespace {
 constexpr float VOICE_BTN_X = 320.0f - VoiceControls::WIDTH - 10.0f;
 constexpr float VOICE_BTN_Y = 240.0f - VoiceControls::BUTTON_SIZE - 10.0f;
+
+// The row of buttons under the channel name on the bottom screen, and where the content under it starts.
+constexpr float TOOLBAR_Y = 37.0f;
+constexpr float TOOLBAR_H = 22.0f;
+constexpr float BODY_TOP = 66.0f;
+
+enum ToolbarButton { TB_FILE, TB_GIF, TB_STICKER, TB_PINS, TB_SEARCH, TB_VOICE, TB_MORE, TB_COUNT };
+constexpr float TOOLBAR_BTN_W = 40.0f;
+constexpr float TOOLBAR_BTN_GAP = 5.0f;
+constexpr float TOOLBAR_X = (320.0f - (TB_COUNT * TOOLBAR_BTN_W + (TB_COUNT - 1) * TOOLBAR_BTN_GAP)) / 2.0f;
+
+float toolbarButtonX(int index) { return TOOLBAR_X + index * (TOOLBAR_BTN_W + TOOLBAR_BTN_GAP); }
 
 float bottomButtonY() {
 	return VoiceControls::visible() ? VOICE_BTN_Y - VoiceControls::BUTTON_SIZE - 8.0f : VOICE_BTN_Y;
@@ -627,6 +641,16 @@ void MessageScreen::update() {
 				return;
 			}
 
+			if (!isMenuOpen && !isLoading && !isForumView && touch.py >= TOOLBAR_Y && touch.py <= TOOLBAR_Y + TOOLBAR_H) {
+				for (int i = 0; i < TB_COUNT; i++) {
+					const float bx = toolbarButtonX(i);
+					if (touch.px >= bx && touch.px <= bx + TOOLBAR_BTN_W) {
+						handleToolbarTouch(i);
+						return;
+					}
+				}
+			}
+
 			float btnW = 30.0f;
 			float btnH = 30.0f;
 			float btnX = 320.0f - btnW - 10.0f;
@@ -662,7 +686,7 @@ void MessageScreen::update() {
 			if (!handled) {
 				std::vector<Discord::VoiceParticipant> participants = callParticipants();
 				if (isCallActive() || !participants.empty()) {
-					if (VoiceControls::handleParticipantTouch(touch, 57.0f, participants)) {
+					if (VoiceControls::handleParticipantTouch(touch, BODY_TOP + 17.0f, participants, 4)) {
 						handled = true;
 					}
 				}
@@ -3304,21 +3328,21 @@ void MessageScreen::renderBottom(C3D_RenderTarget *target) {
 
 	std::vector<Discord::VoiceParticipant> participants = callParticipants();
 	if (isCallActive() || !participants.empty()) {
-		renderCallParticipants(40.0f, participants);
+		renderCallParticipants(BODY_TOP, participants);
 	} else if (channelType == 1) {
-		renderDmProfile(40.0f);
+		renderDmProfile(BODY_TOP);
 	} else {
 		std::string displayTopic =
 		    channelTopic.empty() ? Core::I18n::getInstance().get("common.no_topic") : channelTopic;
 
-		float topicY = 40.0f;
+		float topicY = BODY_TOP;
 
 		auto topicLayout = UI::MarkdownRenderer::get(displayTopic, 300.0f, 0.4f, 13.0f / 0.4f);
 		float contentHeight = 15.0f + UI::MarkdownRenderer::heightOf(*topicLayout, -1);
-		float viewHeight = BOTTOM_SCREEN_HEIGHT - 40.0f - 43.0f;
+		float viewHeight = BOTTOM_SCREEN_HEIGHT - BODY_TOP - 43.0f;
 		float maxScroll = std::max(0.0f, contentHeight - viewHeight);
 		bottomScrollY = std::clamp(bottomScrollY, 0.0f, maxScroll);
-		UI::drawScrollbar(maxScroll, bottomScrollY, 40.0f, viewHeight);
+		UI::drawScrollbar(maxScroll, bottomScrollY, BODY_TOP, viewHeight);
 
 		topicY -= bottomScrollY;
 
@@ -3330,8 +3354,12 @@ void MessageScreen::renderBottom(C3D_RenderTarget *target) {
 		topicY += UI::MarkdownRenderer::heightOf(*topicLayout, -1);
 	}
 
-	C2D_DrawRectSolid(0, 0, 0.45f, 320, 33, ScreenManager::colorBackgroundDark());
+	C2D_DrawRectSolid(0, 0, 0.45f, 320, BODY_TOP - 4.0f, ScreenManager::colorBackgroundDark());
 	C2D_DrawRectSolid(0, BOTTOM_SCREEN_HEIGHT - 43.0f, 0.45f, 320, 43.0f, ScreenManager::colorBackgroundDark());
+
+	if (!isLoading && !isForumView) {
+		renderToolbar();
+	}
 
 	if (--canSendRecheck <= 0) {
 		canSendCached = Discord::DiscordClient::getInstance().canSendMessage(channelId);
@@ -4532,7 +4560,69 @@ void MessageScreen::renderDmProfile(float y) {
 }
 
 void MessageScreen::renderCallParticipants(float y, const std::vector<Discord::VoiceParticipant> &participants) {
-	VoiceControls::drawParticipantList(y, participants);
+	VoiceControls::drawParticipantList(y, participants, 4);
+}
+
+void MessageScreen::renderToolbar() {
+	// Same order as ToolbarButton. Short labels: the buttons are small.
+	const char *keys[TB_COUNT] = {"chat.btn.file", "chat.btn.gif",    "chat.btn.sticker", "chat.btn.pins",
+	                              "chat.btn.search", "chat.btn.voice", "chat.btn.more"};
+	const bool canSend = canSendCached;
+	for (int i = 0; i < TB_COUNT; i++) {
+		const bool needsSend = i == TB_FILE || i == TB_GIF || i == TB_STICKER;
+		const bool dimmed = needsSend && !canSend;
+		const float x = toolbarButtonX(i);
+		drawRoundedRect(x, TOOLBAR_Y, 0.5f, TOOLBAR_BTN_W, TOOLBAR_H, 5.0f, ScreenManager::colorBackgroundLight());
+		const std::string label = TR(keys[i]);
+		const float w = UI::measureText(label, 0.36f, 0.36f);
+		drawText(x + (TOOLBAR_BTN_W - w) / 2.0f, TOOLBAR_Y + 5.0f, 0.52f, 0.36f, 0.36f,
+		         dimmed ? ScreenManager::colorTextMuted() : ScreenManager::colorText(), label);
+	}
+}
+
+void MessageScreen::handleToolbarTouch(int index) {
+	auto &sm = ScreenManager::getInstance();
+	auto &client = Discord::DiscordClient::getInstance();
+	const bool canSend = client.canSendMessage(channelId);
+	switch (index) {
+	case TB_FILE:
+		startFileUpload(channelId);
+		break;
+	case TB_GIF:
+		if (canSend) {
+			ListScreen::open(ListScreen::Mode::GIFS);
+		} else {
+			sm.showToast(TR("message.no_permission"));
+		}
+		break;
+	case TB_STICKER:
+		if (canSend) {
+			ListScreen::open(ListScreen::Mode::STICKERS);
+		} else {
+			sm.showToast(TR("message.no_permission"));
+		}
+		break;
+	case TB_PINS:
+		ListScreen::open(ListScreen::Mode::PINS);
+		break;
+	case TB_SEARCH:
+		ListScreen::open(ListScreen::Mode::SEARCH);
+		break;
+	case TB_VOICE: {
+		const std::string guild = client.getGuildIdFromChannel(channelId);
+		if (isCallActive()) {
+			ListScreen::open(ListScreen::Mode::VOICE_PEOPLE);
+		} else if (!guild.empty() && guild != "DM") {
+			ListScreen::open(ListScreen::Mode::VOICE_CHANNELS);
+		} else if (isCallableChannel()) {
+			startCall();
+		}
+		break;
+	}
+	case TB_MORE:
+		ListScreen::open(ListScreen::Mode::TOOLS);
+		break;
+	}
 }
 
 bool MessageScreen::isCallableChannel() const {

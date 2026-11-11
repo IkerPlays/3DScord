@@ -6,6 +6,7 @@
 #include "log.h"
 #include "network/network_manager.h"
 #include "ui/file_browser_screen.h"
+#include "ui/image_viewer_screen.h"
 #include "ui/message_screen.h"
 #include "ui/profile_screen.h"
 #include "discord/social.h"
@@ -188,6 +189,9 @@ void ListScreen::load() {
 	case Mode::FIND:
 		startFind();
 		break;
+	case Mode::GALLERY:
+		fetch("/channels/" + channelId + "/messages?limit=100");
+		break;
 	case Mode::FRIENDS:
 	case Mode::GROUP_PICK:
 		fetch("/users/@me/relationships");
@@ -327,11 +331,7 @@ void ListScreen::loadLocal() {
 		        {"mentions", channelId, TR("list.mentions"), TR("list.hub.mentions")}};
 		break;
 	case Mode::TOOLS:
-		list = {{"pins", channelId, TR("list.pins"), TR("list.tools.pins")},
-		        {"search", channelId, TR("list.search"), TR("list.tools.search")},
-		        {"files", channelId, TR("list.files"), TR("list.tools.files")},
-		        {"gifs", channelId, TR("list.gifs"), TR("list.tools.gifs")},
-		        {"stickers", channelId, TR("list.stickers"), TR("list.tools.stickers")},
+		list = {{"gallery", channelId, TR("list.gallery"), TR("list.tools.gallery")},
 		        {"threads", channelId, TR("list.threads"), TR("list.tools.threads")},
 		        {"members", channelId, TR("list.members"), TR("list.tools.members")},
 		        {"nick", channelId, TR("list.my_nick"), TR("list.tools.nick")},
@@ -444,6 +444,39 @@ void ListScreen::fetch(const std::string &path) {
 				    std::sort(list.begin(), list.end(), [](const Entry &a, const Entry &b) {
 					    return strcasecmp(a.title.c_str(), b.title.c_str()) < 0;
 				    });
+			    }
+		    } else if (fetchMode == Mode::GALLERY) {
+			    if (doc.IsArray()) {
+				    for (const auto &m : doc.GetArray()) {
+					    if (!m.IsObject() || !m.HasMember("attachments") || !m["attachments"].IsArray()) {
+						    continue;
+					    }
+					    std::string who;
+					    if (m.HasMember("author") && m["author"].IsObject()) {
+						    who = str(m["author"], "global_name");
+						    if (who.empty()) {
+							    who = str(m["author"], "username");
+						    }
+					    }
+					    for (const auto &a : m["attachments"].GetArray()) {
+						    if (!a.IsObject() || str(a, "url").empty()) {
+							    continue;
+						    }
+						    const std::string type = str(a, "content_type");
+						    const bool image = type.rfind("image/", 0) == 0;
+						    std::string info = who;
+						    if (a.HasMember("size") && a["size"].IsInt64()) {
+							    info += "  " + std::to_string((a["size"].GetInt64() + 1023) / 1024) + " KB";
+						    }
+						    if (image && a.HasMember("width") && a["width"].IsInt() && a.HasMember("height") &&
+						        a["height"].IsInt()) {
+							    info += "  " + std::to_string(a["width"].GetInt()) + "x" + std::to_string(a["height"].GetInt());
+						    }
+						    Entry e{str(a, "url"), "", str(a, "filename"), info};
+						    e.kind = image ? 1 : 0;
+						    list.push_back(e);
+					    }
+				    }
 			    }
 		    } else if (fetchMode == Mode::THREADS) {
 			    if (doc.IsObject() && doc.HasMember("threads") && doc["threads"].IsArray()) {
@@ -673,6 +706,8 @@ std::string ListScreen::headerTitle() const {
 		return query.empty() ? TR("list.members") : TR("list.members") + ": " + query;
 	case Mode::THREADS:
 		return TR("list.threads");
+	case Mode::GALLERY:
+		return TR("list.gallery");
 	case Mode::VOICE_CHANNELS:
 		return TR("list.voice_channels");
 	case Mode::VOICE_PEOPLE:
@@ -717,6 +752,8 @@ std::string ListScreen::hintLine() const {
 		return TR("list.hint.members");
 	case Mode::THREADS:
 		return TR("list.hint.threads");
+	case Mode::GALLERY:
+		return TR("list.hint.gallery");
 	case Mode::VOICE_CHANNELS:
 		return TR("list.hint.voice_channels");
 	case Mode::VOICE_PEOPLE:
@@ -785,6 +822,13 @@ void ListScreen::primaryAction(const Entry &entry) {
 	}
 	case Mode::VOICE_PEOPLE:
 		changePersonVolume(entry.id, +10);
+		break;
+	case Mode::GALLERY:
+		if (entry.kind == 1) {
+			ImageViewerScreen::open(entry.id, entry.title);
+		} else {
+			Utils::Transfers::getInstance().saveAttachment(entry.id, entry.title, 0);
+		}
 		break;
 	case Mode::SOUNDS: {
 		int value = -1;
@@ -860,31 +904,8 @@ void ListScreen::primaryAction(const Entry &entry) {
 		break;
 	}
 	case Mode::TOOLS:
-		if (entry.id == "pins") {
-			openReplacing(Mode::PINS);
-		} else if (entry.id == "search") {
-			openReplacing(Mode::SEARCH);
-		} else if (entry.id == "files") {
-			const std::string cid = channelId;
-			FileBrowserScreen::open(
-			    TR("list.files"), FileBrowserScreen::Filter::ANY,
-			    [cid](const std::string &path) {
-				    auto &c = Discord::DiscordClient::getInstance();
-				    if (!c.canSendMessage(cid)) {
-					    ScreenManager::getInstance().showToast(TR("message.no_permission"));
-					    return;
-				    }
-				    std::string caption;
-				    if (!askText(TR("list.caption_hint"), "", caption, 500, false)) {
-					    return;
-				    }
-				    Utils::Transfers::getInstance().uploadFile(cid, path, caption);
-			    },
-			    true);
-		} else if (entry.id == "gifs") {
-			openReplacing(Mode::GIFS);
-		} else if (entry.id == "stickers") {
-			openReplacing(Mode::STICKERS);
+		if (entry.id == "gallery") {
+			openReplacing(Mode::GALLERY);
 		} else if (entry.id == "threads") {
 			openReplacing(Mode::THREADS);
 		} else if (entry.id == "members") {
@@ -1059,6 +1080,9 @@ void ListScreen::secondaryAction(const Entry &entry) {
 		break;
 	case Mode::VOICE_PEOPLE:
 		changePersonVolume(entry.id, -10);
+		break;
+	case Mode::GALLERY:
+		Utils::Transfers::getInstance().saveAttachment(entry.id, entry.title, 0);
 		break;
 	case Mode::FRIENDS: {
 		// Removing someone needs a second press on the same row.

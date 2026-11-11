@@ -88,11 +88,13 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
 - [x] Keep the call going with the lid closed (the console is kept awake)
 
 ## Phase 8 — Media
-- [ ] Short video playback; audio attachments
-- [ ] YouTube link preview
-- [ ] Attachment gallery for a channel
-- [ ] Configurable image cache size
-- [ ] WebP; animated avatars
+- [x] Buttons for files, GIFs, stickers, pins, search and voice right in the chat
+- [x] Preview of a file before it is sent (pictures, text; name, type and size for the rest)
+- [x] Attachment gallery for a channel
+- [x] Configurable image cache size
+- [x] YouTube link preview (shown as an embed, already in TriCord)
+- [ ] Not possible for now: playing videos and music attachments, WebP pictures and animated avatars (the app has no
+      decoder for them; the preview of such files shows their information instead)
 
 ## Phase 9 — Interface
 - [ ] More themes (AMOLED, Nintendo, retro) and an on-console theme editor

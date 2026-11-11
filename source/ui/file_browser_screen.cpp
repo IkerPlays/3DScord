@@ -1,5 +1,6 @@
 #include "ui/file_browser_screen.h"
 #include "core/config.h"
+#include "ui/file_preview_screen.h"
 #include "core/i18n.h"
 #include "log.h"
 #include "ui/screen_manager.h"
@@ -16,6 +17,7 @@ std::string FileBrowserScreen::pendingTitle;
 FileBrowserScreen::Filter FileBrowserScreen::pendingFilter = FileBrowserScreen::Filter::ANY;
 FileBrowserScreen::PickCallback FileBrowserScreen::pendingCallback;
 std::string FileBrowserScreen::lastDirectory = "sdmc:/";
+long long FileBrowserScreen::pendingMax = 4LL * 1024 * 1024;
 
 namespace {
 
@@ -78,9 +80,11 @@ bool hasImageExtension(const std::string &name) {
 
 } // namespace
 
-void FileBrowserScreen::open(const std::string &title, Filter filter, PickCallback onPick, bool replaceCurrent) {
+void FileBrowserScreen::open(const std::string &title, Filter filter, PickCallback onPick, bool replaceCurrent,
+                             long long maxBytes) {
 	pendingTitle = title;
 	pendingFilter = filter;
+	pendingMax = maxBytes;
 	pendingCallback = std::move(onPick);
 	if (replaceCurrent) {
 		ScreenManager::getInstance().setScreen(ScreenType::FILE_BROWSER);
@@ -90,7 +94,7 @@ void FileBrowserScreen::open(const std::string &title, Filter filter, PickCallba
 }
 
 FileBrowserScreen::FileBrowserScreen()
-    : title(pendingTitle), filter(pendingFilter), onPick(std::move(pendingCallback)), directory(lastDirectory),
+    : title(pendingTitle), filter(pendingFilter), onPick(std::move(pendingCallback)), maxBytes(pendingMax), directory(lastDirectory),
       selected(0), scroll(0.0f), repeatTimer(0) {
 	pendingCallback = nullptr;
 }
@@ -181,12 +185,21 @@ void FileBrowserScreen::activate(const Entry &entry) {
 	}
 	lastDirectory = directory;
 	const std::string path = joined(entry.name);
-	PickCallback callback = std::move(onPick);
-	onPick = nullptr;
-	if (callback) {
-		callback(path);
-	}
-	ScreenManager::getInstance().returnToPreviousScreen();
+
+	// The file is shown before it goes anywhere; choosing another one comes back to this same folder.
+	PickCallback callback = onPick;
+	const std::string browserTitle = title;
+	const Filter browserFilter = filter;
+	const long long limit = maxBytes;
+	FilePreviewScreen::open(
+	    path, limit, [callback, path]() {
+		    if (callback) {
+			    callback(path);
+		    }
+	    },
+	    [browserTitle, browserFilter, callback, limit]() {
+		    FileBrowserScreen::open(browserTitle, browserFilter, callback, true, limit);
+	    });
 }
 
 void FileBrowserScreen::clampSelection() {

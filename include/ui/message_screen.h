@@ -273,6 +273,8 @@ class MessageScreen : public Screen {
 	                           int maxLength = -1, const std::string &confirmLabel = "");
 
 	void renderReactionIcon();
+	void renderToolbar();
+	void handleToolbarTouch(int index);
 	void renderCallParticipants(float y, const std::vector<Discord::VoiceParticipant> &participants);
 	void renderDmProfile(float y);
 	std::vector<Discord::VoiceParticipant> callParticipants() const;

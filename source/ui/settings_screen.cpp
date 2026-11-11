@@ -225,6 +225,19 @@ void SettingsScreen::onEnter() {
 	hiddenChannels.onUpdate = [](int val) { Config::getInstance().setShowHiddenChannelsEnabled(val == 1); };
 	allItems.push_back(hiddenChannels);
 
+	SettingItem imageCache;
+	imageCache.label = TR("settings.image_cache");
+	imageCache.description = TR("settings.desc.image_cache");
+	imageCache.type = SettingItemType::STEPPER;
+	imageCache.value = Config::getInstance().getImageCacheLevel();
+	imageCache.min = 0;
+	imageCache.max = 2;
+	imageCache.valueFormatter = [](int val) -> std::string {
+		return TR(val == 0 ? "settings.cache.small" : val == 2 ? "settings.cache.large" : "settings.cache.normal");
+	};
+	imageCache.onUpdate = [](int val) { Config::getInstance().setImageCacheLevel(val); };
+	allItems.push_back(imageCache);
+
 	// CHAT
 	allItems.push_back({TR("settings.section.chat"), "", SettingItemType::SECTION_HEADER});
 
@@ -445,7 +458,7 @@ void SettingsScreen::addAccountItems() {
 				ScreenManager::getInstance().showToast(TR("account.uploading"));
 				report(banner ? Discord::AccountSettings::setBannerFromFile(path)
 				              : Discord::AccountSettings::setAvatarFromFile(path));
-			});
+			}, false, 1536LL * 1024);
 		});
 		addAction(removeLabel, "", [banner]() {
 			report(banner ? Discord::AccountSettings::removeBanner() : Discord::AccountSettings::removeAvatar());
