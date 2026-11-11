@@ -138,7 +138,8 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
 - [x] Send a screenshot of the top and bottom screens to a chat (Channel Tools > Send Screenshot)
 - [ ] "Snapshot sharing": send a screenshot every few seconds to a channel, edited into the same message
 - [x] Compatibility Mode: a New 3DS can behave like an Old 3DS (Settings)
-- [ ] More profile: per-server nickname and bio, connections list, status with an expiry
+- [x] More profile: per-server nickname and bio, status with an expiry
+- [ ] Connections list in profiles
 
 ## Phase 14 — Extras
 - [ ] Spotify: see what you are listening to

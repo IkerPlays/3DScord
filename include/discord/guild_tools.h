@@ -31,6 +31,9 @@ Result setNotifications(const std::string &guildId, const NotifyChange &change);
 // Server profile (needs Manage Server). Only the field named by `field` ("name" or "description") is sent.
 Result editGuildText(const std::string &guildId, const std::string &field, const std::string &value);
 
+// Your "About Me" inside one server.
+Result setServerBio(const std::string &guildId, const std::string &bio);
+
 // Tell Discord whether you are interested in a scheduled event.
 Result setEventInterest(const std::string &guildId, const std::string &eventId, bool interested);
 

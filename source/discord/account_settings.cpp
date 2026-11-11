@@ -5,6 +5,8 @@
 #include "network/http_client.h"
 #include "utils/base64_utils.h"
 #include "utils/file_utils.h"
+#include "utils/message_utils.h"
+#include <ctime>
 #include <algorithm>
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
@@ -266,7 +268,7 @@ Result setThemeColors(int primary, int accent) {
 	            }));
 }
 
-Result setCustomStatus(const std::string &text) {
+Result setCustomStatus(const std::string &text, int expiresInMinutes) {
 	return send("PATCH", "/users/@me/settings", buildJson([&](Writer &w) {
 		            w.Key("custom_status");
 		            if (text.empty()) {
@@ -276,7 +278,12 @@ Result setCustomStatus(const std::string &text) {
 			            w.Key("text");
 			            w.String(text.c_str());
 			            w.Key("expires_at");
-			            w.Null();
+			            if (expiresInMinutes > 0) {
+				            const time_t until = UI::MessageUtils::getUtcNow() + (time_t)expiresInMinutes * 60;
+				            w.String((UI::MessageUtils::getISOTimestamp(until) + "Z").c_str());
+			            } else {
+				            w.Null();
+			            }
 			            w.EndObject();
 		            }
 	            }));

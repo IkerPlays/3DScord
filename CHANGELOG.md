@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- **Status that expires** (Settings > Discord Status): a custom status that clears itself after the minutes you choose.
+- **About Me per server** (Channel Tools > Server Settings): a different bio only for that server.
 - **Send Screenshot** (Channel Tools): sends a picture of both screens to the chat (also saved in `screenshots/` on the
   SD card). Live screen sharing is not possible on the 3DS.
 - **Compatibility Mode** (Settings > Controls and Battery): makes a New 3DS behave like an Old 3DS (smaller queues and

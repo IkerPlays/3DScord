@@ -43,7 +43,7 @@ Result setPronouns(const std::string &pronouns);
 Result setAccentColor(int rgb); // -1 clears it
 // Profile theme: the two colours of the gradient behind your profile. -1 for both clears the theme.
 Result setThemeColors(int primary, int accent);
-Result setCustomStatus(const std::string &text); // empty clears it
+Result setCustomStatus(const std::string &text, int expiresInMinutes = 0); // empty clears it; 0 never expires
 Result setAvatarFromFile(const std::string &path);
 Result setBannerFromFile(const std::string &path);
 Result removeAvatar();

@@ -725,6 +725,22 @@ void SettingsScreen::addAccountItems() {
 			report(r);
 		}
 	});
+	addAction(TR("account.timed_status"), TR("account.desc.timed_status"), []() {
+		std::string text;
+		if (!promptText(TR("account.custom_status"), "", text, 128) || text.empty()) {
+			return;
+		}
+		std::string minutes;
+		if (!promptText(TR("account.status_minutes"), "60", minutes, 5)) {
+			return;
+		}
+		const int m = std::clamp(atoi(minutes.c_str()), 1, 10080);
+		Result r = Discord::AccountSettings::setCustomStatus(text, m);
+		if (r.ok) {
+			cachedSnapshot.customStatus = text;
+		}
+		report(r);
+	});
 	addToggle(TR("account.show_current_game"), TR("account.desc.show_current_game"), "show_current_game",
 	          &Snapshot::showCurrentGame);
 

@@ -45,6 +45,17 @@ Result editGuildText(const std::string &guildId, const std::string &field, const
 	return Api::toResult(http.patch(base() + "/guilds/" + guildId, s.GetString()), "Guild");
 }
 
+Result setServerBio(const std::string &guildId, const std::string &bio) {
+	auto http = Api::authorized();
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> w(s);
+	w.StartObject();
+	w.Key("bio");
+	w.String(bio.c_str());
+	w.EndObject();
+	return Api::toResult(http.patch(base() + "/guilds/" + guildId + "/profile", s.GetString()), "Guild");
+}
+
 Result joinInvite(const std::string &linkOrCode) {
 	std::string code = linkOrCode;
 	const size_t slash = code.rfind('/');

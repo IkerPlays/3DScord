@@ -364,6 +364,7 @@ void ListScreen::loadLocal() {
 	}
 	case Mode::SERVER: {
 		list = {{"s_nick", "", TR("server.nick"), TR("server.nick_desc")},
+		        {"s_bio", "", TR("server.bio"), TR("server.bio_desc")},
 		        {"s_mute", "", TR("server.mute"), TR("server.mute_desc")},
 		        {"s_unmute", "", TR("server.unmute"), TR("server.unmute_desc")},
 		        {"s_all", "", TR("server.notify_all"), TR("server.notify_desc")},
@@ -1170,6 +1171,12 @@ void ListScreen::primaryAction(const Entry &entry) {
 				break;
 			}
 			r = Discord::Social::setMyNickname(guildId, nick);
+		} else if (id == "s_bio") {
+			std::string bio;
+			if (!askText(TR("server.bio"), "", bio, 190, false)) {
+				break;
+			}
+			r = Discord::GuildTools::setServerBio(guildId, bio);
 		} else if (id == "s_sound") {
 			const Discord::Guild *g = client.getGuildPtr(guildId);
 			openSounds(guildId, g ? g->name : "");
