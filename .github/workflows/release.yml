@@ -1,14 +1,21 @@
 name: Stable release
 
-# Actions > "Stable release" > Run workflow (on main), type the version (for example 1.0.0).
+# Actions > "Stable release" > Run workflow (on main) and type the version (for example 0.1.0).
 # Builds .cia and .3dsx and publishes a normal GitHub release (marked Latest).
+# Notes come from the matching "## <version>" section of CHANGELOG.md.
+# "clean" deletes ALL existing releases and tags first (only after the build succeeded).
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version as MAJOR.MINOR.PATCH (for example 1.0.0)"
+        description: "Version as MAJOR.MINOR.PATCH (for example 0.1.0)"
         required: true
         type: string
+      clean:
+        description: "Delete ALL existing releases and tags before publishing"
+        required: false
+        default: false
+        type: boolean
       draft:
         description: "Publish as a draft first"
         required: false
@@ -22,25 +29,35 @@ concurrency:
   group: stable-release
   cancel-in-progress: false
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
-  release:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - id: v
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          version="${INPUT_VERSION#v}"
+          printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "::error::Version must look like 0.1.0"; exit 1; }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: check
     runs-on: ubuntu-latest
     container: devkitpro/devkitarm:latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Validate version
-        env:
-          INPUT_VERSION: ${{ inputs.version }}
-        run: |
-          version="${INPUT_VERSION#v}"
-          printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "::error::Version must look like 1.0.0"; exit 1; }
-          echo "VERSION=$version" >> "$GITHUB_ENV"
-
       - name: System tools
         run: |
           apt-get update
-          apt-get install -y git make cmake g++ gcc curl
+          apt-get install -y git make cmake g++ gcc
 
       - name: Build makerom and bannertool
         run: |
@@ -54,27 +71,63 @@ jobs:
           cp /tmp/bannertool/b/bannertool /usr/local/bin/
 
       - name: Set version
+        env:
+          VERSION: ${{ needs.check.outputs.version }}
         run: |
           IFS=. read -r a b c <<< "$VERSION"
           sed -i -e "s/^APP_VERSION_MAJOR.*/APP_VERSION_MAJOR = $a/" \
                  -e "s/^APP_VERSION_MINOR.*/APP_VERSION_MINOR = $b/" \
                  -e "s/^APP_VERSION_MICRO.*/APP_VERSION_MICRO = $c/" resources/AppInfo
+          cat resources/AppInfo
 
       - name: Build .3dsx and .cia
         run: make -j"$(nproc)" MAKEROM=makerom BANNERTOOL=bannertool
 
+      - name: Collect files
+        run: |
+          mkdir dist
+          cp TriCord.cia dist/3DScord.cia
+          cp TriCord.3dsx dist/3DScord.3dsx
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: 3DScord-release
+          path: dist/
+
+  publish:
+    needs: [check, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: 3DScord-release
+          path: dist
+
+      - name: Delete existing releases and tags
+        if: inputs.clean
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for tag in $(gh release list --repo "$GITHUB_REPOSITORY" --limit 1000 --json tagName --jq '.[].tagName'); do
+            echo "deleting $tag"
+            gh release delete "$tag" --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes
+          done
+
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.check.outputs.version }}
           DRAFT: ${{ inputs.draft }}
         run: |
           {
             awk -v v="$VERSION" '$0=="## "v{f=1;next} /^## /{f=0} f' CHANGELOG.md
             echo
-            echo "Built from commit \`${GITHUB_SHA::7}\`. Install \`TriCord.cia\` with FBI, or run \`TriCord.3dsx\` from the Homebrew Launcher."
+            echo "Built from commit \`${GITHUB_SHA::7}\`. Install \`3DScord.cia\` with FBI, or run \`3DScord.3dsx\` from the Homebrew Launcher."
           } > notes.md
           extra=""; [ "$DRAFT" = "true" ] && extra="--draft"
-          gh release create "v${VERSION}" TriCord.cia TriCord.3dsx \
+          gh release create "v${VERSION}" dist/3DScord.cia dist/3DScord.3dsx \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --latest $extra \
             --title "3DScord ${VERSION}" \
             --notes-file notes.md

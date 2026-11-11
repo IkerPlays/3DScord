@@ -1,7 +1,8 @@
 name: Build 3DSX + CIA
 
-# Every push to main and every pull request is built (artifacts only).
-# Run by hand (Actions > Build 3DSX + CIA > Run workflow, on main) to also publish a devbuild pre-release.
+# Pushes and pull requests are only BUILT (artifacts, never a release).
+# A devbuild pre-release is published ONLY when this workflow is run by hand
+# (Actions > Build 3DSX + CIA > Run workflow, on main), after a complete update.
 on:
   push:
     branches: [main]
@@ -14,6 +15,10 @@ permissions:
 concurrency:
   group: build-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
   build:
@@ -49,7 +54,8 @@ jobs:
           get() { sed -n "s/^$1 *= *\([0-9]*\).*/\1/p" resources/AppInfo; }
           echo "version=$(get APP_VERSION_MAJOR).$(get APP_VERSION_MINOR).$(get APP_VERSION_MICRO)-dev.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
           mkdir dist
-          cp TriCord.cia TriCord.3dsx dist/
+          cp TriCord.cia dist/3DScord.cia
+          cp TriCord.3dsx dist/3DScord.3dsx
 
       - uses: actions/upload-artifact@v4
         with:
@@ -71,7 +77,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.build.outputs.version }}
         run: |
-          gh release create "v${VERSION}" dist/TriCord.cia dist/TriCord.3dsx \
+          gh release create "v${VERSION}" dist/3DScord.cia dist/3DScord.3dsx \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
             --title "3DScord ${VERSION} (devbuild)" \
-            --notes "Development build ${VERSION} from commit \`${GITHUB_SHA::7}\`. Install \`TriCord.cia\` with FBI, or run \`TriCord.3dsx\` from the Homebrew Launcher. May be unstable."
+            --notes "Development build ${VERSION} from commit \`${GITHUB_SHA::7}\`. Install \`3DScord.cia\` with FBI, or run \`3DScord.3dsx\` from the Homebrew Launcher. May be unstable."
