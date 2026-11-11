@@ -1,0 +1,10 @@
+*.elf
+*.3dsx
+*.cia
+*.smdh
+*.lst
+build/
+
+.cache
+.vscode/
+compile_commands.json

@@ -1,0 +1,491 @@
+#ifndef DISCORD_CLIENT_H
+#define DISCORD_CLIENT_H
+
+#include "discord/types.h"
+#include "network/json_input_stream.h"
+#include "network/websocket_client.h"
+#include "utils/json_pull.h"
+#include "utils/worker_thread.h"
+#include <atomic>
+#include <condition_variable>
+#include <deque>
+#include <functional>
+#include <map>
+#include <set>
+#include <mutex>
+#include <optional>
+#include <rapidjson/document.h>
+#include <string>
+#include <string_view>
+#include <thread>
+#include <vector>
+
+namespace Network {
+struct HttpResponse;
+}
+
+namespace Discord {
+
+enum class ConnectionState {
+	DISCONNECTED,
+	CONNECTING,
+	CONNECTED_WS,
+	IDENTIFYING,
+	AUTHENTICATING,
+	READY,
+	RECONNECTING,
+	DISCONNECTED_ERROR
+};
+
+using MessagesCallback = std::function<void(const std::vector<Message> &)>;
+using SingleMessageCallback = std::function<void(const std::optional<Message> &)>;
+using SuccessCallback = std::function<void(bool success)>;
+using ThreadsCallback = std::function<void(const std::vector<Channel> &)>;
+using TokenCallback = std::function<void(const std::string &token)>;
+using SendMessageCallback = std::function<void(const Message &msg, bool success, int code)>;
+using InteractionCallback = std::function<void(const std::string &nonce, InteractionResult result)>;
+using ModalCallback = std::function<void(const Modal &modal)>;
+using ReactionCallback = std::function<void(const std::string &channelId, const std::string &messageId,
+                                            const std::string &userId, const Emoji &emoji)>;
+using PollVoteCallback = std::function<void(const std::string &channelId, const std::string &messageId,
+                                            const std::string &userId, int answerId, bool added)>;
+
+struct LoginResult {
+	bool success = false;
+	std::string token;
+	bool mfaRequired = false;
+	std::string ticket;
+	std::string loginInstanceId;
+	bool totp = false;
+	bool sms = false;
+	int errorCode = 0;
+	std::string error;
+};
+
+using LoginCallback = std::function<void(const LoginResult &result)>;
+using MfaSmsCallback = std::function<void(bool success, const std::string &phoneOrError)>;
+using ErrorCallback = std::function<void(const std::string &error)>;
+using JsonPull = Utils::Json::Pull<Network::JsonInputStream>;
+
+struct TypingUser {
+	std::string userId;
+	std::string channelId;
+	time_t timestamp;
+	std::string displayName;
+};
+
+class DiscordClient {
+  public:
+	static DiscordClient &getInstance();
+
+	void init();
+	void update();
+	void shutdown();
+
+	void login(const std::string &token);
+	void logout();
+
+	bool connect(const std::string &token);
+	void disconnect();
+
+	bool isConnected() const {
+		return state != ConnectionState::DISCONNECTED && state != ConnectionState::DISCONNECTED_ERROR;
+	}
+	bool isReady() const { return state == ConnectionState::READY; }
+	ConnectionState getState() const { return state; }
+
+	bool wasAuthFailed() const { return authFailed.load(); }
+	void clearAuthFailed() { authFailed.store(false); }
+
+	std::string consumeReadStateDirty() {
+		if (!readStateDirty.exchange(false)) {
+			return "";
+		}
+		std::lock_guard<std::recursive_mutex> lock(clientMutex);
+		return readStateDirtyChannelId;
+	}
+
+	bool consumeGuildDataDirty() { return guildDataDirty.exchange(false); }
+	bool consumePrivateChannelsDirty() { return privateChannelsDirty.exchange(false); }
+
+	std::recursive_mutex &getMutex() { return clientMutex; }
+	std::string getStatusMessage() {
+		std::lock_guard<std::mutex> lock(statusMutex);
+		return statusMessage;
+	}
+
+	void setMessageCallback(std::function<void(const Message &)> cb) {
+		std::lock_guard<std::recursive_mutex> lock(clientMutex);
+		messageCallback = cb;
+	}
+	void setMessageUpdateCallback(std::function<void(const Message &)> cb) {
+		std::lock_guard<std::recursive_mutex> lock(clientMutex);
+		messageUpdateCallback = cb;
+	}
+	void setMessageDeleteCallback(std::function<void(const std::string &)> cb) {
+		std::lock_guard<std::recursive_mutex> lock(clientMutex);
+		messageDeleteCallback = cb;
+	}
+	void setMessageReactionAddCallback(ReactionCallback cb) {
+		std::lock_guard<std::recursive_mutex> lock(clientMutex);
+		messageReactionAddCallback = cb;
+	}
+	void setMessageReactionRemoveCallback(ReactionCallback cb) {
+		std::lock_guard<std::recursive_mutex> lock(clientMutex);
+		messageReactionRemoveCallback = cb;
+	}
+	void setPollVoteCallback(PollVoteCallback cb) {
+		std::lock_guard<std::recursive_mutex> lock(clientMutex);
+		pollVoteCallback = cb;
+	}
+	void setInteractionCallback(InteractionCallback cb) {
+		std::lock_guard<std::recursive_mutex> lock(clientMutex);
+		interactionCallback = cb;
+	}
+	void setModalCallback(ModalCallback cb) {
+		std::lock_guard<std::recursive_mutex> lock(clientMutex);
+		modalCallback = cb;
+	}
+	void setConnectionCallback(std::function<void()> cb) {
+		std::lock_guard<std::recursive_mutex> lock(clientMutex);
+		connectionCallback = cb;
+	}
+
+	User getCurrentUser() {
+		std::lock_guard<std::recursive_mutex> lock(clientMutex);
+		return currentUser;
+	}
+
+	std::string getSessionId() {
+		std::lock_guard<std::recursive_mutex> lock(clientMutex);
+		return sessionId;
+	}
+
+	void updateVoiceState(const std::string &guildId, const std::string &channelId, bool selfMute, bool selfDeaf);
+
+	std::vector<VoiceParticipant> getVoiceParticipants(const std::string &channelId);
+	size_t getVoiceParticipantCount(const std::string &channelId);
+	void resolveVoiceNames(const std::string &guildId);
+
+	void setVoiceStateCallback(std::function<void(const std::string &sessionId, bool serverMute, bool serverDeaf)> cb) {
+		std::lock_guard<std::recursive_mutex> lock(clientMutex);
+		voiceStateCallback = cb;
+	}
+	void setVoiceServerCallback(
+	    std::function<void(const std::string &token, const std::string &endpoint, const std::string &serverId)> cb) {
+		std::lock_guard<std::recursive_mutex> lock(clientMutex);
+		voiceServerCallback = cb;
+	}
+
+	const std::vector<Guild> &getGuilds() { return guilds; }
+	const std::vector<GuildFolder> &getGuildFolders() { return folders; }
+	const std::vector<Channel> &getPrivateChannels() { return privateChannels; }
+	const std::map<std::string, ReadState> &getReadStates() const { return readStates; }
+	const std::map<std::string, GuildNotificationSettings> &getNotificationSettings() const {
+		return notificationSettings;
+	}
+
+	void setSelectedGuildId(const std::string &id) { selectedGuildId = id; }
+	std::string getSelectedGuildId() const { return selectedGuildId; }
+
+	void setSelectedChannelId(const std::string &id) { selectedChannelId = id; }
+	std::string getSelectedChannelId() const { return selectedChannelId; }
+
+	void fetchMessagesAsync(const std::string &channelId, int limit, MessagesCallback cb,
+	                        const std::string &around = "");
+	void fetchMessagesBeforeAsync(const std::string &channelId, const std::string &beforeId, int limit,
+	                              MessagesCallback cb);
+	void fetchMessage(const std::string &channelId, const std::string &messageId, SingleMessageCallback cb);
+	void sendMessage(const std::string &channelId, const std::string &content, SendMessageCallback cb = nullptr,
+	                 const std::string &nonce = "");
+	void sendMessageAsync(const std::string &channelId, const std::string &content, SuccessCallback cb);
+	void sendReply(const std::string &channelId, const std::string &content, const std::string &replyId,
+	               SendMessageCallback cb = nullptr, const std::string &nonce = "");
+	bool editMessage(const std::string &channelId, const std::string &messageId, const std::string &content);
+	void editMessageAsync(const std::string &channelId, const std::string &messageId, const std::string &content,
+	                      SuccessCallback cb);
+	bool deleteMessage(const std::string &channelId, const std::string &messageId);
+	void deleteMessageAsync(const std::string &channelId, const std::string &messageId, SuccessCallback cb);
+	void fetchForumThreads(const std::string &channelId, ThreadsCallback cb);
+	void hasArchivedThreads(const std::string &channelId, std::function<void(bool)> cb);
+	void sendComponentInteraction(const Message &msg, const MessageControl &control,
+	                              const std::vector<std::string> &values, const std::string &nonce, SuccessCallback cb);
+	void sendModalSubmit(const Modal &modal, const std::string &nonce, SuccessCallback cb);
+	void fetchGuildDetails(const std::string &guildId, std::function<void(bool)> cb = nullptr);
+	void fetchUserProfile(const std::string &userId);
+	UserProfile getUserProfile(const std::string &userId);
+	void exchangeTicketForToken(const std::string &ticket, TokenCallback cb);
+	// Replies arrive as Guild Members Chunk, not to the caller.
+	void requestMembers(const std::string &guildId, const std::vector<std::string> &userIds);
+
+	void triggerTypingIndicator(const std::string &channelId);
+	std::vector<TypingUser> getTypingUsers(const std::string &channelId);
+	std::vector<Message> getEphemeralMessages(const std::string &channelId);
+	void forgetEphemeralMessage(const std::string &channelId, const std::string &messageId);
+
+	void ringCall(const std::string &channelId);
+	void stopRinging(const std::string &channelId);
+	std::string getIncomingCallChannel();
+	std::optional<int> getCallRingingCount(const std::string &channelId);
+
+	// Shown through the reaction callbacks right away, and rolled back the same way if Discord rejects it.
+	void addReaction(const std::string &channelId, const std::string &messageId, const Emoji &emoji);
+	void removeReaction(const std::string &channelId, const std::string &messageId, const Emoji &emoji);
+
+	void performLogin(const std::string &login, const std::string &password, bool undelete, LoginCallback cb);
+	void submitMFA(const std::string &method, const std::string &ticket, const std::string &loginInstanceId,
+	               const std::string &code, LoginCallback cb);
+	void sendMfaSms(const std::string &ticket, MfaSmsCallback cb);
+	// Verifies the SMS code sent for a phone login from a new location, then authorizes the IP for a retry.
+	void authorizeLoginByPhone(const std::string &phone, const std::string &code, ErrorCallback cb);
+	void revokeToken(const std::string &token);
+
+	void sendLazyRequest(const std::string &guildId, const std::string &channelId);
+
+	void votePoll(const std::string &channelId, const std::string &messageId, const std::vector<int> &answerIds);
+
+	bool canSendMessage(const std::string &channelId);
+	bool canManageMessages(const std::string &channelId);
+	bool isUserMentioned(const Message &msg);
+
+	void markChannelRead(const std::string &channelId, const std::string &messageId);
+	void markChannelReadLatest(const std::string &channelId, const std::string &seenMessageId = "");
+	void markGuildRead(const std::string &guildId);
+	void updatePresence(UserStatus status);
+	void setGuildMuted(const std::string &guildId, bool muted, int timeWindowMinutes);
+	void setChannelMuted(const std::string &channelId, bool muted, int timeWindowMinutes);
+	// messageNotifications: 0=all, 1=mentions, 2=none (3=inherit, channel only)
+	void setGuildNotificationLevel(const std::string &guildId, int messageNotifications);
+	void setChannelNotificationLevel(const std::string &channelId, int messageNotifications);
+
+	Channel getChannel(const std::string &channelId);
+	const Channel *getChannelPtr(const std::string &channelId);
+	Guild getGuild(const std::string &guildId);
+	const Guild *getGuildPtr(const std::string &guildId);
+	Member getMember(const std::string &guildId, const std::string &userId);
+	int getRoleColor(const std::string &guildId, const Member &member);
+	int getRoleColor(const std::string &guildId, const std::string &userId);
+	std::string getMemberDisplayName(const std::string &guildId, const std::string &userId, const User &user);
+	std::string getGuildIdFromChannel(const std::string &channelId);
+
+	enum class GuildChannelsState { LOADED, UNLOADED, LOADING, FAILED };
+	GuildChannelsState getGuildChannelsState(const std::string &guildId);
+	// For guilds whose channels READY left out; false when no load started.
+	bool loadGuildChannels(const std::string &guildId);
+
+  private:
+	DiscordClient();
+	~DiscordClient();
+
+	void workerLoop();
+	void sendHeartbeat();
+	void sendIdentify();
+	void requestGuildCount();
+	bool parseGuildBody(const Network::HttpResponse &resp, Guild &guild);
+	void sendResume();
+	void queueSend(const std::string &message);
+	void runNetworkThread(const std::string &token);
+
+	struct GatewayMessage {
+		std::string data;
+		bool compressed = false;
+		uint32_t generation = 0;
+	};
+
+	struct ReadyData;
+	struct GuildLoad;
+
+	void enqueueGatewayMessage(std::string &data, bool compressed);
+	void handleGatewayFrame(std::string &frame);
+	void processGatewayMessage(GatewayMessage &message);
+	void processMessage(std::string &message);
+	void processStreamedMessage(Network::JsonInputStream &stream, const std::string &event);
+	void handleHello(const rapidjson::Document &doc);
+	void handleDispatch(const rapidjson::Document &doc);
+	void handleInvalidSession(const rapidjson::Document &doc);
+	void handleReconnect();
+
+	bool parseReady(JsonPull &p, ReadyData &ready, rapidjson::Document &voiceStates);
+	bool parseReadyGuilds(JsonPull &p, ReadyData &ready, rapidjson::Document &voiceStates);
+	bool parseGuildFields(JsonPull &p, Guild &guild, const std::string &userId, rapidjson::Document *voiceStates,
+	                      bool keepDetails, bool *unavailable = nullptr);
+	bool parseChannelArray(JsonPull &p, rapidjson::Document &item, std::vector<Channel> &out, bool &fits);
+	void finishParsedGuild(Guild &guild, const std::string &userId);
+	void computeViewable(Guild &guild, const std::string &userId);
+	void applyReady(ReadyData &ready, rapidjson::Document &voiceStates);
+	void applyVoiceStatesLocked(rapidjson::Document &voiceStates);
+	void invalidateSession();
+	void applyGuildCreate(Guild &guild, rapidjson::Document &voiceStates);
+	void applyGuildDetailsLocked(Guild &guild, Guild &details);
+	void completeGuildLoadLocked(GuildLoad &load);
+	Guild *findGuildLocked(const std::string &guildId);
+
+	void handleResumed();
+	void handleChannelCreateUpdate(const rapidjson::Value &d, const std::string &guildIdOverride = "");
+	void handleGuildMembersChunk(const rapidjson::Value &d);
+	void applyVoiceMemberName(const std::string &userId, const Member &member);
+	void handleChannelDelete(const rapidjson::Value &d);
+	void handleTypingStart(const rapidjson::Value &d);
+	void handleMessageCreate(const rapidjson::Value &d);
+	void handleMessageUpdate(const rapidjson::Value &d);
+	void handleMessageDelete(const rapidjson::Value &d);
+	void handleMessageAck(const rapidjson::Value &d);
+	void handleReactionAdd(const rapidjson::Value &d);
+	void handleReactionRemove(const rapidjson::Value &d);
+	void handlePollVote(const rapidjson::Value &d, bool added);
+	void handleInteractionResult(const rapidjson::Value &d, InteractionResult result);
+	void handleModalCreate(const rapidjson::Value &d);
+	std::string buildComponentInteraction(const Message &msg, const MessageControl &control,
+	                                      const std::vector<std::string> &values, const std::string &nonce);
+	std::string buildModalSubmit(const Modal &modal, const std::string &nonce);
+	void handlePresenceUpdate(const rapidjson::Value &d);
+	void handleUserSettingsUpdate(const rapidjson::Value &d);
+	void handleUserGuildSettingsUpdate(const rapidjson::Value &d);
+	void handleSessionsReplace(const rapidjson::Value &d);
+	void parseUserGuildSettings(const rapidjson::Value &entry, std::map<std::string, GuildNotificationSettings> &out);
+	void parseChannelObject(const rapidjson::Value &cObj, Channel &channel);
+	void parseOverwrites(const rapidjson::Value &ows, std::vector<Overwrite> &overwrites);
+
+	static User parseUserObject(const rapidjson::Value &uObj);
+	static Member parseMemberObject(const rapidjson::Value &mObj, const std::string &userId);
+	static Embed parseEmbedObject(const rapidjson::Value &eObj);
+	static Attachment parseAttachmentObject(const rapidjson::Value &aObj);
+	static Emoji parseEmojiObject(const rapidjson::Value &eObj);
+	static MessageControl parseControl(const rapidjson::Value &component, bool hidden);
+	static ModalField parseModalInput(const rapidjson::Value &component);
+	static void parseComponents(const rapidjson::Value &components, Message &msg, std::vector<MessageBlock> &blocks,
+	                            bool spoiler);
+
+	struct ReactionRequest {
+		std::string channelId;
+		std::string messageId;
+		Emoji emoji;
+		bool add;
+	};
+	void queueReaction(ReactionRequest request);
+	void sendNextReactionLocked();
+	void onReactionResponse(Network::HttpResponse &resp);
+	void notifyOwnReactionLocked(const ReactionRequest &request, bool added);
+	bool hasQueuedReactionLocked(const std::string &messageId, const Emoji &emoji);
+
+	void postMessage(const std::string &channelId, const std::string &content, const std::string &nonce,
+	                 const std::string &replyId, SendMessageCallback cb);
+
+	std::vector<Message> parseMessages(const std::string &json);
+	Message parseSingleMessage(const rapidjson::Value &d);
+	Message parseSingleMessage(const std::string &json);
+
+	uint64_t calcBasePermissions(const Guild &guild, const std::string &userId,
+	                             const std::vector<std::string> &memberRoleIds);
+	uint64_t applyChannelOverwrites(uint64_t base, const Guild &guild, const Channel *parent, const Channel &channel,
+	                                const std::string &userId, const std::vector<std::string> &memberRoleIds);
+	uint64_t computeChannelPermissions(const Guild &guild, const Channel &channel, const std::string &userId,
+	                                   const std::vector<std::string> &memberRoleIds);
+	uint64_t computeOverwrites(uint64_t base, const std::string &guildId, const std::string &userId,
+	                           const std::vector<std::string> &memberRoleIds, const rapidjson::Value &overwrites);
+	uint64_t computeOverwrites(uint64_t base, const std::string &guildId, const std::string &userId,
+	                           const std::vector<std::string> &memberRoleIds, const std::vector<Overwrite> &overwrites);
+
+	void setState(ConnectionState newState, const std::string &message = "");
+	void setStatus(const std::string &message);
+
+	User self;
+	User currentUser;
+	std::vector<Guild> guilds;
+	std::vector<Channel> privateChannels;
+	std::vector<GuildFolder> folders;
+	std::map<std::string, std::string> channelToGuildCache;
+	std::map<std::string, ReadState> readStates;
+	std::map<std::string, GuildNotificationSettings> notificationSettings;
+
+	std::string token;
+	std::atomic<ConnectionState> state;
+
+	std::atomic<int> heartbeatInterval;
+	std::atomic<uint64_t> lastHeartbeat;
+	std::atomic<bool> waitingForHeartbeatAck;
+	bool hasReceivedHello;
+	std::string sessionId;
+	std::string resumeGatewayUrl;
+	std::atomic<uint64_t> lastSequence;
+	std::atomic<bool> reconnectRequested{false};
+	std::atomic<bool> reconnectLater{false};
+
+	bool isConnecting;
+	bool stopWorker;
+	std::atomic<bool> authFailed{false};
+	std::atomic<bool> readStateDirty{false};
+	std::string readStateDirtyChannelId;
+	std::atomic<bool> guildDataDirty{false};
+	std::atomic<bool> privateChannelsDirty{false};
+	Utils::WorkerThread workerThread;
+	Utils::WorkerThread networkThread;
+
+	std::deque<GatewayMessage> messageQueue;
+	std::mutex queueMutex;
+	std::condition_variable queueCv;
+
+	// Network thread only.
+	std::string pendingFrames;
+	uint32_t connectionGeneration = 0;
+	// Worker thread only.
+	Network::ZlibInflater inflater;
+	uint32_t inflaterGeneration = 0;
+
+	std::atomic<int> expectedGuildCount{-1};
+
+	std::string guildLoadInFlight;
+	std::string guildLoadFailed;
+
+	std::deque<std::string> sendQueue;
+	std::mutex sendQueueMutex;
+
+	std::string statusMessage;
+	std::mutex statusMutex;
+
+	std::string fingerprint;
+	std::mutex fingerprintMutex;
+	void postUnauthenticated(const std::string &path, const std::string &body,
+	                         std::function<void(Network::HttpResponse &)> cb);
+
+	std::string selectedGuildId;
+	std::string selectedChannelId;
+	std::string incomingCallChannelId;
+	std::map<std::string, int> callRinging;
+
+	Network::WebSocketClient ws;
+
+	mutable std::recursive_mutex clientMutex;
+
+	std::function<void()> connectionCallback;
+	std::function<void(const std::string &, bool, bool)> voiceStateCallback;
+
+	std::map<std::string, std::vector<VoiceParticipant>> voiceParticipants;
+	std::map<std::string, std::string> voiceChannelByUser;
+	void applyVoiceState(const rapidjson::Value &state, const std::string &guildId);
+	void clearVoiceParticipant(const std::string &userId);
+	std::set<std::string> voiceNameLookups;
+	std::function<void(const std::string &, const std::string &, const std::string &)> voiceServerCallback;
+	std::function<void(const Message &)> messageCallback;
+	std::function<void(const Message &)> messageUpdateCallback;
+	std::function<void(const std::string &)> messageDeleteCallback;
+	ReactionCallback messageReactionAddCallback;
+	ReactionCallback messageReactionRemoveCallback;
+	PollVoteCallback pollVoteCallback;
+	InteractionCallback interactionCallback;
+	ModalCallback modalCallback;
+
+	// One at a time: the network workers would otherwise let a quick add and remove land out of order.
+	std::deque<ReactionRequest> reactionQueue;
+	bool reactionInFlight = false;
+	uint64_t reactionRetryAt = 0;
+
+	std::map<std::string, std::vector<TypingUser>> typingUsers;
+	// The gateway is the only source of these: REST history never returns them.
+	std::map<std::string, std::vector<Message>> ephemeralMessages;
+	std::map<std::string, UserProfile> profileCache;
+};
+
+} // namespace Discord
+
+#endif // DISCORD_CLIENT_H

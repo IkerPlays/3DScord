@@ -1,0 +1,221 @@
+#ifndef SCREEN_MANAGER_H
+#define SCREEN_MANAGER_H
+
+#include "ui/hamburger_menu.h"
+#include "ui/incoming_call.h"
+#include <citro2d.h>
+#include <map>
+#include <memory>
+#include <optional>
+#include <set>
+#include <string>
+#include <vector>
+
+namespace UI {
+
+class Screen;
+
+enum class ScreenType {
+	LOGIN,
+	GUILD_LIST,
+	MESSAGES,
+	ADD_ACCOUNT,
+	FORUM_CHANNEL,
+	SETTINGS,
+	ABOUT,
+	DISCLAIMER,
+	THEME_MANAGER
+};
+
+class Screen {
+  public:
+	Screen();
+	virtual ~Screen() = default;
+
+	virtual void update() = 0;
+	virtual void renderTop(C3D_RenderTarget *target) = 0;
+	virtual void renderBottom(C3D_RenderTarget *target) = 0;
+	virtual void onEnter() {}
+	virtual void onExit() {}
+	virtual bool hidesMenu() const { return false; }
+	// Frames are drawn only on change, so anything that moves on its own must say so.
+	virtual bool isAnimating() const { return false; }
+
+	bool shouldExit() const { return exitRequested; }
+
+  protected:
+	bool exitRequested;
+};
+
+class ScreenManager {
+  public:
+	static ScreenManager &getInstance();
+
+	void init();
+	void shutdown();
+
+	void setScreen(ScreenType type);
+	void pushScreen(ScreenType type);
+	ScreenType getCurrentType() const { return currentType; }
+	void returnToPreviousScreen();
+	void update();
+	bool shouldRender();
+	void render();
+	void showToast(const std::string &message);
+
+	bool shouldCloseApplication() const { return appExitRequested; }
+	void requestAppExit() { appExitRequested = true; }
+
+	bool isMenuHidden() const;
+	bool shouldShowBackArrow() const;
+
+	void renderDebugOverlay();
+	bool isDebugOverlayEnabled() const { return debugOverlayEnabled; }
+	void toggleDebugOverlay();
+
+	void renderStatsOverlay();
+	void toggleStatsOverlay();
+
+	HamburgerMenu &getHamburgerMenu() { return hamburgerMenu; }
+
+	void setSelectedGuildId(const std::string &id) { selectedGuildId = id; }
+	std::string getSelectedGuildId() const { return selectedGuildId; }
+
+	static u32 colorBackground();
+	static u32 colorBackgroundDark();
+	static u32 colorBackgroundLight();
+	static u32 colorAccent();
+	static u32 colorText();
+	static u32 colorTextMuted();
+	static u32 colorSuccess();
+	static u32 colorError();
+	static u32 colorInput();
+	static u32 colorLink();
+
+	static u32 colorSeparator();
+	static u32 colorHeaderGlass();
+	static u32 colorHeaderBorder();
+	static u32 colorSelection();
+	static u32 colorOverlay();
+	static u32 colorWhite();
+	static u32 colorEmbed();
+	static u32 colorEmbedMedia();
+	static u32 colorReaction();
+	static u32 colorReactionMe();
+
+	int getLastServerIndex() const { return lastServerIndex; }
+	void setLastServerIndex(int idx) { lastServerIndex = idx; }
+	int getLastServerScroll() const { return lastServerScroll; }
+	void setLastServerScroll(int scroll) { lastServerScroll = scroll; }
+
+	void resetSelection();
+	void clearCaches();
+
+	int getLastChannelIndex(const std::string &guildId) {
+		return lastChannelIndex.count(guildId) ? lastChannelIndex[guildId] : 0;
+	}
+	void setLastChannelIndex(const std::string &guildId, int idx) { lastChannelIndex[guildId] = idx; }
+	int getLastChannelScroll(const std::string &guildId) {
+		return lastChannelScroll.count(guildId) ? lastChannelScroll[guildId] : 0;
+	}
+	void setLastChannelScroll(const std::string &guildId, int scroll) { lastChannelScroll[guildId] = scroll; }
+
+	// Separate from the selected channel, which opening a thread overwrites.
+	void setForumChannelId(const std::string &id) { forumChannelId = id; }
+	std::string getForumChannelId() const { return forumChannelId; }
+
+	int getLastForumIndex(const std::string &channelId) {
+		return lastForumIndex.count(channelId) ? lastForumIndex[channelId] : 0;
+	}
+	void setLastForumIndex(const std::string &channelId, int idx) { lastForumIndex[channelId] = idx; }
+	int getLastForumScroll(const std::string &channelId) {
+		return lastForumScroll.count(channelId) ? lastForumScroll[channelId] : 0;
+	}
+	void setLastForumScroll(const std::string &channelId, int scroll) { lastForumScroll[channelId] = scroll; }
+
+	void setFolderExpanded(const std::string &id, bool expanded) {
+		if (expanded) {
+			expandedFolders.insert(id);
+		} else {
+			expandedFolders.erase(id);
+		}
+	}
+	bool isFolderExpanded(const std::string &id) { return expandedFolders.find(id) != expandedFolders.end(); }
+
+  private:
+	ScreenManager() : currentType(ScreenType::LOGIN), debugOverlayEnabled(false), appExitRequested(false) {}
+	~ScreenManager() = default;
+
+	C3D_RenderTarget *topTarget;
+	C3D_RenderTarget *bottomTarget;
+
+	std::unique_ptr<Screen> currentScreen;
+	ScreenType currentType;
+	bool updatingScreen = false;
+	std::optional<ScreenType> pendingScreen;
+	std::vector<ScreenType> screenHistory;
+	std::string selectedGuildId;
+	bool debugOverlayEnabled;
+	float debugScrollOffset = 0.0f;
+
+	bool statsOverlayEnabled = false;
+	uint32_t statsFrames = 0;
+	uint64_t statsWindowStart = 0;
+	float statsFps = 0.0f;
+	float statsFrameMs = 0.0f;
+	bool appExitRequested;
+	HamburgerMenu hamburgerMenu;
+	IncomingCall incomingCall;
+	C2D_ImageTint tint;
+
+	int lastServerIndex = 0;
+	int lastServerScroll = 0;
+	std::map<std::string, int> lastChannelIndex;
+	std::map<std::string, int> lastChannelScroll;
+	std::string forumChannelId;
+	std::map<std::string, int> lastForumIndex;
+	std::map<std::string, int> lastForumScroll;
+
+	std::set<std::string> expandedFolders;
+
+	void drawHamburgerButton();
+	void drawToast();
+
+	std::string toastMessage;
+	int toastTimer = 0;
+
+	bool inputActive = false;
+	bool wasAnimating = false;
+	int framesSinceRender = 0;
+	// Catches any change nothing asked a redraw for.
+	static const int IDLE_REDRAW_FRAMES = 30;
+	static const int CIRCLE_DEADZONE = 15;
+	aptHookCookie aptCookie;
+};
+
+void drawText(float x, float y, float z, float scaleX, float scaleY, u32 color, const std::string &text);
+void drawCenteredText(float y, float z, float scaleX, float scaleY, u32 color, const std::string &text,
+                      float screenWidth);
+float measureText(const std::string &text, float scaleX, float scaleY);
+float measureTextDirect(const std::string &text, float scaleX, float scaleY);
+void drawRoundedRect(float x, float y, float z, float w, float h, float radius, u32 color);
+void drawCircle(float x, float y, float z, float radius, u32 color);
+void drawScrollbar(float maxScroll, float currentScroll, float y, float viewHeight);
+void drawRichText(float x, float y, float z, float scaleX, float scaleY, u32 color, const std::string &rawText);
+void drawCenteredRichText(float y, float z, float scaleX, float scaleY, u32 color, const std::string &rawText,
+                          float screenWidth);
+float measureRichText(const std::string &rawText, float scaleX, float scaleY);
+void drawRichTextUnicodeOnly(float x, float y, float z, float scaleX, float scaleY, u32 color,
+                             const std::string &rawText);
+float measureRichTextUnicodeOnly(const std::string &rawText, float scaleX, float scaleY);
+
+std::string getTruncatedText(const std::string &text, float maxWidth, float scaleX, float scaleY);
+std::string getTruncatedRichText(const std::string &rawText, float maxWidth, float scaleX, float scaleY);
+
+void drawOverlay(float z);
+void drawPopupBackground(float x, float y, float w, float h, float z, float radius = 12.0f);
+void drawPopupMenuItem(float x, float y, float w, float h, float z, bool isSelected, u32 selectionColor);
+
+} // namespace UI
+
+#endif // SCREEN_MANAGER_H
