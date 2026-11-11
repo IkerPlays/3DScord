@@ -1,13 +1,23 @@
 # Changelog
 
-## Unreleased
-- **Channel Tools** (menu > Channel Tools, inside a channel): pinned messages, search, quick replies, drafts, formatting
-  helpers, mark channel as read and mark server as read.
-- **Saved messages**: save a message from its menu and read it later from menu > Saved Messages (stored on the SD card).
-- **Mentions**: menu > Mentions lists your recent mentions; press A to open that channel.
-- **Drafts**: keep unsent messages and use them later. **Quick replies**: send an editable phrase with one tap.
-- **Formatting helpers**: quote, code block, inline code, spoiler, bold, italic, underline and strikethrough.
-- The side menu fits more entries.
+## 0.2.0
+The app is now called **3DScord** and gets channel tools, saved messages and an updater that asks first.
+
+- **Updater:** at startup, while the Discord logo spins, the app looks for a new version, shows the release notes and
+  asks before installing (A: update, B: later). Settings > Updates can turn it off or include devbuilds.
+- **Devbuilds** now have release notes, shown in the app before updating.
+- **New name:** 3DScord. Your TriCord files are moved to `sdmc:/3ds/3DScord` automatically.
+- **Channel Tools** (menu > Channel Tools, inside a channel): pinned messages, search, quick replies, drafts,
+  formatting helpers (quote, code block, spoiler, bold, italic, underline, strikethrough), mark channel or server as
+  read.
+- **Saved messages:** save a message from its menu, read it later from menu > Saved Messages.
+- **Mentions:** menu > Mentions lists your recent mentions.
+- **Pin and unpin** messages (needs Manage Messages); **Jump to Original** on replies.
+- **Ping on Reply** setting (Settings > Chat).
+- Goes idle when you close the lid and comes back online when you open it.
+- **Your Discord account** in Settings: display name, About Me, pronouns, profile color, avatar and banner, status and
+  custom status, chat and privacy options.
+- New README and ROADMAP.
 
 ## 0.1.0
 - First 3DScord release, based on TriCord (2b-zipper, GPLv3).
