@@ -7,9 +7,13 @@
 #include "network/network_manager.h"
 #include "ui/message_screen.h"
 #include "utils/message_utils.h"
+#include "utils/transfers.h"
 #include "utils/utf8_utils.h"
 #include <3ds.h>
+#include <strings.h>
 #include <algorithm>
+#include <dirent.h>
+#include <sys/stat.h>
 #include <rapidjson/document.h>
 
 namespace UI {
@@ -160,6 +164,21 @@ void ListScreen::load() {
 	case Mode::SEARCH:
 		startSearch();
 		break;
+	case Mode::GIFS:
+		startGifSearch();
+		break;
+	case Mode::STICKERS: {
+		const std::string guildId = Discord::DiscordClient::getInstance().getGuildIdFromChannel(channelId);
+		if (guildId.empty() || guildId == "DM") {
+			std::lock_guard<std::mutex> lock(shared->mutex);
+			shared->error = TR("list.stickers_need_server");
+			shared->loading = false;
+			shared->version++;
+		} else {
+			fetch("/guilds/" + guildId + "/stickers");
+		}
+		break;
+	}
 	default:
 		loadLocal();
 		break;
@@ -187,9 +206,38 @@ void ListScreen::loadLocal() {
 			list.push_back({"", channelId, "", r});
 		}
 		break;
+	case Mode::FILES: {
+		mkdir("sdmc:/3ds", 0777);
+		mkdir(CONFIG_DIR_PATH, 0777);
+		const std::string dirPath = Utils::Transfers::uploadDir();
+		mkdir(dirPath.c_str(), 0777);
+		if (DIR *dir = opendir(dirPath.c_str())) {
+			while (dirent *e = readdir(dir)) {
+				const std::string name = e->d_name;
+				if (name.empty() || name[0] == '.') {
+					continue;
+				}
+				struct stat st;
+				const std::string full = dirPath + "/" + name;
+				if (stat(full.c_str(), &st) != 0 || S_ISDIR(st.st_mode)) {
+					continue;
+				}
+				const long long kb = (st.st_size + 1023) / 1024;
+				list.push_back({full, channelId, name, std::to_string(kb) + " KB"});
+			}
+			closedir(dir);
+		}
+		std::sort(list.begin(), list.end(), [](const Entry &a, const Entry &b) {
+			return strcasecmp(a.title.c_str(), b.title.c_str()) < 0;
+		});
+		break;
+	}
 	case Mode::TOOLS:
 		list = {{"pins", channelId, TR("list.pins"), TR("list.tools.pins")},
 		        {"search", channelId, TR("list.search"), TR("list.tools.search")},
+		        {"files", channelId, TR("list.files"), TR("list.tools.files")},
+		        {"gifs", channelId, TR("list.gifs"), TR("list.tools.gifs")},
+		        {"stickers", channelId, TR("list.stickers"), TR("list.tools.stickers")},
 		        {"quick", channelId, TR("list.quick_replies"), TR("list.tools.quick")},
 		        {"drafts", channelId, TR("list.drafts"), TR("list.tools.drafts")},
 		        {"format", channelId, TR("list.format"), TR("list.tools.format")},
@@ -226,10 +274,11 @@ void ListScreen::fetch(const std::string &path) {
 	}
 
 	const bool searching = (mode == Mode::SEARCH);
+	const Mode fetchMode = mode;
 	auto state = shared;
 	Network::NetworkManager::getInstance().enqueue(
 	    "https://discord.com/api/v10" + path, "GET", "", Network::RequestPriority::INTERACTIVE,
-	    [state, searching](Network::HttpResponse &resp) {
+	    [state, searching, fetchMode](Network::HttpResponse &resp) {
 		    std::vector<Entry> list;
 		    std::string err;
 
@@ -242,6 +291,28 @@ void ListScreen::fetch(const std::string &path) {
 			    }
 		    } else if (doc.HasParseError()) {
 			    err = TR("list.error");
+		    } else if (fetchMode == Mode::GIFS) {
+			    if (doc.IsArray()) {
+				    for (const auto &g : doc.GetArray()) {
+					    if (!g.IsObject()) {
+						    continue;
+					    }
+					    const std::string link = str(g, "url");
+					    if (link.empty()) {
+						    continue;
+					    }
+					    std::string title = str(g, "title");
+					    list.push_back({link, "", title.empty() ? "GIF" : title, link});
+				    }
+			    }
+		    } else if (fetchMode == Mode::STICKERS) {
+			    if (doc.IsArray()) {
+				    for (const auto &st : doc.GetArray()) {
+					    if (st.IsObject() && !str(st, "id").empty()) {
+						    list.push_back({str(st, "id"), "", str(st, "name"), str(st, "description")});
+					    }
+				    }
+			    }
 		    } else if (searching) {
 			    if (doc.IsObject() && doc.HasMember("messages") && doc["messages"].IsArray()) {
 				    for (const auto &group : doc["messages"].GetArray()) {
@@ -293,6 +364,23 @@ void ListScreen::fetch(const std::string &path) {
 	    {{"Authorization", token}});
 }
 
+void ListScreen::startGifSearch() {
+	std::string text;
+	// An empty search shows what is trending.
+	if (!askText(TR("list.gif_hint"), query, text, 60, false)) {
+		std::lock_guard<std::mutex> lock(shared->mutex);
+		shared->loading = false;
+		shared->version++;
+		return;
+	}
+	query = text;
+	if (query.empty()) {
+		fetch("/gifs/trending?provider=tenor&locale=en-US&media_format=gif");
+	} else {
+		fetch("/gifs/search?q=" + urlEncode(query) + "&media_format=gif&provider=tenor&locale=en-US");
+	}
+}
+
 void ListScreen::startSearch() {
 	std::string text;
 	if (!askText(TR("list.search_hint"), query, text, 100, false) || text.empty()) {
@@ -337,6 +425,12 @@ std::string ListScreen::headerTitle() const {
 	switch (mode) {
 	case Mode::TOOLS:
 		return TR("list.tools");
+	case Mode::FILES:
+		return TR("list.files");
+	case Mode::GIFS:
+		return query.empty() ? TR("list.gifs") : TR("list.gifs") + ": " + query;
+	case Mode::STICKERS:
+		return TR("list.stickers");
 	case Mode::PINS:
 		return TR("list.pins");
 	case Mode::SEARCH:
@@ -359,6 +453,12 @@ std::string ListScreen::hintLine() const {
 	switch (mode) {
 	case Mode::TOOLS:
 		return TR("list.hint.tools");
+	case Mode::FILES:
+		return TR("list.hint.files");
+	case Mode::GIFS:
+		return TR("list.hint.gifs");
+	case Mode::STICKERS:
+		return TR("list.hint.stickers");
 	case Mode::SEARCH:
 		return TR("list.hint.search");
 	case Mode::MENTIONS:
@@ -395,6 +495,12 @@ void ListScreen::primaryAction(const Entry &entry) {
 			openReplacing(Mode::PINS);
 		} else if (entry.id == "search") {
 			openReplacing(Mode::SEARCH);
+		} else if (entry.id == "files") {
+			openReplacing(Mode::FILES);
+		} else if (entry.id == "gifs") {
+			openReplacing(Mode::GIFS);
+		} else if (entry.id == "stickers") {
+			openReplacing(Mode::STICKERS);
 		} else if (entry.id == "quick") {
 			openReplacing(Mode::QUICK_REPLIES);
 		} else if (entry.id == "drafts") {
@@ -414,6 +520,35 @@ void ListScreen::primaryAction(const Entry &entry) {
 			} else {
 				sm.showToast(TR("list.not_in_server"));
 			}
+		}
+		break;
+	case Mode::FILES: {
+		if (!client.canSendMessage(channelId)) {
+			sm.showToast(TR("message.no_permission"));
+			break;
+		}
+		std::string caption;
+		if (!askText(TR("list.caption_hint"), "", caption, 500, false)) {
+			break;
+		}
+		Utils::Transfers::getInstance().uploadFile(channelId, entry.id, caption);
+		sm.returnToPreviousScreen();
+		break;
+	}
+	case Mode::GIFS:
+		if (!client.canSendMessage(channelId)) {
+			sm.showToast(TR("message.no_permission"));
+		} else {
+			client.sendMessage(channelId, entry.body);
+			sm.returnToPreviousScreen();
+		}
+		break;
+	case Mode::STICKERS:
+		if (!client.canSendMessage(channelId)) {
+			sm.showToast(TR("message.no_permission"));
+		} else {
+			Utils::Transfers::getInstance().sendSticker(channelId, entry.id);
+			sm.returnToPreviousScreen();
 		}
 		break;
 	case Mode::MENTIONS:
@@ -511,6 +646,8 @@ void ListScreen::tertiaryAction() {
 	std::string text;
 	switch (mode) {
 	case Mode::SEARCH:
+	case Mode::GIFS:
+	case Mode::FILES:
 		load();
 		break;
 	case Mode::QUICK_REPLIES:

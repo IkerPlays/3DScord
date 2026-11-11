@@ -26,7 +26,8 @@ enum class ScreenType {
 	DISCLAIMER,
 	THEME_MANAGER,
 	UPDATER,
-	LIST
+	LIST,
+	IMAGE_VIEWER
 };
 
 class Screen {

@@ -9,6 +9,7 @@
 #include "utils/message_utils.h"
 #include "utils/sound_player.h"
 #include "utils/system_utils.h"
+#include "utils/transfers.h"
 #include "utils/updater.h"
 #include <3ds.h>
 #include <citro2d.h>
@@ -152,6 +153,7 @@ int main(int argc, char **argv) {
 	// Its destructor would otherwise run after socExit and ndspExit.
 	Discord::VoiceClient::getInstance().disconnect();
 
+	Utils::Transfers::getInstance().shutdown();
 	Utils::Updater::getInstance().cancel();
 	Utils::Updater::getInstance().join();
 

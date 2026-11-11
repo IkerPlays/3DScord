@@ -36,16 +36,16 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
 - [x] Recent mentions list
 
 ## Phase 3 — Sending media
-- [ ] Upload files from the SD card
+- [x] Upload files from the SD card (`sdmc:/3ds/3DScord/upload`, up to 4 MB)
+- [x] Send stickers (from the current server)
+- [x] GIF picker (Tenor, through Discord)
+- [x] Save received images and files to the SD card
+- [x] Image viewer with pan and zoom
+
+## Phase 4 — Camera, voice and servers
 - [ ] Upload photos from the 3DS camera
 - [ ] Compress big images before uploading
-- [ ] Send stickers
-- [ ] GIF picker (Tenor / Giphy)
 - [ ] Voice messages recorded with the microphone
-- [ ] Save received images to the SD card
-- [ ] Image viewer with touch zoom and pan
-
-## Phase 4 — Servers and people
 - [ ] Threads: create, join, archive
 - [ ] Follow announcement channels
 - [ ] Forum tags and filters

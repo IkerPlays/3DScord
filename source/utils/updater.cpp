@@ -1,6 +1,7 @@
 #include "utils/updater.h"
 #include "core/config.h"
 #include "log.h"
+#include "network/download.h"
 #include "network/http_client.h"
 #include <3ds.h>
 #include <algorithm>
@@ -21,32 +22,6 @@ constexpr const char *TEMP_FILE = CONFIG_DIR_PATH "/update.tmp";
 constexpr const char *CIA_ASSET = "3DScord.cia";
 constexpr const char *DSX_ASSET = "3DScord.3dsx";
 constexpr const char *DEFAULT_3DSX_PATH = "sdmc:/3ds/3DScord/3DScord.3dsx";
-
-struct DownloadContext {
-	FILE *file;
-	std::atomic<long long> *downloaded;
-	std::atomic<long long> *total;
-	std::atomic<bool> *cancel;
-	bool writeFailed;
-};
-
-size_t writeChunk(void *data, size_t size, size_t nmemb, void *userp) {
-	auto *ctx = static_cast<DownloadContext *>(userp);
-	const size_t written = fwrite(data, size, nmemb, ctx->file);
-	if (written != nmemb) {
-		ctx->writeFailed = true;
-	}
-	return written * size;
-}
-
-int reportProgress(void *userp, curl_off_t dltotal, curl_off_t dlnow, curl_off_t, curl_off_t) {
-	auto *ctx = static_cast<DownloadContext *>(userp);
-	ctx->downloaded->store(dlnow);
-	if (dltotal > 0) {
-		ctx->total->store(dltotal);
-	}
-	return ctx->cancel->load() ? 1 : 0;
-}
 
 long long versionKey(const Updater::Version &v) {
 	// A stable build is newer than any devbuild of the same version.
@@ -256,54 +231,14 @@ void Updater::runCheck(bool includeDevBuilds) {
 
 bool Updater::download(const Release &rel, const std::string &dest) {
 	ensureConfigDir();
-	FILE *file = fopen(dest.c_str(), "wb");
-	if (!file) {
-		fail("Cannot write to the SD card");
-		return false;
-	}
+	Network::DownloadControl control;
+	control.downloaded = &downloaded;
+	control.total = &total;
+	control.cancel = &cancelRequested;
 
-	CURL *easy = curl_easy_init();
-	if (!easy) {
-		fclose(file);
-		fail("Network unavailable");
-		return false;
-	}
-
-	Network::HttpResponse unused;
-	Network::HttpRequest request{rel.assetUrl, "GET", "", {}, 0};
-	curl_slist *headers = Network::prepareTransfer(easy, request, unused);
-
-	DownloadContext ctx{file, &downloaded, &total, &cancelRequested, false};
-	curl_easy_setopt(easy, CURLOPT_WRITEFUNCTION, writeChunk);
-	curl_easy_setopt(easy, CURLOPT_WRITEDATA, &ctx);
-	curl_easy_setopt(easy, CURLOPT_HEADERFUNCTION, nullptr);
-	curl_easy_setopt(easy, CURLOPT_HEADERDATA, nullptr);
-	curl_easy_setopt(easy, CURLOPT_ACCEPT_ENCODING, nullptr);
-	curl_easy_setopt(easy, CURLOPT_TIMEOUT, 0L);
-	curl_easy_setopt(easy, CURLOPT_LOW_SPEED_LIMIT, 1024L);
-	curl_easy_setopt(easy, CURLOPT_LOW_SPEED_TIME, 30L);
-	curl_easy_setopt(easy, CURLOPT_NOPROGRESS, 0L);
-	curl_easy_setopt(easy, CURLOPT_XFERINFOFUNCTION, reportProgress);
-	curl_easy_setopt(easy, CURLOPT_XFERINFODATA, &ctx);
-	curl_easy_setopt(easy, CURLOPT_FAILONERROR, 1L);
-
-	const CURLcode code = curl_easy_perform(easy);
-	curl_slist_free_all(headers);
-	curl_easy_cleanup(easy);
-	fclose(file);
-
-	if (code != CURLE_OK || ctx.writeFailed) {
-		remove(dest.c_str());
-		fail(cancelRequested ? "Update cancelled"
-		                     : ctx.writeFailed ? "SD card full or not writable"
-		                                       : std::string("Download failed: ") + curl_easy_strerror(code));
-		return false;
-	}
-
-	struct stat st;
-	if (stat(dest.c_str(), &st) != 0 || (rel.assetSize > 0 && st.st_size != rel.assetSize)) {
-		remove(dest.c_str());
-		fail("Downloaded file is incomplete");
+	std::string error;
+	if (!Network::downloadToFile(rel.assetUrl, dest, control, error, rel.assetSize)) {
+		fail(error);
 		return false;
 	}
 	return true;

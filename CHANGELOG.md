@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+- **Upload files** from the SD card: Channel Tools > Upload File lists `sdmc:/3ds/3DScord/upload` (up to 4 MB).
+- **GIFs:** Channel Tools > GIFs searches Tenor (or shows what is trending) and sends the one you pick.
+- **Stickers:** Channel Tools > Stickers sends one of the stickers of the server.
+- **Save to SD Card:** the message menu can save any attachment to `sdmc:/3ds/3DScord/downloads`.
+- **View Image:** open an attached image full screen; D-Pad / Circle Pad / touch to move, L and R to zoom, A to fit.
+- Old name TriCord removed from the texts of the app.
+- Downloads and uploads run in the background and report with a message when they finish.
+
 ## 0.2.0
 The app is now called **3DScord** and gets channel tools, saved messages and an updater that asks first.
 

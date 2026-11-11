@@ -10,6 +10,7 @@
 #include "ui/emoji_manager.h"
 #include "ui/forum_screen.h"
 #include "ui/image_manager.h"
+#include "ui/image_viewer_screen.h"
 #include "ui/list_screen.h"
 #include "ui/login_screen.h"
 #include "ui/message_screen.h"
@@ -19,6 +20,7 @@
 #include "ui/theme_manager_screen.h"
 #include "ui/updater_screen.h"
 #include "utils/redraw.h"
+#include "utils/transfers.h"
 #include "utils/utf8_utils.h"
 #include <algorithm>
 #include <cmath>
@@ -370,6 +372,9 @@ void ScreenManager::setScreen(ScreenType type) {
 	case ScreenType::LIST:
 		currentScreen = std::make_unique<ListScreen>();
 		break;
+	case ScreenType::IMAGE_VIEWER:
+		currentScreen = std::make_unique<ImageViewerScreen>();
+		break;
 	}
 
 	if (currentScreen) {
@@ -406,6 +411,14 @@ void ScreenManager::update() {
 	Discord::VoiceClient::getInstance().update();
 
 	hamburgerMenu.update();
+
+	// Results of the background saves and uploads.
+	{
+		const std::string transferMessage = Utils::Transfers::getInstance().takeMessage();
+		if (!transferMessage.empty()) {
+			showToast(transferMessage);
+		}
+	}
 
 	if (layoutTextBuf) {
 		C2D_TextBufClear(layoutTextBuf);

@@ -1,5 +1,7 @@
 #include "ui/message_screen.h"
 #include "core/local_store.h"
+#include "ui/image_viewer_screen.h"
+#include "utils/transfers.h"
 #include "core/config.h"
 #include "core/i18n.h"
 #include "discord/avatar_cache.h"
@@ -866,6 +868,24 @@ void MessageScreen::update() {
 						ScreenManager::getInstance().showToast(TR(pin ? "message.pinned" : "message.unpinned"));
 					} else {
 						ScreenManager::getInstance().showToast(TR("message.pin_failed"));
+					}
+				}
+			} else if (action == "ViewImage" || action == "SaveAttachment") {
+				if (selectedIndex >= 0 && selectedIndex < (int)messages.size()) {
+					const Discord::Message &target = messages[selectedIndex];
+					const Discord::Attachment *chosen = nullptr;
+					for (const auto &attach : target.attachments) {
+						if (action == "SaveAttachment" ? true : isImageAttachment(attach)) {
+							chosen = &attach;
+							break;
+						}
+					}
+					if (chosen) {
+						if (action == "ViewImage") {
+							ImageViewerScreen::open(attachmentUrl(*chosen), chosen->filename);
+						} else {
+							Utils::Transfers::getInstance().saveAttachment(chosen->url, chosen->filename, chosen->size);
+						}
 					}
 				}
 			} else if (action == "Save" || action == "Unsave") {
@@ -3541,6 +3561,20 @@ void MessageScreen::showMessageOptions() {
 
 		if (isMine && canSend) {
 			addOption("Edit", "message.menu.edit");
+		}
+
+		const Discord::Attachment *firstImage = nullptr;
+		for (const auto &attach : msg.attachments) {
+			if (isImageAttachment(attach)) {
+				firstImage = &attach;
+				break;
+			}
+		}
+		if (firstImage) {
+			addOption("ViewImage", "message.menu.view_image");
+		}
+		if (!msg.attachments.empty()) {
+			addOption("SaveAttachment", "message.menu.save_attachment");
 		}
 
 		if (msg.showsContent()) {
