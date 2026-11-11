@@ -12,9 +12,11 @@ on:
 permissions:
   contents: write # needed to publish devbuild releases
 
+# Pushes and manual (devbuild) runs queue separately: a push can never cancel a devbuild that was asked for by hand,
+# and a newer push replaces an older push build that is still running.
 concurrency:
-  group: build-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  group: build-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
 
 defaults:
   run:
