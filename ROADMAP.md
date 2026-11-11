@@ -136,7 +136,7 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
 
 ## Phase 13 — Sharing the screen (what the 3DS can do)
 - [x] Send a screenshot of the top and bottom screens to a chat (Channel Tools > Send Screenshot)
-- [ ] "Snapshot sharing": send a screenshot every few seconds to a channel, edited into the same message
+- [ ] "Snapshot sharing": send a screenshot every few seconds to a channel (dropped for now: it would flood the chat)
 - [x] Compatibility Mode: a New 3DS can behave like an Old 3DS (Settings)
 - [x] More profile: per-server nickname and bio, status with an expiry
 - [x] Connections list in profiles
@@ -146,15 +146,14 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
 - [x] Bot command mini-games with buttons (slash commands from Channel Tools + the buttons of bot messages)
 - [x] Share themes between consoles (as a .json file through any chat)
 
-## Phase 15 — System integration (to be tried on a real console)
-- [ ] HOME menu widget with the latest message
-
 > Some items depend on what the 3DS system allows (background work, the HOME icon, the notification LED, playing audio
 > with the lid closed). They will be tried on a real console and may change or be dropped.
 
 
 ## Not possible on the 3DS
 
+- **HOME menu widget.** The HOME menu cannot show anything from a running or closed app; only the icon and banner
+  stored in the CIA are drawn.
 - **Live screen sharing** (3DS to Discord or Discord to 3DS). Discord streams are encoded video (H.264/VP8) over WebRTC.
   The 3DS cannot encode video, and decoding a stream is only possible in hardware on the New 3DS with a decoder service
   the app cannot use for this. What is possible is sending screenshots (Phase 13).
