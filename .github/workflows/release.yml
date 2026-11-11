@@ -68,8 +68,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           DRAFT: ${{ inputs.draft }}
         run: |
+          {
+            awk -v v="$VERSION" '$0=="## "v{f=1;next} /^## /{f=0} f' CHANGELOG.md
+            echo
+            echo "Built from commit \`${GITHUB_SHA::7}\`. Install \`TriCord.cia\` with FBI, or run \`TriCord.3dsx\` from the Homebrew Launcher."
+          } > notes.md
           extra=""; [ "$DRAFT" = "true" ] && extra="--draft"
           gh release create "v${VERSION}" TriCord.cia TriCord.3dsx \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --latest $extra \
             --title "3DScord ${VERSION}" \
-            --notes "Built from commit \`${GITHUB_SHA::7}\`. Install \`TriCord.cia\` with FBI, or run \`TriCord.3dsx\` from the Homebrew Launcher."
+            --notes-file notes.md

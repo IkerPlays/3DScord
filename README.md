@@ -1,4 +1,8 @@
-# TriCord
+# 3DScord
+
+Fork of [TriCord](https://github.com/2b-zipper/TriCord) by 2b-zipper (GPLv3), maintained by IkerPlays.
+Prebuilt `.cia` and `.3dsx` files are on the [Releases](../../releases) page; every push to `main` is built by GitHub Actions.
+
 ![License](https://img.shields.io/badge/license-GPLv3-green)
 ![Platform](https://img.shields.io/badge/platform-Nintendo%203DS-red)
 ![Downloads](https://img.shields.io/github/downloads/2b-zipper/TriCord/total?style=flat&color=blue)
