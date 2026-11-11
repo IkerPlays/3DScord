@@ -566,24 +566,51 @@ void ListScreen::fetch(const std::string &path) {
 		    } else if (doc.HasParseError()) {
 			    err = TR("list.error");
 		    } else if (fetchMode == Mode::GIFS) {
+			    // Search answers with a list; trending answers with an object that holds the list in "gifs".
+			    const rapidjson::Value *items = nullptr;
 			    if (doc.IsArray()) {
-				    for (const auto &g : doc.GetArray()) {
+				    items = &doc;
+			    } else if (doc.IsObject() && doc.HasMember("gifs") && doc["gifs"].IsArray()) {
+				    items = &doc["gifs"];
+			    }
+			    if (!items) {
+				    Logger::log("[GIFs] Unexpected answer: %.200s", resp.body.c_str());
+			    }
+			    auto usable = [](const std::string &u) {
+				    // Videos cannot be shown on the 3DS.
+				    const size_t q = u.find('?');
+				    const std::string path = q == std::string::npos ? u : u.substr(0, q);
+				    const auto ends = [&](const char *ext) {
+					    const size_t n = strlen(ext);
+					    return path.size() >= n && path.compare(path.size() - n, n, ext) == 0;
+				    };
+				    return !u.empty() && !ends(".mp4") && !ends(".webm") && !ends(".mov");
+			    };
+			    if (items) {
+				    for (const auto &g : items->GetArray()) {
 					    if (!g.IsObject()) {
 						    continue;
 					    }
-					    const std::string link = str(g, "url");
+					    std::string link = str(g, "url");
+					    if (link.empty()) {
+						    link = str(g, "src");
+					    }
 					    if (link.empty()) {
 						    continue;
 					    }
 					    std::string title = str(g, "title");
 					    Entry e{link, "", title.empty() ? "GIF" : title, link};
-					    // preview is a small still, gif_src the animated picture.
-					    e.preview = str(g, "preview");
-					    e.animated = str(g, "gif_src");
-					    if (e.preview.empty()) {
-						    e.preview = e.animated;
-						    e.animated.clear();
+					    // preview is a small still, gif_src (or src) the animated picture.
+					    const std::string still = str(g, "preview");
+					    std::string moving = str(g, "gif_src");
+					    if (!usable(moving)) {
+						    moving = str(g, "src");
 					    }
+					    if (!usable(moving)) {
+						    moving.clear();
+					    }
+					    e.preview = usable(still) ? still : moving;
+					    e.animated = e.preview == moving ? std::string() : moving;
 					    list.push_back(e);
 				    }
 			    }
