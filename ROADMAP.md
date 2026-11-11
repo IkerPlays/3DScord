@@ -144,7 +144,7 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
 ## Phase 14 — Extras
 - [x] Spotify: see what people are listening to (in their profile, when Discord sends it)
 - [ ] Bot command mini-games with buttons
-- [ ] Share themes between consoles
+- [x] Share themes between consoles (as a .json file through any chat)
 
 ## Phase 15 — System integration (to be tried on a real console)
 - [ ] HOME menu widget with the latest message

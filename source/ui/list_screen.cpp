@@ -14,6 +14,7 @@
 #include "utils/file_utils.h"
 #include "utils/system_utils.h"
 #include "utils/updater.h"
+#include <sys/stat.h>
 #include <sys/statvfs.h>
 #include "ui/message_screen.h"
 #include "ui/profile_screen.h"
@@ -509,6 +510,8 @@ void ListScreen::loadLocal() {
 		        {"read", channelId, TR("list.mark_read"), TR("list.tools.read")},
 		        {"readserver", channelId, TR("list.mark_server_read"), TR("list.tools.read_server")},
 		        {"archive", channelId, TR("list.archive_thread"), TR("list.tools.archive")},
+		        {"themeshare", channelId, TR("theme.share"), TR("list.tools.theme_share")},
+		        {"themeimport", channelId, TR("theme.import"), TR("list.tools.theme_import")},
 		        {"shot", channelId, TR("screenshot.title"), TR("list.tools.shot")},
 		        {"server", channelId, TR("server.title"), TR("list.tools.server")},
 		        {"events", channelId, TR("list.events"), TR("list.tools.events")},
@@ -1369,6 +1372,45 @@ void ListScreen::primaryAction(const Entry &entry) {
 				const Discord::Guild *g = client.getGuildPtr(guildId);
 				openSounds(guildId, g ? g->name : "");
 			}
+		} else if (entry.id == "themeshare") {
+			// The theme in use goes to themes/ and from there to the chat as a .json file anyone can import.
+			Theme theme = Config::getInstance().getTheme();
+			if (theme.name.empty()) {
+				theme.name = "Shared Theme";
+			}
+			if (Config::getInstance().saveThemeToFile(theme.name, theme)) {
+				std::string clean;
+				for (char ch : theme.name) {
+					clean += (std::string("\\/:*?\"<>|").find(ch) != std::string::npos || (unsigned char)ch < 32) ? '_' : ch;
+				}
+				Utils::Transfers::getInstance().uploadFile(channelId,
+				                                           std::string(CONFIG_DIR_PATH) + "/themes/" + clean + ".json", "");
+			} else {
+				sm.showToast(TR("theme.save_failed"));
+			}
+		} else if (entry.id == "themeimport") {
+			FileBrowserScreen::open(TR("theme.import"), FileBrowserScreen::Filter::ANY, [](const std::string &path) {
+				// Copied into themes/ under its own name, then switched on if it reads as a theme.
+				std::string name = path.substr(path.find_last_of('/') + 1);
+				if (name.size() > 5 && name.compare(name.size() - 5, 5, ".json") == 0) {
+					name.resize(name.size() - 5);
+				}
+				const auto bytes = Utils::File::readFile(path);
+				const std::string data(bytes.begin(), bytes.end());
+				const std::string dir = std::string(CONFIG_DIR_PATH) + "/themes";
+				mkdir("sdmc:/3ds", 0777);
+				mkdir(CONFIG_DIR_PATH, 0777);
+				mkdir(dir.c_str(), 0777);
+				auto &sm = ScreenManager::getInstance();
+				if (!data.empty() && Utils::File::writeFile(dir + "/" + name + ".json", data) &&
+				    Config::getInstance().loadThemeFromFile(name)) {
+					Config::getInstance().setCustomThemeEnabled(true);
+					sm.showToast(TR("theme.imported"));
+				} else {
+					remove((dir + "/" + name + ".json").c_str());
+					sm.showToast(TR("theme.import_failed"));
+				}
+			});
 		} else if (entry.id == "shot") {
 			// Close this list first so the picture shows the chat, not the menu.
 			sm.returnToPreviousScreen();

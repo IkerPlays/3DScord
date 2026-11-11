@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- **Share My Theme / Import a Theme** (Channel Tools): sends the theme in use to the chat as a `.json` file, and imports
+  one from the SD card (for example a file saved from a chat) and turns it on.
 - **What they listen to or play:** a profile shows the Spotify song or the game when Discord sends it (it only does so for
   friends and for people it has recently seen online).
 - **GIF picker:** trending GIFs now load (Discord answers them in a different shape than searches), video-only results
