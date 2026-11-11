@@ -102,19 +102,6 @@ bool pollEnded(const Discord::Poll &poll);
 
 static std::unordered_map<std::string, std::string> channelDrafts;
 
-std::string getChannelDraft(const std::string &channelId) {
-	auto it = channelDrafts.find(channelId);
-	return it == channelDrafts.end() ? std::string() : it->second;
-}
-
-void setChannelDraft(const std::string &channelId, const std::string &text) {
-	if (text.empty()) {
-		channelDrafts.erase(channelId);
-	} else {
-		channelDrafts[channelId] = text;
-	}
-}
-
 constexpr float BLOCK_GAP = 4.0f;
 constexpr float BLOCK_WIDTH = 400.0f - 42.0f - 10.0f;
 constexpr float BUTTON_H = 20.0f;
@@ -322,6 +309,19 @@ float buttonWidth(const Discord::MessageControl &control, float maxWidth) {
 	return std::min(width, maxWidth);
 }
 } // namespace
+
+std::string getChannelDraft(const std::string &channelId) {
+	auto it = channelDrafts.find(channelId);
+	return it == channelDrafts.end() ? std::string() : it->second;
+}
+
+void setChannelDraft(const std::string &channelId, const std::string &text) {
+	if (text.empty()) {
+		channelDrafts.erase(channelId);
+	} else {
+		channelDrafts[channelId] = text;
+	}
+}
 
 MessageScreen::MessageScreen(const std::string &channelId, const std::string &channelName)
     : channelId(channelId), channelName(channelName), channelType(0), rulesChannelId(""), selectedIndex(0),
