@@ -1,0 +1,75 @@
+name: Stable release
+
+# Actions > "Stable release" > Run workflow (on main), type the version (for example 1.0.0).
+# Builds .cia and .3dsx and publishes a normal GitHub release (marked Latest).
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version as MAJOR.MINOR.PATCH (for example 1.0.0)"
+        required: true
+        type: string
+      draft:
+        description: "Publish as a draft first"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: stable-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    container: devkitpro/devkitarm:latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          version="${INPUT_VERSION#v}"
+          printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "::error::Version must look like 1.0.0"; exit 1; }
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: System tools
+        run: |
+          apt-get update
+          apt-get install -y git make cmake g++ gcc curl
+
+      - name: Build makerom and bannertool
+        run: |
+          git clone --depth 1 https://github.com/3DSGuy/Project_CTR.git /tmp/ctr
+          make -C /tmp/ctr/makerom deps
+          make -C /tmp/ctr/makerom -j"$(nproc)"
+          cp /tmp/ctr/makerom/bin/makerom /usr/local/bin/
+          git clone --depth 1 https://github.com/carstene1ns/3ds-bannertool.git /tmp/bannertool
+          cmake -S /tmp/bannertool -B /tmp/bannertool/b
+          make -C /tmp/bannertool/b -j"$(nproc)"
+          cp /tmp/bannertool/b/bannertool /usr/local/bin/
+
+      - name: Set version
+        run: |
+          IFS=. read -r a b c <<< "$VERSION"
+          sed -i -e "s/^APP_VERSION_MAJOR.*/APP_VERSION_MAJOR = $a/" \
+                 -e "s/^APP_VERSION_MINOR.*/APP_VERSION_MINOR = $b/" \
+                 -e "s/^APP_VERSION_MICRO.*/APP_VERSION_MICRO = $c/" resources/AppInfo
+
+      - name: Build .3dsx and .cia
+        run: make -j"$(nproc)" MAKEROM=makerom BANNERTOOL=bannertool
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DRAFT: ${{ inputs.draft }}
+        run: |
+          extra=""; [ "$DRAFT" = "true" ] && extra="--draft"
+          gh release create "v${VERSION}" TriCord.cia TriCord.3dsx \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --latest $extra \
+            --title "3DScord ${VERSION}" \
+            --notes "Built from commit \`${GITHUB_SHA::7}\`. Install \`TriCord.cia\` with FBI, or run \`TriCord.3dsx\` from the Homebrew Launcher."
