@@ -1,0 +1,36 @@
+name: Releases maintenance
+
+# Deletes releases (and their tags) by tag name: for example old devbuilds that are numbered wrongly or replaced.
+# Actions > "Releases maintenance" > Run workflow, then type the tags separated by spaces (v0.2.1-dev.26 v0.1.1-dev.10).
+on:
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: "Tags to delete, separated by spaces"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  delete:
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          TAGS: ${{ inputs.tags }}
+        run: |
+          for tag in $TAGS; do
+            case "$tag" in
+              v*) ;;
+              *) echo "::error::'$tag' does not look like a release tag"; exit 1 ;;
+            esac
+            if gh release view "$tag" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+              echo "deleting $tag"
+              gh release delete "$tag" --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes
+            else
+              echo "no release $tag (skipped)"
+            fi
+          done
+          gh release list --repo "$GITHUB_REPOSITORY" --limit 20

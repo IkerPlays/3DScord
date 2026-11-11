@@ -8,6 +8,10 @@
 - **Threads:** Channel Tools > Threads lists the active threads (Y: show archived), A opens one, X joins it.
   The message menu has **Create Thread**, and Channel Tools has **Archive This Thread**.
 - The update check can no longer hold the app on a slow network: it gives up after a few seconds and starts normally.
+- **Updater:** downloads are retried up to three times, errors show their real code, and a small `updater.log` is kept
+  in `sdmc:/3ds/3DScord` so a failed update can be diagnosed.
+- **Devbuild numbers** now follow the next stable version (`0.3.0-dev.1`, `0.3.0-dev.2`, ...) with no gaps, and the
+  release notes are cleaner.
 
 ## Pending 0.3.0
 These changes already shipped in a devbuild and will be part of the 0.3.0 release notes.

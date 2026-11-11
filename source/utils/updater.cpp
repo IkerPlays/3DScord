@@ -39,6 +39,28 @@ void ensureConfigDir() {
 	mkdir(CONFIG_DIR_PATH, 0777);
 }
 
+constexpr const char *UPDATER_LOG = CONFIG_DIR_PATH "/updater.log";
+
+// The updater keeps its own small log on the SD card (always on), so a failed update can be diagnosed afterwards.
+void writeLog(const std::string &line) {
+	Logger::log("[Updater] %s", line.c_str());
+	ensureConfigDir();
+	struct stat st;
+	if (stat(UPDATER_LOG, &st) == 0 && st.st_size > 24 * 1024) {
+		remove(UPDATER_LOG);
+	}
+	if (FILE *f = fopen(UPDATER_LOG, "a")) {
+		fprintf(f, "%s | %s\n", APP_VERSION, line.c_str());
+		fclose(f);
+	}
+}
+
+std::string hex(Result rc) {
+	char buf[16];
+	snprintf(buf, sizeof(buf), "0x%08lX", (unsigned long)rc);
+	return buf;
+}
+
 } // namespace
 
 Updater &Updater::getInstance() {
@@ -128,7 +150,7 @@ void Updater::setStatus(const std::string &message) {
 }
 
 void Updater::fail(const std::string &message) {
-	Logger::log("[Updater] %s", message.c_str());
+	writeLog("FAILED: " + message);
 	{
 		std::lock_guard<std::mutex> lock(mutex);
 		error = message;
@@ -162,9 +184,17 @@ void Updater::startInstall() {
 void Updater::runCheck(bool includeDevBuilds) {
 	Network::HttpClient http;
 	http.setTimeout(8);
+	writeLog("Checking " + versionString(currentVersion()) + (isCiaInstall() ? " (CIA)" : " (3DSX)") +
+	         (includeDevBuilds ? ", devbuilds on" : ", stable only"));
 	Network::HttpResponse resp = http.get(RELEASES_URL, {{"Accept", "application/vnd.github+json"}});
 	if (!resp.success) {
-		fail("Update check failed (HTTP " + std::to_string(resp.statusCode) + ")");
+		if (resp.statusCode == 403 || resp.statusCode == 429) {
+			fail("GitHub is limiting requests, try again later");
+		} else if (resp.statusCode == 0) {
+			fail("No connection to GitHub" + (resp.error.empty() ? "" : " (" + resp.error + ")"));
+		} else {
+			fail("Update check failed (HTTP " + std::to_string(resp.statusCode) + ")");
+		}
 		return;
 	}
 
@@ -216,12 +246,12 @@ void Updater::runCheck(bool includeDevBuilds) {
 	}
 
 	if (!found) {
-		Logger::log("[Updater] Up to date (%s)", versionString(current).c_str());
+		writeLog("Up to date");
 		state = State::UP_TO_DATE;
 		return;
 	}
 
-	Logger::log("[Updater] Update available: %s", best.tag.c_str());
+	writeLog("Update available: " + best.tag + " (" + std::to_string(best.assetSize) + " bytes)");
 	{
 		std::lock_guard<std::mutex> lock(mutex);
 		release = best;
@@ -237,11 +267,20 @@ bool Updater::download(const Release &rel, const std::string &dest) {
 	control.cancel = &cancelRequested;
 
 	std::string error;
-	if (!Network::downloadToFile(rel.assetUrl, dest, control, error, rel.assetSize)) {
-		fail(error);
-		return false;
+	for (int attempt = 1; attempt <= 3; attempt++) {
+		downloaded = 0;
+		writeLog("Downloading " + rel.tag + " (attempt " + std::to_string(attempt) + ")");
+		if (Network::downloadToFile(rel.assetUrl, dest, control, error, rel.assetSize)) {
+			return true;
+		}
+		writeLog("Download error: " + error);
+		if (cancelRequested) {
+			break;
+		}
+		svcSleepThread(2000000000LL);
 	}
-	return true;
+	fail(error);
+	return false;
 }
 
 bool Updater::installCia(const std::string &path) {
@@ -254,7 +293,7 @@ bool Updater::installCia(const std::string &path) {
 	Result rc = amInit();
 	if (R_FAILED(rc)) {
 		fclose(in);
-		fail("Cannot access the installer (AM service)");
+		fail("Cannot access the installer (AM service " + hex(rc) + ")");
 		return false;
 	}
 
@@ -263,18 +302,21 @@ bool Updater::installCia(const std::string &path) {
 	if (R_FAILED(rc)) {
 		fclose(in);
 		amExit();
-		fail("Cannot start the installation");
+		fail("Cannot start the installation (" + hex(rc) + ")");
 		return false;
 	}
 
 	std::vector<unsigned char> buffer(128 * 1024);
 	u64 offset = 0;
 	bool ok = true;
+	Result failCode = 0;
 	size_t n;
 	while ((n = fread(buffer.data(), 1, buffer.size(), in)) > 0) {
 		u32 written = 0;
 		rc = FSFILE_Write(cia, &written, offset, buffer.data(), (u32)n, 0);
 		if (R_FAILED(rc) || written != n) {
+			writeLog("Write to the installer failed at " + std::to_string(offset) + ": " + hex(rc));
+			failCode = rc;
 			ok = false;
 			break;
 		}
@@ -285,13 +327,16 @@ bool Updater::installCia(const std::string &path) {
 	if (ok) {
 		rc = AM_FinishCiaInstall(cia);
 		ok = R_SUCCEEDED(rc);
+		if (!ok) {
+			failCode = rc;
+		}
 	} else {
 		AM_CancelCIAInstall(cia);
 	}
 	amExit();
 
 	if (!ok) {
-		fail("Installation failed (invalid CIA or no space left)");
+		fail("Installation failed (" + hex(failCode) + "): invalid CIA or no space left");
 		return false;
 	}
 	return true;
@@ -352,7 +397,7 @@ void Updater::runInstall() {
 		return;
 	}
 
-	Logger::log("[Updater] Installed %s", rel.tag.c_str());
+	writeLog("Installed " + rel.tag);
 	state = cia ? State::RESTART : State::EXIT_MANUAL;
 }
 

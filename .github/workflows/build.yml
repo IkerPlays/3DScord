@@ -8,6 +8,11 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      ref:
+        description: "Commit to build (empty: the latest commit of main)"
+        required: false
+        type: string
 
 permissions:
   contents: write # needed to publish devbuild releases
@@ -23,30 +28,32 @@ defaults:
     shell: bash
 
 jobs:
-  # Version of this build: "<core>-dev.<run number>". <core> is the version of resources/AppInfo, but never lower
-  # than the latest stable release + 1 patch, so a devbuild is always newer than the stable one it follows.
+  # Devbuilds are numbered after the next stable version: with 0.2.0 out they are 0.3.0-dev.1, 0.3.0-dev.2 ...
+  # The number counts the devbuilds that exist for that version, so it has no gaps, and every devbuild is newer than the
+  # stable release before it and older than the stable release it leads to.
   version:
     runs-on: ubuntu-latest
     outputs:
       core: ${{ steps.ver.outputs.core }}
+      dev: ${{ steps.ver.outputs.dev }}
       version: ${{ steps.ver.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
       - id: ver
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          get() { sed -n "s/^$1 *= *\([0-9]*\).*/\1/p" resources/AppInfo; }
-          core="$(get APP_VERSION_MAJOR).$(get APP_VERSION_MINOR).$(get APP_VERSION_MICRO)"
           stable=$(gh release list --repo "$GITHUB_REPOSITORY" --exclude-pre-releases --limit 100 \
                      --json tagName --jq '.[].tagName' | sed 's/^v//' \
                      | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1 || true)
-          if [ -n "$stable" ] && [ "$(printf '%s\n%s\n' "$core" "$stable" | sort -V | tail -1)" = "$stable" ]; then
-            IFS=. read -r a b c <<< "$stable"
-            core="$a.$b.$((c + 1))"
-          fi
+          IFS=. read -r a b c <<< "${stable:-0.0.0}"
+          core="$a.$((b + 1)).0"
+          last=$(gh release list --repo "$GITHUB_REPOSITORY" --limit 300 --json tagName --jq '.[].tagName' \
+                   | sed -n "s/^v${core//./\\.}-dev\\.\\([0-9][0-9]*\\)$/\\1/p" | sort -n | tail -1 || true)
+          dev=$(( ${last:-0} + 1 ))
           echo "core=$core" >> "$GITHUB_OUTPUT"
-          echo "version=${core}-dev.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+          echo "dev=$dev" >> "$GITHUB_OUTPUT"
+          echo "version=${core}-dev.${dev}" >> "$GITHUB_OUTPUT"
+          echo "Stable: ${stable:-none}  ->  this build: ${core}-dev.${dev}"
 
   build:
     needs: version
@@ -54,6 +61,8 @@ jobs:
     container: devkitpro/devkitarm:latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
 
       - name: System tools
         run: |
@@ -81,7 +90,7 @@ jobs:
                  -e "s/^APP_VERSION_MICRO.*/APP_VERSION_MICRO = $c/" resources/AppInfo
 
       - name: Build .3dsx and .cia
-        run: make -j"$(nproc)" MAKEROM=makerom BANNERTOOL=bannertool APP_DEV_BUILD=${{ github.run_number }}
+        run: make -j"$(nproc)" MAKEROM=makerom BANNERTOOL=bannertool APP_DEV_BUILD=${{ needs.version.outputs.dev }}
 
       - name: Collect files
         run: |
@@ -101,6 +110,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.ref || github.sha }}
           fetch-depth: 0
 
       - uses: actions/download-artifact@v4
@@ -108,30 +118,33 @@ jobs:
           name: 3DScord
           path: dist
 
-      # Notes: the "Unreleased" section of CHANGELOG.md (written by hand, shown in the app before updating),
-      # or, when it is empty, the commit subjects since the previous release.
+      # Notes: the "Unreleased" section of CHANGELOG.md of the built commit (written by hand, shown in the app before
+      # updating), or, when it is empty, the commit subjects since the previous release.
       - name: Write release notes
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.version.outputs.version }}
         run: |
           git fetch --tags --force
+          built=$(git rev-parse HEAD)
           prev=$(gh release list --repo "$GITHUB_REPOSITORY" --limit 1 --json tagName --jq '.[0].tagName // empty')
-          awk '/^## /{f=($0=="## Unreleased"); next} f' CHANGELOG.md | sed '/./,$!d' > changes.md
-          if [ ! -s changes.md ]; then
+          changes=$(awk '/^## /{f=($0=="## Unreleased"); next} f' CHANGELOG.md | sed '/./,$!d' | cat -s)
+          if [ -z "$changes" ]; then
             if [ -n "$prev" ] && git rev-parse -q --verify "refs/tags/$prev" > /dev/null; then range="$prev..HEAD"; else range="-30"; fi
-            git log --no-merges --pretty='- %s' $range | grep -v -i -E '^- (Bump |Import |Merge )' | head -40 > changes.md || true
+            changes=$(git log --no-merges --pretty='- %s' $range | grep -v -i -E '^- (Bump |Import |Merge )' | head -40 || true)
           fi
           {
             echo "# 3DScord ${VERSION} (devbuild)"
             echo
-            cat changes.md
+            printf '%s\n' "$changes"
             echo
             echo "---"
-            echo "Development build from commit \`${GITHUB_SHA::7}\`. Install \`3DScord.cia\` with FBI, or run \`3DScord.3dsx\` from the Homebrew Launcher. May be unstable."
+            echo "Development build of commit \`${built::7}\`. Install \`3DScord.cia\` with FBI, or run \`3DScord.3dsx\` from the Homebrew Launcher. It may be unstable."
           } > notes.md
           cat notes.md
 
+      # The tag is made on the commit the workflow runs on (GITHUB_SHA): GitHub refuses to tag an older commit with the
+      # default token when workflow files changed since then. The files attached are built from the requested commit.
       - name: Publish devbuild
         env:
           GH_TOKEN: ${{ github.token }}
