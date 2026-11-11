@@ -12,6 +12,7 @@
 #include "discord/threads.h"
 #include "utils/message_utils.h"
 #include "utils/redraw.h"
+#include "utils/sound_player.h"
 #include "utils/transfers.h"
 #include "utils/utf8_utils.h"
 #include <3ds.h>
@@ -24,6 +25,8 @@
 namespace UI {
 
 ListScreen::Mode ListScreen::pendingMode = ListScreen::Mode::PINS;
+std::string ListScreen::pendingSoundTarget;
+std::string ListScreen::pendingSoundName;
 
 namespace {
 
@@ -128,6 +131,13 @@ bool messageToEntry(const rapidjson::Value &m, std::string &id, std::string &cha
 
 } // namespace
 
+void ListScreen::openSounds(const std::string &targetId, const std::string &targetName) {
+	pendingSoundTarget = targetId;
+	pendingSoundName = targetName;
+	pendingMode = Mode::SOUNDS;
+	ScreenManager::getInstance().setScreen(ScreenType::LIST);
+}
+
 void ListScreen::openReplacing(Mode mode) {
 	pendingMode = mode;
 	ScreenManager::getInstance().setScreen(ScreenType::LIST);
@@ -141,6 +151,8 @@ void ListScreen::open(Mode mode) {
 ListScreen::ListScreen()
     : mode(pendingMode), shared(std::make_shared<Shared>()), loading(true), seenVersion(-1), selected(0), scroll(0.0f) {
 	channelId = Discord::DiscordClient::getInstance().getSelectedChannelId();
+	soundTarget = pendingSoundTarget;
+	soundTargetName = pendingSoundName;
 }
 
 ListScreen::~ListScreen() {}
@@ -234,6 +246,22 @@ void ListScreen::loadLocal() {
 			list.push_back({"", channelId, "", r});
 		}
 		break;
+	case Mode::SOUNDS: {
+		const int current = store.getSoundOverride(soundTarget);
+		auto row = [&](const std::string &id, int value, const std::string &name) {
+			list.push_back({id, soundTarget, name, current == value ? TR("list.sound_current") : ""});
+		};
+		row("default", -1, TR("sound.default"));
+		row("0", 0, TR("sound.silent"));
+		row("1", (int)Utils::Sound::NOTIFICATION + 1, TR("sound.notification"));
+		row("2", (int)Utils::Sound::VOICE_JOIN + 1, TR("sound.join"));
+		row("3", (int)Utils::Sound::VOICE_LEFT + 1, TR("sound.left"));
+		row("4", (int)Utils::Sound::VOICE_PEER_LEFT + 1, TR("sound.left2"));
+		row("5", (int)Utils::Sound::MIC_ON + 1, TR("sound.mic_on"));
+		row("6", (int)Utils::Sound::HEADPHONE_ON + 1, TR("sound.headphones"));
+		row("7", (int)Utils::Sound::CALL_INCOMING + 1, TR("sound.call"));
+		break;
+	}
 	case Mode::HUB:
 		list = {{"find", channelId, TR("list.find"), TR("list.hub.find")},
 		        {"friends", channelId, TR("list.friends"), TR("list.hub.friends")},
@@ -250,6 +278,8 @@ void ListScreen::loadLocal() {
 		        {"threads", channelId, TR("list.threads"), TR("list.tools.threads")},
 		        {"members", channelId, TR("list.members"), TR("list.tools.members")},
 		        {"nick", channelId, TR("list.my_nick"), TR("list.tools.nick")},
+		        {"sound_channel", channelId, TR("list.sound_channel"), TR("list.tools.sound_channel")},
+		        {"sound_guild", channelId, TR("list.sound_guild"), TR("list.tools.sound_guild")},
 		        {"quick", channelId, TR("list.quick_replies"), TR("list.tools.quick")},
 		        {"drafts", channelId, TR("list.drafts"), TR("list.tools.drafts")},
 		        {"format", channelId, TR("list.format"), TR("list.tools.format")},
@@ -585,6 +615,8 @@ std::string ListScreen::headerTitle() const {
 		return query.empty() ? TR("list.members") : TR("list.members") + ": " + query;
 	case Mode::THREADS:
 		return TR("list.threads");
+	case Mode::SOUNDS:
+		return TR("list.sounds") + (soundTargetName.empty() ? "" : ": " + soundTargetName);
 	case Mode::HUB:
 		return TR("menu.quick_access");
 	case Mode::FRIENDS:
@@ -623,6 +655,8 @@ std::string ListScreen::hintLine() const {
 		return TR("list.hint.members");
 	case Mode::THREADS:
 		return TR("list.hint.threads");
+	case Mode::SOUNDS:
+		return TR("list.hint.sounds");
 	case Mode::HUB:
 		return TR("list.hint.tools");
 	case Mode::FRIENDS:
@@ -660,6 +694,30 @@ void ListScreen::primaryAction(const Entry &entry) {
 	auto &client = Discord::DiscordClient::getInstance();
 	auto &sm = ScreenManager::getInstance();
 	switch (mode) {
+	case Mode::SOUNDS: {
+		int value = -1;
+		Utils::Sound preview = Utils::Sound::NOTIFICATION;
+		bool silent = false;
+		if (entry.id != "default") {
+			value = atoi(entry.id.c_str());
+			silent = (value == 0);
+			// Rows 1..7 map to the sounds listed in loadLocal.
+			static const Utils::Sound order[] = {Utils::Sound::NOTIFICATION,  Utils::Sound::VOICE_JOIN,
+			                                     Utils::Sound::VOICE_LEFT,    Utils::Sound::VOICE_PEER_LEFT,
+			                                     Utils::Sound::MIC_ON,        Utils::Sound::HEADPHONE_ON,
+			                                     Utils::Sound::CALL_INCOMING};
+			if (value >= 1 && value <= 7) {
+				preview = order[value - 1];
+				value = (int)preview + 1;
+			}
+		}
+		Core::LocalStore::getInstance().setSoundOverride(soundTarget, value);
+		if (!silent) {
+			Utils::SoundPlayer::getInstance().play(preview);
+		}
+		load();
+		break;
+	}
 	case Mode::HUB:
 		if (entry.id == "find") {
 			openReplacing(Mode::FIND);
@@ -732,6 +790,16 @@ void ListScreen::primaryAction(const Entry &entry) {
 			openReplacing(Mode::THREADS);
 		} else if (entry.id == "members") {
 			openReplacing(Mode::MEMBERS);
+		} else if (entry.id == "sound_channel") {
+			openSounds(channelId, channelLabel(channelId));
+		} else if (entry.id == "sound_guild") {
+			const std::string guildId = client.getGuildIdFromChannel(channelId);
+			if (guildId.empty() || guildId == "DM") {
+				sm.showToast(TR("list.members_need_server"));
+			} else {
+				const Discord::Guild *g = client.getGuildPtr(guildId);
+				openSounds(guildId, g ? g->name : "");
+			}
 		} else if (entry.id == "nick") {
 			const std::string guildId = client.getGuildIdFromChannel(channelId);
 			if (guildId.empty() || guildId == "DM") {

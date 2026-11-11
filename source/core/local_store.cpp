@@ -69,6 +69,13 @@ void LocalStore::ensureLoaded() {
 					}
 				}
 			}
+			if (doc.HasMember("sound_overrides") && doc["sound_overrides"].IsObject()) {
+				for (auto it = doc["sound_overrides"].MemberBegin(); it != doc["sound_overrides"].MemberEnd(); ++it) {
+					if (it->value.IsInt()) {
+						soundOverrides[it->name.GetString()] = it->value.GetInt();
+					}
+				}
+			}
 			if (!doc.HasMember("quick_replies")) {
 				replies = {"On my way!", "Be right back", "Thanks!", "Can't talk now"};
 			}
@@ -116,6 +123,13 @@ void LocalStore::save() {
 		w.String(id.c_str());
 	}
 	w.EndArray();
+	w.Key("sound_overrides");
+	w.StartObject();
+	for (const auto &kv : soundOverrides) {
+		w.Key(kv.first.c_str());
+		w.Int(kv.second);
+	}
+	w.EndObject();
 	w.Key("quick_replies");
 	w.StartArray();
 	for (const auto &r : replies) {
@@ -201,6 +215,22 @@ bool LocalStore::toggleDmPinned(const std::string &channelId) {
 	}
 	save();
 	return nowPinned;
+}
+
+int LocalStore::getSoundOverride(const std::string &id) {
+	ensureLoaded();
+	auto it = soundOverrides.find(id);
+	return it == soundOverrides.end() ? -1 : it->second;
+}
+
+void LocalStore::setSoundOverride(const std::string &id, int value) {
+	ensureLoaded();
+	if (value < 0) {
+		soundOverrides.erase(id);
+	} else {
+		soundOverrides[id] = value;
+	}
+	save();
 }
 
 const std::vector<std::string> &LocalStore::quickReplies() {

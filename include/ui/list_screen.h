@@ -14,11 +14,13 @@ namespace UI {
 // quick replies and the formatting helpers. The mode is chosen with open() before the screen is created.
 class ListScreen : public Screen {
   public:
-	enum class Mode { TOOLS, PINS, SEARCH, MENTIONS, SAVED, DRAFTS, QUICK_REPLIES, FORMAT, GIFS, STICKERS, FIND, MEMBERS, THREADS, HUB, FRIENDS, GROUP_PICK };
+	enum class Mode { TOOLS, PINS, SEARCH, MENTIONS, SAVED, DRAFTS, QUICK_REPLIES, FORMAT, GIFS, STICKERS, FIND, MEMBERS, THREADS, HUB, FRIENDS, GROUP_PICK, SOUNDS };
 
 	static void open(Mode mode);
 	// Switches to another list without adding the current one to the back history.
 	static void openReplacing(Mode mode);
+	// Notification sound of a server or channel (the id of the server or channel and a name to show).
+	static void openSounds(const std::string &targetId, const std::string &targetName);
 
 	ListScreen();
 	~ListScreen() override;
@@ -64,6 +66,8 @@ class ListScreen : public Screen {
 	void clampSelection();
 
 	static Mode pendingMode;
+	static std::string pendingSoundTarget;
+	static std::string pendingSoundName;
 
 	Mode mode;
 	std::string channelId;
@@ -75,6 +79,8 @@ class ListScreen : public Screen {
 	int selected;
 	float scroll;
 	std::string query;
+	std::string soundTarget;
+	std::string soundTargetName;
 	bool includeArchived = false;
 	int friendFilter = 0; // 0 friends, 1 pending, 2 blocked
 	std::set<std::string> groupIds;

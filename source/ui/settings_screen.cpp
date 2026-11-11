@@ -262,6 +262,60 @@ void SettingsScreen::onEnter() {
 	replyPing.onUpdate = [](int val) { Config::getInstance().setReplyPingEnabled(val == 1); };
 	allItems.push_back(replyPing);
 
+	SettingItem dmUnread;
+	dmUnread.label = TR("settings.dm_unread_first");
+	dmUnread.description = TR("settings.desc.dm_unread_first");
+	dmUnread.type = SettingItemType::TOGGLE;
+	dmUnread.value = Config::getInstance().isDmUnreadFirst() ? 1 : 0;
+	dmUnread.min = 0;
+	dmUnread.max = 1;
+	dmUnread.valueFormatter = [](int val) { return (val == 1) ? TR("common.enabled") : TR("common.disabled"); };
+	dmUnread.onUpdate = [](int val) { Config::getInstance().setDmUnreadFirst(val == 1); };
+	allItems.push_back(dmUnread);
+
+	// Quiet hours: no message sounds between two hours of the day.
+	SettingItem quiet;
+	quiet.label = TR("settings.quiet_hours");
+	quiet.description = TR("settings.desc.quiet_hours");
+	quiet.type = SettingItemType::TOGGLE;
+	quiet.value = Config::getInstance().isQuietHoursEnabled() ? 1 : 0;
+	quiet.min = 0;
+	quiet.max = 1;
+	quiet.valueFormatter = [](int val) { return (val == 1) ? TR("common.enabled") : TR("common.disabled"); };
+	quiet.onUpdate = [](int val) { Config::getInstance().setQuietHoursEnabled(val == 1); };
+	allItems.push_back(quiet);
+
+	auto hourFormatter = [](int val) {
+		char buf[8];
+		snprintf(buf, sizeof(buf), "%02d:00", val);
+		return std::string(buf);
+	};
+	SettingItem quietFrom;
+	quietFrom.label = TR("settings.quiet_from");
+	quietFrom.description = TR("settings.desc.quiet_from");
+	quietFrom.type = SettingItemType::STEPPER;
+	quietFrom.value = Config::getInstance().getQuietStart();
+	quietFrom.min = 0;
+	quietFrom.max = 23;
+	quietFrom.valueFormatter = hourFormatter;
+	quietFrom.onUpdate = [](int val) {
+		Config::getInstance().setQuietHours(val, Config::getInstance().getQuietEnd());
+	};
+	allItems.push_back(quietFrom);
+
+	SettingItem quietTo;
+	quietTo.label = TR("settings.quiet_to");
+	quietTo.description = TR("settings.desc.quiet_to");
+	quietTo.type = SettingItemType::STEPPER;
+	quietTo.value = Config::getInstance().getQuietEnd();
+	quietTo.min = 0;
+	quietTo.max = 23;
+	quietTo.valueFormatter = hourFormatter;
+	quietTo.onUpdate = [](int val) {
+		Config::getInstance().setQuietHours(Config::getInstance().getQuietStart(), val);
+	};
+	allItems.push_back(quietTo);
+
 	addAccountItems();
 	addUpdateItems();
 

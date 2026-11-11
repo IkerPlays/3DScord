@@ -2,6 +2,7 @@
 #include "core/config.h"
 #include "discord/avatar_cache.h"
 #include "core/i18n.h"
+#include "core/local_store.h"
 #include "log.h"
 #include "network/http_client.h"
 #include "network/network_manager.h"
@@ -69,6 +70,21 @@ bool peekEventName(const char *json, size_t size, std::string &event) {
 	}
 	event.clear();
 	return p.ok();
+}
+
+// Quiet hours silence message sounds between two hours of the day (they may wrap past midnight).
+bool inQuietHours() {
+	const Config &cfg = Config::getInstance();
+	if (!cfg.isQuietHoursEnabled() || cfg.getQuietStart() == cfg.getQuietEnd()) {
+		return false;
+	}
+	const time_t local = UI::MessageUtils::getUtcNow() + (time_t)UI::MessageUtils::get3DSLocalTimeOffset();
+	struct tm t;
+	gmtime_r(&local, &t);
+	const int hour = t.tm_hour;
+	const int start = cfg.getQuietStart();
+	const int end = cfg.getQuietEnd();
+	return start < end ? (hour >= start && hour < end) : (hour >= start || hour < end);
 }
 
 std::string statusToString(UserStatus status) {
@@ -2114,8 +2130,18 @@ void DiscordClient::handleMessageCreate(const rapidjson::Value &d) {
 		}
 	}
 
-	if (playSound && Config::getInstance().isNotificationSoundEnabled()) {
-		Utils::SoundPlayer::getInstance().play(Utils::Sound::NOTIFICATION);
+	if (playSound && Config::getInstance().isNotificationSoundEnabled() && !inQuietHours()) {
+		// A channel's own sound wins over its server's, which wins over the default one.
+		auto &store = Core::LocalStore::getInstance();
+		int choice = store.getSoundOverride(msg.channelId);
+		if (choice < 0 && !isPrivate) {
+			choice = store.getSoundOverride(guildId);
+		}
+		if (choice < 0) {
+			Utils::SoundPlayer::getInstance().play(Utils::Sound::NOTIFICATION);
+		} else if (choice > 0 && choice <= (int)Utils::Sound::NOTIFICATION + 1) {
+			Utils::SoundPlayer::getInstance().play((Utils::Sound)(choice - 1));
+		}
 	}
 
 	// Any message in an unmuted private channel counts towards the badge.

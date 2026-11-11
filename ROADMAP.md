@@ -58,7 +58,8 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
 - [x] Pinned DMs on top of the list (X on a DM)
 - [x] Search in DMs (Channel Tools > Search works in DMs; Find jumps to a DM by name)
 - [x] Quick Access in the side menu (Find, Friends, New Group DM, Saved, Mentions)
-- [ ] Unread-first DM view; typing indicator in the DM list
+- [x] Unread-first DM view (setting in Phase 6)
+- [ ] Typing indicator in the DM list
 - [ ] Carried over: upload photos from the 3DS camera
 - [ ] Carried over: compress big images before uploading
 - [ ] Carried over: voice messages recorded with the microphone
@@ -68,13 +69,13 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
 - [ ] Carried over: full member list with presence (Discord only lets bots list every member)
 
 ## Phase 6 — Notifications
-- [ ] Background notifications by polling (StreetPass / SpotPass-like)
-- [ ] Notification LED on mentions
-- [ ] Different sound per server or channel
-- [ ] Mute servers and channels for a chosen time (partly in TriCord)
-- [ ] Scheduled Do Not Disturb
-- [ ] Unread counter on the HOME icon
-- [ ] "While you were away" summary on open
+- [x] Different sound per server or channel
+- [x] Scheduled quiet hours (no message sounds)
+- [x] "While you were away" summary when you log in
+- [x] Unread DMs first (setting)
+- [x] Mute servers and channels for a chosen time (already in TriCord)
+- [ ] Not possible on the 3DS: notifications while the app is closed or the console sleeps (apps do not run in the
+      background), the notification LED (no system API for apps) and a counter on the HOME icon
 
 ## Phase 7 — Voice
 - [ ] Voice channel picker with the people connected

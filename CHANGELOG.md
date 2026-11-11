@@ -1,6 +1,15 @@
 # Changelog
 
 ## Unreleased
+- **Sound per server or channel:** Channel Tools > Sound of This Channel / Sound of This Server. Pick a sound and hear it;
+  the channel's own sound wins over the server's.
+- **Quiet Hours** (Settings > Chat): no message sounds between two hours of the day, even across midnight.
+- **While you were away:** when you log in, a message tells you how many mentions you have and in how many conversations.
+- **Unread DMs First** (Settings > Chat): unread direct messages go right after the pinned ones.
+
+## Pending 0.4.0
+These changes already shipped in a devbuild and will be part of the 0.4.0 release notes.
+
 - **Quick Access** in the side menu groups Find, Friends, New Group DM, Saved Messages and Mentions.
 - **Friends:** list of friends, pending requests and blocked people (Y changes the list). A messages a friend or accepts
   a request, X removes (press twice), R adds a friend by username.

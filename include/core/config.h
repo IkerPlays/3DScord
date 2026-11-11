@@ -131,6 +131,14 @@ class Config {
 	bool isShowHiddenChannelsEnabled() const { return showHiddenChannels; }
 	void setShowHiddenChannelsEnabled(bool enabled);
 
+	bool isQuietHoursEnabled() const { return quietHours; }
+	void setQuietHoursEnabled(bool enabled);
+	int getQuietStart() const { return quietStart; }
+	int getQuietEnd() const { return quietEnd; }
+	void setQuietHours(int startHour, int endHour);
+	bool isDmUnreadFirst() const { return dmUnreadFirst; }
+	void setDmUnreadFirst(bool enabled);
+
 	bool isReplyPingEnabled() const { return replyPing; }
 	void setReplyPingEnabled(bool enabled);
 	bool isAutoUpdateEnabled() const { return autoUpdate; }
@@ -169,6 +177,10 @@ class Config {
 	bool showHiddenChannels;
 	bool autoUpdate;
 	bool replyPing;
+	bool quietHours;
+	int quietStart;
+	int quietEnd;
+	bool dmUnreadFirst;
 	bool devBuildUpdates;
 
 	int micVolume;

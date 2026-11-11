@@ -1,6 +1,7 @@
 #ifndef LOCAL_STORE_H
 #define LOCAL_STORE_H
 
+#include <map>
 #include <string>
 #include <vector>
 
@@ -37,6 +38,10 @@ class LocalStore {
 	bool isDmPinned(const std::string &channelId);
 	bool toggleDmPinned(const std::string &channelId); // returns the new state
 
+	// Notification sound of a server or channel: -1 = the default, 0 = silent, otherwise Utils::Sound + 1.
+	int getSoundOverride(const std::string &id);
+	void setSoundOverride(const std::string &id, int value); // -1 removes the override
+
 	const std::vector<std::string> &quickReplies();
 	void addQuickReply(const std::string &text);
 	void setQuickReply(size_t index, const std::string &text); // empty text deletes it
@@ -51,6 +56,7 @@ class LocalStore {
 	std::vector<Draft> draftList;
 	std::vector<std::string> replies;
 	std::vector<std::string> pinnedDms;
+	std::map<std::string, int> soundOverrides;
 };
 
 } // namespace Core

@@ -307,9 +307,31 @@ void ScreenManager::setScreen(ScreenType type) {
 
 		currentScreen = std::make_unique<LoginScreen>();
 		break;
-	case ScreenType::GUILD_LIST:
+	case ScreenType::GUILD_LIST: {
 		currentScreen = std::make_unique<ServerListScreen>();
+		// Once per session: what happened while the app was closed.
+		static bool awayShown = false;
+		auto &dc = Discord::DiscordClient::getInstance();
+		if (!awayShown && dc.getState() == Discord::ConnectionState::READY) {
+			awayShown = true;
+			int mentions = 0;
+			int conversations = 0;
+			{
+				std::lock_guard<std::recursive_mutex> lock(dc.getMutex());
+				for (const auto &kv : dc.getReadStates()) {
+					if (kv.second.mentionCount > 0) {
+						mentions += kv.second.mentionCount;
+						conversations++;
+					}
+				}
+			}
+			if (mentions > 0) {
+				showToast(Core::I18n::format(TR("away.summary"), std::to_string(mentions),
+				                             std::to_string(conversations)));
+			}
+		}
 		break;
+	}
 	case ScreenType::MESSAGES: {
 		auto &client = Discord::DiscordClient::getInstance();
 		std::string channelId = client.getSelectedChannelId();

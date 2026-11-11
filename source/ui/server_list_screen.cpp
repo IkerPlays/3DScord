@@ -281,13 +281,38 @@ void ServerListScreen::refreshChannels() {
 
 	if (item.isDm) {
 		sortedChannels = Discord::DiscordClient::getInstance().getPrivateChannels();
+		// A copy of the read marks, so the sort does not race with the network thread.
+		std::map<std::string, Discord::ReadState> readMarks;
+		{
+			auto &dc = Discord::DiscordClient::getInstance();
+			std::lock_guard<std::recursive_mutex> lock(dc.getMutex());
+			readMarks = dc.getReadStates();
+		}
+		const bool unreadFirst = Config::getInstance().isDmUnreadFirst();
+		auto isUnread = [&readMarks](const Discord::Channel &ch) {
+			auto it = readMarks.find(ch.id);
+			if (it == readMarks.end()) {
+				return false;
+			}
+			return it->second.mentionCount > 0 ||
+			       (!ch.last_message_id.empty() &&
+			        UI::MessageUtils::isNewerSnowflake(ch.last_message_id, it->second.lastReadMessageId));
+		};
 		std::sort(sortedChannels.begin(), sortedChannels.end(),
-		          [](const Discord::Channel &a, const Discord::Channel &b) {
-			          // Pinned conversations stay on top, the rest is ordered by the latest message.
+		          [&](const Discord::Channel &a, const Discord::Channel &b) {
+			          // Pinned conversations stay on top, then (optionally) the unread ones; the rest is ordered by
+			          // the latest message.
 			          const bool pinA = Core::LocalStore::getInstance().isDmPinned(a.id);
 			          const bool pinB = Core::LocalStore::getInstance().isDmPinned(b.id);
 			          if (pinA != pinB) {
 				          return pinA;
+			          }
+			          if (unreadFirst) {
+				          const bool unreadA = isUnread(a);
+				          const bool unreadB = isUnread(b);
+				          if (unreadA != unreadB) {
+					          return unreadA;
+				          }
 			          }
 			          if (a.last_message_id.length() != b.last_message_id.length()) {
 				          return a.last_message_id.length() > b.last_message_id.length();

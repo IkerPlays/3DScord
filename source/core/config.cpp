@@ -24,7 +24,7 @@
 Config::Config()
     : currentAccountIndex(-1), timezoneOffset(0), language("en_US"), themeType(0), typingIndicatorEnabled(true),
       notificationSound(true), fileLoggingEnabled(false), disclaimerAccepted(false), showAvatars(true),
-      showServerIcons(true), showHiddenChannels(false), autoUpdate(true), replyPing(true), devBuildUpdates(false), micVolume(100), customThemeEnabled(false),
+      showServerIcons(true), showHiddenChannels(false), autoUpdate(true), replyPing(true), quietHours(false), quietStart(22), quietEnd(7), dmUnreadFirst(false), devBuildUpdates(false), micVolume(100), customThemeEnabled(false),
       selectedThemeName("") {
 	customTheme = getDarkPreset();
 	customTheme.name = "Custom Theme";
@@ -242,6 +242,18 @@ void Config::loadSettings() {
 			if (doc.HasMember("show_hidden_channels") && doc["show_hidden_channels"].IsBool()) {
 				showHiddenChannels = doc["show_hidden_channels"].GetBool();
 			}
+			if (doc.HasMember("quiet_hours") && doc["quiet_hours"].IsBool()) {
+				quietHours = doc["quiet_hours"].GetBool();
+			}
+			if (doc.HasMember("quiet_start") && doc["quiet_start"].IsInt()) {
+				quietStart = std::clamp(doc["quiet_start"].GetInt(), 0, 23);
+			}
+			if (doc.HasMember("quiet_end") && doc["quiet_end"].IsInt()) {
+				quietEnd = std::clamp(doc["quiet_end"].GetInt(), 0, 23);
+			}
+			if (doc.HasMember("dm_unread_first") && doc["dm_unread_first"].IsBool()) {
+				dmUnreadFirst = doc["dm_unread_first"].GetBool();
+			}
 			if (doc.HasMember("reply_ping") && doc["reply_ping"].IsBool()) {
 				replyPing = doc["reply_ping"].GetBool();
 			}
@@ -304,6 +316,14 @@ void Config::saveSettings() {
 	writer.Bool(showServerIcons);
 	writer.Key("show_hidden_channels");
 	writer.Bool(showHiddenChannels);
+	writer.Key("quiet_hours");
+	writer.Bool(quietHours);
+	writer.Key("quiet_start");
+	writer.Int(quietStart);
+	writer.Key("quiet_end");
+	writer.Int(quietEnd);
+	writer.Key("dm_unread_first");
+	writer.Bool(dmUnreadFirst);
 	writer.Key("reply_ping");
 	writer.Bool(replyPing);
 	writer.Key("auto_update");
@@ -389,6 +409,22 @@ void Config::setShowServerIconsEnabled(bool enabled) {
 
 void Config::setShowHiddenChannelsEnabled(bool enabled) {
 	showHiddenChannels = enabled;
+	saveSettings();
+}
+
+void Config::setQuietHoursEnabled(bool enabled) {
+	quietHours = enabled;
+	saveSettings();
+}
+
+void Config::setQuietHours(int startHour, int endHour) {
+	quietStart = std::clamp(startHour, 0, 23);
+	quietEnd = std::clamp(endHour, 0, 23);
+	saveSettings();
+}
+
+void Config::setDmUnreadFirst(bool enabled) {
+	dmUnreadFirst = enabled;
 	saveSettings();
 }
 
