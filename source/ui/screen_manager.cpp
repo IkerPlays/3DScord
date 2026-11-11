@@ -10,6 +10,7 @@
 #include "ui/emoji_manager.h"
 #include "ui/forum_screen.h"
 #include "ui/image_manager.h"
+#include "ui/list_screen.h"
 #include "ui/login_screen.h"
 #include "ui/message_screen.h"
 #include "ui/server_list_screen.h"
@@ -365,6 +366,9 @@ void ScreenManager::setScreen(ScreenType type) {
 		break;
 	case ScreenType::UPDATER:
 		currentScreen = std::make_unique<UpdaterScreen>();
+		break;
+	case ScreenType::LIST:
+		currentScreen = std::make_unique<ListScreen>();
 		break;
 	}
 

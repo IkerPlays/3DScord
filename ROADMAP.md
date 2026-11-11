@@ -26,14 +26,14 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
 - [x] Edit and delete your own messages (already in TriCord)
 
 ## Phase 2 — Messages I
-- [ ] View the pinned messages of a channel
-- [ ] Search messages in a channel
-- [ ] Message drafts: save a message without sending it
-- [ ] Saved (favorite) messages, stored on the SD card
-- [ ] Quote and code-block / spoiler helpers in the composer
-- [ ] Quick replies (editable phrases)
-- [ ] Mark a channel or server as read
-- [ ] Recent mentions list
+- [x] View the pinned messages of a channel
+- [x] Search messages in a channel
+- [x] Message drafts: save a message without sending it
+- [x] Saved (favorite) messages, stored on the SD card
+- [x] Quote and code-block / spoiler helpers in the composer
+- [x] Quick replies (editable phrases)
+- [x] Mark a channel or server as read
+- [x] Recent mentions list
 
 ## Phase 3 — Sending media
 - [ ] Upload files from the SD card

@@ -5,6 +5,7 @@
 #include "discord/avatar_cache.h"
 #include "discord/discord_client.h"
 #include "ui/image_manager.h"
+#include "ui/list_screen.h"
 #include "ui/screen_manager.h"
 #include "utils/utf8_utils.h"
 #include <3ds.h>
@@ -24,8 +25,16 @@ HamburgerMenu::HamburgerMenu()
 void HamburgerMenu::refreshStrings() {
 	items.clear();
 	items.push_back({TR("menu.servers"), MenuItemType::SERVER_LIST});
+	if (inMessages) {
+		items.push_back({TR("menu.channel_tools"), MenuItemType::CHANNEL_TOOLS});
+	}
+	items.push_back({TR("menu.saved"), MenuItemType::SAVED});
+	items.push_back({TR("menu.mentions"), MenuItemType::MENTIONS});
 	items.push_back({TR("menu.settings"), MenuItemType::SETTINGS});
 	items.push_back({TR("menu.about"), MenuItemType::ABOUT});
+	if (selectedIndex >= (int)items.size()) {
+		selectedIndex = 0;
+	}
 }
 
 void HamburgerMenu::toggle() {
@@ -37,6 +46,9 @@ void HamburgerMenu::toggle() {
 }
 
 void HamburgerMenu::open() {
+	// The entries depend on the screen the menu is opened over.
+	inMessages = ScreenManager::getInstance().getCurrentType() == ScreenType::MESSAGES;
+	refreshStrings();
 	if (state != State::OPEN) {
 		state = State::OPENING;
 		Logger::log("Opening Hamburger Menu");
@@ -122,6 +134,18 @@ void HamburgerMenu::update() {
 					return;
 				case MenuItemType::SETTINGS:
 					sm.pushScreen(ScreenType::SETTINGS);
+					close();
+					return;
+				case MenuItemType::CHANNEL_TOOLS:
+					ListScreen::open(ListScreen::Mode::TOOLS);
+					close();
+					return;
+				case MenuItemType::SAVED:
+					ListScreen::open(ListScreen::Mode::SAVED);
+					close();
+					return;
+				case MenuItemType::MENTIONS:
+					ListScreen::open(ListScreen::Mode::MENTIONS);
 					close();
 					return;
 				case MenuItemType::ABOUT:
@@ -307,9 +331,10 @@ void HamburgerMenu::render() {
 
 	if (state == State::OPEN || state == State::OPENING || state == State::CLOSING) {
 		float y = 10.0f;
+		const float step = itemStep();
 		for (size_t i = 0; i < items.size(); i++) {
 			drawMenuItem(i, y, alpha);
-			y += 40.0f;
+			y += step;
 		}
 
 		drawAccountCard(x, 240.0f - 50.0f, alpha);
@@ -459,7 +484,7 @@ void HamburgerMenu::drawMenuItem(int index, float y, float alpha) {
 	u32 textColor = ScreenManager::colorText();
 	if (index == selectedIndex && !accountCardSelected) {
 		u32 highlight = ScreenManager::colorSelection();
-		drawRoundedRect(x + 8, y, 0.975f, MENU_WIDTH - 16, 32, 8.0f, highlight);
+		drawRoundedRect(x + 8, y, 0.975f, MENU_WIDTH - 16, itemStep() - 8.0f, 8.0f, highlight);
 		textColor = ScreenManager::colorWhite();
 	} else {
 		u32 base = ScreenManager::colorText();
@@ -469,7 +494,9 @@ void HamburgerMenu::drawMenuItem(int index, float y, float alpha) {
 		textColor = C2D_Color32(r, g, b, (int)(255 * alpha));
 	}
 
-	drawText(x + 20.0f, y + 5.0f, 0.98f, 0.6f, 0.6f, textColor, items[index].label);
+	const bool roomy = itemStep() > 30.0f;
+	drawText(x + 20.0f, y + (roomy ? 5.0f : 3.0f), 0.98f, roomy ? 0.6f : 0.5f, roomy ? 0.6f : 0.5f, textColor,
+	         items[index].label);
 }
 
 void HamburgerMenu::drawAccountCard(float x, float y, float alpha) {

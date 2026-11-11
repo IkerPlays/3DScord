@@ -1,4 +1,5 @@
 #include "ui/message_screen.h"
+#include "core/local_store.h"
 #include "core/config.h"
 #include "core/i18n.h"
 #include "discord/avatar_cache.h"
@@ -100,6 +101,19 @@ float bottomButtonY() {
 bool pollEnded(const Discord::Poll &poll);
 
 static std::unordered_map<std::string, std::string> channelDrafts;
+
+std::string getChannelDraft(const std::string &channelId) {
+	auto it = channelDrafts.find(channelId);
+	return it == channelDrafts.end() ? std::string() : it->second;
+}
+
+void setChannelDraft(const std::string &channelId, const std::string &text) {
+	if (text.empty()) {
+		channelDrafts.erase(channelId);
+	} else {
+		channelDrafts[channelId] = text;
+	}
+}
 
 constexpr float BLOCK_GAP = 4.0f;
 constexpr float BLOCK_WIDTH = 400.0f - 42.0f - 10.0f;
@@ -852,6 +866,25 @@ void MessageScreen::update() {
 						ScreenManager::getInstance().showToast(TR(pin ? "message.pinned" : "message.unpinned"));
 					} else {
 						ScreenManager::getInstance().showToast(TR("message.pin_failed"));
+					}
+				}
+			} else if (action == "Save" || action == "Unsave") {
+				if (selectedIndex >= 0 && selectedIndex < (int)messages.size()) {
+					const Discord::Message &target = messages[selectedIndex];
+					auto &store = Core::LocalStore::getInstance();
+					if (action == "Save") {
+						Core::SavedMessage saved;
+						saved.id = target.id;
+						saved.channelId = channelId;
+						saved.author =
+						    target.author.global_name.empty() ? target.author.username : target.author.global_name;
+						saved.content = target.content.empty() ? "[attachment]" : target.content;
+						saved.timestamp = target.timestamp;
+						store.saveMessage(saved);
+						ScreenManager::getInstance().showToast(TR("message.saved"));
+					} else {
+						store.removeSaved(target.id);
+						ScreenManager::getInstance().showToast(TR("message.unsaved"));
 					}
 				}
 			} else if (action == "JumpToReply") {
@@ -3508,6 +3541,11 @@ void MessageScreen::showMessageOptions() {
 
 		if (isMine && canSend) {
 			addOption("Edit", "message.menu.edit");
+		}
+
+		if (msg.showsContent()) {
+			addOption(Core::LocalStore::getInstance().isSaved(msg.id) ? "Unsave" : "Save",
+			          Core::LocalStore::getInstance().isSaved(msg.id) ? "message.menu.unsave" : "message.menu.save");
 		}
 
 		if (client.canManageMessages(channelId)) {

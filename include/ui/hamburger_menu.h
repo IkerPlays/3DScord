@@ -7,7 +7,7 @@
 
 namespace UI {
 
-enum class MenuItemType { SERVER_LIST, SETTINGS, HOME, ACCOUNT_SWITCH, ABOUT };
+enum class MenuItemType { SERVER_LIST, SETTINGS, HOME, ACCOUNT_SWITCH, ABOUT, CHANNEL_TOOLS, SAVED, MENTIONS };
 
 struct MenuItem {
 	std::string label;
@@ -48,8 +48,11 @@ class HamburgerMenu {
 	static const float ANIMATION_SPEED;
 
 	void drawMenuItem(int index, float y, float alpha);
+	// 40px per entry, tighter once there are more than four so they stay above the account card.
+	float itemStep() const { return items.size() > 4 ? 28.0f : 40.0f; }
 	void drawAccountCard(float x, float y, float alpha);
 	bool accountCardSelected = false;
+	bool inMessages = false;
 };
 
 } // namespace UI

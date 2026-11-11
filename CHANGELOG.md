@@ -1,14 +1,13 @@
 # Changelog
 
 ## Unreleased
-- The app is now called **3DScord** (your TriCord files are moved to `sdmc:/3ds/3DScord` automatically).
-- Updater: when a new version exists it now shows the release notes and asks before installing (A: update, B: later).
-- Devbuilds now have release notes, shown in the app before updating.
-- Pin and unpin messages from the message menu (needs Manage Messages).
-- New "Jump to Original" option on replies.
-- New setting: **Ping on Reply** (Settings > Chat).
-- Goes idle when you close the lid and comes back online when you open it.
-- New README and ROADMAP.
+- **Channel Tools** (menu > Channel Tools, inside a channel): pinned messages, search, quick replies, drafts, formatting
+  helpers, mark channel as read and mark server as read.
+- **Saved messages**: save a message from its menu and read it later from menu > Saved Messages (stored on the SD card).
+- **Mentions**: menu > Mentions lists your recent mentions; press A to open that channel.
+- **Drafts**: keep unsent messages and use them later. **Quick replies**: send an editable phrase with one tap.
+- **Formatting helpers**: quote, code block, inline code, spoiler, bold, italic, underline and strikethrough.
+- The side menu fits more entries.
 
 ## 0.1.0
 - First 3DScord release, based on TriCord (2b-zipper, GPLv3).

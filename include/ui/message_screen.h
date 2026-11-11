@@ -281,6 +281,10 @@ class MessageScreen : public Screen {
 	void startCall();
 };
 
+// The unsent text of a channel, kept while the app runs.
+std::string getChannelDraft(const std::string &channelId);
+void setChannelDraft(const std::string &channelId, const std::string &text);
+
 } // namespace UI
 
 #endif // MESSAGE_SCREEN_H
