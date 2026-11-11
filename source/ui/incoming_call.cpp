@@ -1,4 +1,5 @@
 #include "ui/incoming_call.h"
+#include "core/local_store.h"
 #include "core/i18n.h"
 #include "discord/discord_client.h"
 #include "discord/voice_client.h"
@@ -49,9 +50,16 @@ void IncomingCall::update() {
 
 	if (--ringTimer <= 0) {
 		Utils::SoundPlayer &sound = Utils::SoundPlayer::getInstance();
-		sound.play(Utils::Sound::CALL_INCOMING);
-		ringPlaying = true;
-		ringTimer = sound.clipFrames(Utils::Sound::CALL_INCOMING);
+		// Settings > Voice > Call Ringtone: -1 the usual ring, 0 silent, otherwise another of the bundled sounds.
+		const int choice = Core::LocalStore::getInstance().getSoundOverride("call_ringtone");
+		const Utils::Sound ring = (choice > 0 && choice <= (int)Utils::Sound::NOTIFICATION + 1)
+		                              ? (Utils::Sound)(choice - 1)
+		                              : Utils::Sound::CALL_INCOMING;
+		if (choice != 0) {
+			sound.play(ring);
+			ringPlaying = true;
+		}
+		ringTimer = choice == 0 ? 60 : sound.clipFrames(ring);
 		if (ringTimer <= 0) {
 			ringTimer = 60;
 		}

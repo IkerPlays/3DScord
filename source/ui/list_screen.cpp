@@ -10,6 +10,7 @@
 #include "ui/profile_screen.h"
 #include "discord/social.h"
 #include "discord/threads.h"
+#include "discord/voice_client.h"
 #include "utils/message_utils.h"
 #include "utils/redraw.h"
 #include "utils/sound_player.h"
@@ -246,6 +247,60 @@ void ListScreen::loadLocal() {
 			list.push_back({"", channelId, "", r});
 		}
 		break;
+	case Mode::VOICE_CHANNELS: {
+		auto &client = Discord::DiscordClient::getInstance();
+		auto &voice = Discord::VoiceClient::getInstance();
+		std::string guildId = ScreenManager::getInstance().getSelectedGuildId();
+		if (guildId.empty()) {
+			guildId = client.getGuildIdFromChannel(channelId);
+		}
+		const bool inCall = voice.getState() != Discord::VoiceState::DISCONNECTED &&
+		                    voice.getState() != Discord::VoiceState::FAILED;
+		if (inCall) {
+			list.push_back({"leave", "", TR("voice.leave"), TR("voice.leave_desc")});
+		}
+		if (const Discord::Guild *g = client.getGuildPtr(guildId)) {
+			for (const auto &ch : g->channels) {
+				if ((ch.type != 2 && ch.type != 13) || !ch.viewable) {
+					continue;
+				}
+				std::string who;
+				int count = 0;
+				for (const auto &p : client.getVoiceParticipants(ch.id)) {
+					if (count++ < 3) {
+						who += (who.empty() ? "" : ", ") + p.name;
+					}
+				}
+				if (count > 3) {
+					who += " +" + std::to_string(count - 3);
+				}
+				const bool here = inCall && voice.getChannelId() == ch.id;
+				list.push_back({"join:" + guildId + ":" + ch.id, ch.id, (here ? "> " : "") + ch.name,
+				                who.empty() ? TR("voice.empty") : who});
+			}
+		}
+		break;
+	}
+	case Mode::VOICE_PEOPLE: {
+		auto &client = Discord::DiscordClient::getInstance();
+		auto &voice = Discord::VoiceClient::getInstance();
+		if (voice.getState() != Discord::VoiceState::DISCONNECTED && !voice.getChannelId().empty()) {
+			const std::string me = client.getCurrentUser().id;
+			for (const auto &p : client.getVoiceParticipants(voice.getChannelId())) {
+				const int volume = p.userId == me ? voice.getMicVolume() : voice.getUserVolume(p.userId);
+				std::string state = (p.userId == me ? TR("voice.mic") : TR("voice.volume")) + " " +
+				                    std::to_string(volume) + "%";
+				if (p.selfMute || p.mute) {
+					state += "  " + TR("voice.is_muted");
+				}
+				if (p.selfDeaf || p.deaf) {
+					state += "  " + TR("voice.is_deaf");
+				}
+				list.push_back({p.userId, "", (voice.isSpeaking(p.userId) ? "* " : "") + p.name, state});
+			}
+		}
+		break;
+	}
 	case Mode::SOUNDS: {
 		const int current = store.getSoundOverride(soundTarget);
 		auto row = [&](const std::string &id, int value, const std::string &name) {
@@ -266,6 +321,8 @@ void ListScreen::loadLocal() {
 		list = {{"find", channelId, TR("list.find"), TR("list.hub.find")},
 		        {"friends", channelId, TR("list.friends"), TR("list.hub.friends")},
 		        {"group", channelId, TR("list.new_group"), TR("list.hub.group")},
+		        {"voice", channelId, TR("list.voice_channels"), TR("list.hub.voice")},
+		        {"people", channelId, TR("list.voice_people"), TR("list.hub.people")},
 		        {"saved", channelId, TR("list.saved"), TR("list.hub.saved")},
 		        {"mentions", channelId, TR("list.mentions"), TR("list.hub.mentions")}};
 		break;
@@ -302,6 +359,7 @@ void ListScreen::loadLocal() {
 	}
 	std::lock_guard<std::mutex> lock(shared->mutex);
 	shared->entries = std::move(list);
+	shared->error = (mode == Mode::VOICE_PEOPLE && shared->entries.empty()) ? TR("voice.not_in_call") : "";
 	shared->loading = false;
 	shared->version++;
 }
@@ -615,6 +673,10 @@ std::string ListScreen::headerTitle() const {
 		return query.empty() ? TR("list.members") : TR("list.members") + ": " + query;
 	case Mode::THREADS:
 		return TR("list.threads");
+	case Mode::VOICE_CHANNELS:
+		return TR("list.voice_channels");
+	case Mode::VOICE_PEOPLE:
+		return TR("list.voice_people");
 	case Mode::SOUNDS:
 		return TR("list.sounds") + (soundTargetName.empty() ? "" : ": " + soundTargetName);
 	case Mode::HUB:
@@ -655,6 +717,10 @@ std::string ListScreen::hintLine() const {
 		return TR("list.hint.members");
 	case Mode::THREADS:
 		return TR("list.hint.threads");
+	case Mode::VOICE_CHANNELS:
+		return TR("list.hint.voice_channels");
+	case Mode::VOICE_PEOPLE:
+		return TR("list.hint.voice_people");
 	case Mode::SOUNDS:
 		return TR("list.hint.sounds");
 	case Mode::HUB:
@@ -694,6 +760,32 @@ void ListScreen::primaryAction(const Entry &entry) {
 	auto &client = Discord::DiscordClient::getInstance();
 	auto &sm = ScreenManager::getInstance();
 	switch (mode) {
+	case Mode::VOICE_CHANNELS: {
+		auto &voice = Discord::VoiceClient::getInstance();
+		if (entry.id == "leave") {
+			voice.disconnect();
+			sm.showToast(TR("voice.left"));
+			load();
+		} else if (entry.id.rfind("join:", 0) == 0) {
+			const size_t split = entry.id.rfind(':');
+			const std::string guildId = entry.id.substr(5, split - 5);
+			const std::string voiceChannel = entry.id.substr(split + 1);
+			const bool idle = voice.getState() == Discord::VoiceState::DISCONNECTED ||
+			                  voice.getState() == Discord::VoiceState::FAILED;
+			if (!idle && voice.getChannelId() == voiceChannel) {
+				voice.disconnect();
+				sm.showToast(TR("voice.left"));
+			} else {
+				voice.connect(guildId, voiceChannel);
+				sm.showToast(TR("voice.joining"));
+			}
+			sm.returnToPreviousScreen();
+		}
+		break;
+	}
+	case Mode::VOICE_PEOPLE:
+		changePersonVolume(entry.id, +10);
+		break;
 	case Mode::SOUNDS: {
 		int value = -1;
 		Utils::Sound preview = Utils::Sound::NOTIFICATION;
@@ -711,6 +803,9 @@ void ListScreen::primaryAction(const Entry &entry) {
 				value = (int)preview + 1;
 			}
 		}
+		if (entry.id == "default" && soundTarget == "call_ringtone") {
+			preview = Utils::Sound::CALL_INCOMING;
+		}
 		Core::LocalStore::getInstance().setSoundOverride(soundTarget, value);
 		if (!silent) {
 			Utils::SoundPlayer::getInstance().play(preview);
@@ -725,6 +820,10 @@ void ListScreen::primaryAction(const Entry &entry) {
 			openReplacing(Mode::FRIENDS);
 		} else if (entry.id == "group") {
 			openReplacing(Mode::GROUP_PICK);
+		} else if (entry.id == "voice") {
+			openReplacing(Mode::VOICE_CHANNELS);
+		} else if (entry.id == "people") {
+			openReplacing(Mode::VOICE_PEOPLE);
 		} else if (entry.id == "saved") {
 			openReplacing(Mode::SAVED);
 		} else if (entry.id == "mentions") {
@@ -958,6 +1057,9 @@ void ListScreen::secondaryAction(const Entry &entry) {
 		store.removeDraft((size_t)selected);
 		load();
 		break;
+	case Mode::VOICE_PEOPLE:
+		changePersonVolume(entry.id, -10);
+		break;
 	case Mode::FRIENDS: {
 		// Removing someone needs a second press on the same row.
 		if (confirmId != entry.id) {
@@ -1003,6 +1105,11 @@ void ListScreen::tertiaryAction() {
 		includeArchived = !includeArchived;
 		load();
 		break;
+	case Mode::VOICE_PEOPLE:
+		if (selected >= 0 && selected < (int)entries.size()) {
+			changePersonVolume(entries[selected].id, 0);
+		}
+		break;
 	case Mode::FRIENDS:
 		friendFilter = (friendFilter + 1) % 3;
 		confirmId.clear();
@@ -1041,6 +1148,20 @@ void ListScreen::tertiaryAction() {
 	}
 }
 
+void ListScreen::changePersonVolume(const std::string &userId, int delta) {
+	auto &voice = Discord::VoiceClient::getInstance();
+	const bool self = userId == Discord::DiscordClient::getInstance().getCurrentUser().id;
+	const int current = self ? voice.getMicVolume() : voice.getUserVolume(userId);
+	const int next = delta == 0 ? 100 : std::clamp(current + delta, 0, 200);
+	if (self) {
+		Config::getInstance().setMicVolume(next);
+		voice.setMicVolume(next);
+	} else {
+		voice.setUserVolume(userId, next);
+	}
+	load();
+}
+
 void ListScreen::quaternaryAction() {
 	if (mode != Mode::FRIENDS) {
 		return;
@@ -1056,6 +1177,10 @@ void ListScreen::quaternaryAction() {
 }
 
 void ListScreen::update() {
+	if (mode == Mode::VOICE_PEOPLE && ++refreshTick >= 20) {
+		refreshTick = 0;
+		loadLocal();
+	}
 	{
 		std::lock_guard<std::mutex> lock(shared->mutex);
 		if (shared->version != seenVersion) {

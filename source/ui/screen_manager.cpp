@@ -467,6 +467,32 @@ void ScreenManager::update() {
 		return;
 	}
 
+	// Voice shortcuts that work on every screen while a call is on:
+	//   mute: ZL or L+X      deafen: ZR or L+Y      push to talk: the button chosen in Settings > Voice.
+	bool voiceKeyHandled = false;
+	{
+		Discord::VoiceClient &voice = Discord::VoiceClient::getInstance();
+		const bool inCall = voice.getState() == Discord::VoiceState::ESTABLISHED;
+		const int pttMode = Config::getInstance().getPushToTalk();
+		const u32 pttKey = pttMode == 1 ? KEY_R : pttMode == 2 ? KEY_ZR : 0;
+		voice.setPushToTalk(inCall && pttKey != 0, inCall && pttKey != 0 && (kHeld & pttKey));
+
+		if (inCall) {
+			const bool chord = (kHeld & KEY_L) && !(kHeld & KEY_R);
+			const bool muteKey = (kDown & KEY_ZL) || (chord && (kDown & KEY_X));
+			const bool deafKey = (pttKey != KEY_ZR && (kDown & KEY_ZR)) || (chord && (kDown & KEY_Y));
+			if (muteKey && !voice.isServerMuted()) {
+				voice.setMuted(!voice.isMuted());
+				showToast(TR(voice.isMuted() ? "voice.muted" : "voice.unmuted"));
+				voiceKeyHandled = true;
+			} else if (deafKey && !voice.isServerDeafened()) {
+				voice.setDeafened(!voice.isDeafened());
+				showToast(TR(voice.isDeafened() ? "voice.deafened" : "voice.undeafened"));
+				voiceKeyHandled = true;
+			}
+		}
+	}
+
 	bool callWasVisible = incomingCall.isVisible();
 	incomingCall.update();
 
@@ -499,6 +525,10 @@ void ScreenManager::update() {
 			hamburgerMenu.toggle();
 			shouldBlockScreen = !hamburgerMenu.isClosed();
 		}
+	}
+
+	if (voiceKeyHandled) {
+		shouldBlockScreen = true;
 	}
 
 	if (!shouldBlockScreen) {

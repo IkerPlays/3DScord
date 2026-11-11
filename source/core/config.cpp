@@ -24,7 +24,7 @@
 Config::Config()
     : currentAccountIndex(-1), timezoneOffset(0), language("en_US"), themeType(0), typingIndicatorEnabled(true),
       notificationSound(true), fileLoggingEnabled(false), disclaimerAccepted(false), showAvatars(true),
-      showServerIcons(true), showHiddenChannels(false), autoUpdate(true), replyPing(true), quietHours(false), quietStart(22), quietEnd(7), dmUnreadFirst(false), devBuildUpdates(false), micVolume(100), customThemeEnabled(false),
+      showServerIcons(true), showHiddenChannels(false), autoUpdate(true), replyPing(true), quietHours(false), pushToTalk(0), noiseGate(5), keepCallsAwake(true), quietStart(22), quietEnd(7), dmUnreadFirst(false), devBuildUpdates(false), micVolume(100), customThemeEnabled(false),
       selectedThemeName("") {
 	customTheme = getDarkPreset();
 	customTheme.name = "Custom Theme";
@@ -242,6 +242,15 @@ void Config::loadSettings() {
 			if (doc.HasMember("show_hidden_channels") && doc["show_hidden_channels"].IsBool()) {
 				showHiddenChannels = doc["show_hidden_channels"].GetBool();
 			}
+			if (doc.HasMember("push_to_talk") && doc["push_to_talk"].IsInt()) {
+				pushToTalk = std::clamp(doc["push_to_talk"].GetInt(), 0, 2);
+			}
+			if (doc.HasMember("noise_gate") && doc["noise_gate"].IsInt()) {
+				noiseGate = std::clamp(doc["noise_gate"].GetInt(), 0, 10);
+			}
+			if (doc.HasMember("keep_calls_awake") && doc["keep_calls_awake"].IsBool()) {
+				keepCallsAwake = doc["keep_calls_awake"].GetBool();
+			}
 			if (doc.HasMember("quiet_hours") && doc["quiet_hours"].IsBool()) {
 				quietHours = doc["quiet_hours"].GetBool();
 			}
@@ -316,6 +325,12 @@ void Config::saveSettings() {
 	writer.Bool(showServerIcons);
 	writer.Key("show_hidden_channels");
 	writer.Bool(showHiddenChannels);
+	writer.Key("push_to_talk");
+	writer.Int(pushToTalk);
+	writer.Key("noise_gate");
+	writer.Int(noiseGate);
+	writer.Key("keep_calls_awake");
+	writer.Bool(keepCallsAwake);
 	writer.Key("quiet_hours");
 	writer.Bool(quietHours);
 	writer.Key("quiet_start");
@@ -409,6 +424,21 @@ void Config::setShowServerIconsEnabled(bool enabled) {
 
 void Config::setShowHiddenChannelsEnabled(bool enabled) {
 	showHiddenChannels = enabled;
+	saveSettings();
+}
+
+void Config::setPushToTalk(int mode) {
+	pushToTalk = std::clamp(mode, 0, 2);
+	saveSettings();
+}
+
+void Config::setNoiseGate(int level) {
+	noiseGate = std::clamp(level, 0, 10);
+	saveSettings();
+}
+
+void Config::setKeepCallsAwake(bool enabled) {
+	keepCallsAwake = enabled;
 	saveSettings();
 }
 

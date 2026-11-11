@@ -78,14 +78,14 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
       background), the notification LED (no system API for apps) and a counter on the HOME icon
 
 ## Phase 7 — Voice
-- [ ] Voice channel picker with the people connected
-- [ ] Mute / deafen with the physical buttons
-- [ ] Push-to-talk on a console button
-- [ ] Adjustable noise suppression
-- [ ] Easier per-user volume
-- [ ] Speaking indicator
-- [ ] Custom DM call ringtone
-- [ ] Keep audio playing with the lid closed
+- [x] Voice channel picker with the people connected (Quick Access > Voice Channels)
+- [x] Mute / deafen with the physical buttons (ZL or L+X, ZR or L+Y)
+- [x] Push to talk on a console button (R, or ZR on a New 3DS)
+- [x] Adjustable noise gate
+- [x] Easier per-user volume (Quick Access > People in the Call)
+- [x] Speaking indicator in the call list (already in TriCord)
+- [x] Custom call ringtone
+- [x] Keep the call going with the lid closed (the console is kept awake)
 
 ## Phase 8 — Media
 - [ ] Short video playback; audio attachments

@@ -8,6 +8,7 @@
 #include "discord/avatar_cache.h"
 #include "discord/discord_client.h"
 #include "ui/file_browser_screen.h"
+#include "ui/list_screen.h"
 #include "ui/updater_screen.h"
 #include "utils/updater.h"
 #include <cstdlib>
@@ -318,6 +319,56 @@ void SettingsScreen::onEnter() {
 
 	addAccountItems();
 	addUpdateItems();
+
+	// VOICE
+	allItems.push_back({TR("settings.section.voice"), "", SettingItemType::SECTION_HEADER});
+
+	SettingItem ptt;
+	ptt.label = TR("settings.ptt");
+	ptt.description = TR("settings.desc.ptt");
+	ptt.type = SettingItemType::STEPPER;
+	ptt.value = Config::getInstance().getPushToTalk();
+	ptt.min = 0;
+	ptt.max = 2;
+	ptt.valueFormatter = [](int val) -> std::string {
+		return TR(val == 1 ? "settings.ptt.r" : val == 2 ? "settings.ptt.zr" : "settings.ptt.off");
+	};
+	ptt.onUpdate = [](int val) { Config::getInstance().setPushToTalk(val); };
+	allItems.push_back(ptt);
+
+	SettingItem gate;
+	gate.label = TR("settings.noise_gate");
+	gate.description = TR("settings.desc.noise_gate");
+	gate.type = SettingItemType::STEPPER;
+	gate.value = Config::getInstance().getNoiseGate();
+	gate.min = 0;
+	gate.max = 10;
+	gate.valueFormatter = [](int val) -> std::string {
+		return std::to_string(val) + (val == 0 ? " (" + TR("settings.gate.sensitive") + ")"
+		                              : val == 5 ? " (" + TR("settings.gate.normal") + ")"
+		                              : val == 10 ? " (" + TR("settings.gate.strict") + ")"
+		                                          : std::string());
+	};
+	gate.onUpdate = [](int val) { Config::getInstance().setNoiseGate(val); };
+	allItems.push_back(gate);
+
+	SettingItem awake;
+	awake.label = TR("settings.keep_awake");
+	awake.description = TR("settings.desc.keep_awake");
+	awake.type = SettingItemType::TOGGLE;
+	awake.value = Config::getInstance().isKeepCallsAwake() ? 1 : 0;
+	awake.min = 0;
+	awake.max = 1;
+	awake.valueFormatter = [](int val) { return (val == 1) ? TR("common.enabled") : TR("common.disabled"); };
+	awake.onUpdate = [](int val) { Config::getInstance().setKeepCallsAwake(val == 1); };
+	allItems.push_back(awake);
+
+	SettingItem ringtone;
+	ringtone.label = TR("settings.ringtone");
+	ringtone.description = TR("settings.desc.ringtone");
+	ringtone.type = SettingItemType::ACTION;
+	ringtone.action = []() { ListScreen::openSounds("call_ringtone", TR("settings.ringtone")); };
+	allItems.push_back(ringtone);
 
 	// DEVELOPER
 	SettingItem devSection;

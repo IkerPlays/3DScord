@@ -89,6 +89,9 @@ class VoiceClient {
 	VoiceCapture capture;
 	EchoCanceller echo;
 	std::atomic<VoiceState> state{VoiceState::DISCONNECTED};
+	std::atomic<bool> pttEnabled{false};
+	std::atomic<bool> pttDown{false};
+	bool sleepBlocked = false;
 	std::atomic<bool> serverMuted{false};
 	std::atomic<bool> serverDeafened{false};
 	bool mutedBeforeDeafen = false;
@@ -172,6 +175,13 @@ class VoiceClient {
 	bool isSpeaking(const std::string &userId) const;
 	bool isServerMuted() const { return serverMuted; }
 	bool isServerDeafened() const { return serverDeafened; }
+
+	// Push to talk: while enabled the microphone only transmits while the button is held (called every frame).
+	void setPushToTalk(bool enabled, bool buttonDown) {
+		pttEnabled = enabled;
+		pttDown = buttonDown;
+	}
+	bool isPushToTalkActive() const { return pttEnabled; }
 
 	void setUserVolume(const std::string &userId, int volumePercent);
 	int getUserVolume(const std::string &userId) const;

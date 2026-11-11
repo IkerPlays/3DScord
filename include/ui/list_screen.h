@@ -14,7 +14,7 @@ namespace UI {
 // quick replies and the formatting helpers. The mode is chosen with open() before the screen is created.
 class ListScreen : public Screen {
   public:
-	enum class Mode { TOOLS, PINS, SEARCH, MENTIONS, SAVED, DRAFTS, QUICK_REPLIES, FORMAT, GIFS, STICKERS, FIND, MEMBERS, THREADS, HUB, FRIENDS, GROUP_PICK, SOUNDS };
+	enum class Mode { TOOLS, PINS, SEARCH, MENTIONS, SAVED, DRAFTS, QUICK_REPLIES, FORMAT, GIFS, STICKERS, FIND, MEMBERS, THREADS, HUB, FRIENDS, GROUP_PICK, SOUNDS, VOICE_CHANNELS, VOICE_PEOPLE };
 
 	static void open(Mode mode);
 	// Switches to another list without adding the current one to the back history.
@@ -30,6 +30,8 @@ class ListScreen : public Screen {
 	void renderTop(C3D_RenderTarget *target) override;
 	void renderBottom(C3D_RenderTarget *target) override;
 	bool hidesMenu() const override { return false; }
+	// The people in a call change all the time (speaking, volume), so that list keeps redrawing.
+	bool isAnimating() const override { return mode == Mode::VOICE_PEOPLE; }
 
   private:
 	struct Entry {
@@ -60,6 +62,8 @@ class ListScreen : public Screen {
 	void secondaryAction(const Entry &entry);
 	void tertiaryAction();
 	void quaternaryAction();
+	// Volume of one person in the call (the microphone volume for yourself); delta 0 resets it to 100%.
+	void changePersonVolume(const std::string &userId, int delta);
 	std::string channelLabel(const std::string &channelId) const;
 	std::string headerTitle() const;
 	std::string hintLine() const;
@@ -82,6 +86,7 @@ class ListScreen : public Screen {
 	std::string soundTarget;
 	std::string soundTargetName;
 	bool includeArchived = false;
+	int refreshTick = 0;
 	int friendFilter = 0; // 0 friends, 1 pending, 2 blocked
 	std::set<std::string> groupIds;
 	std::string confirmId; // entry waiting for a second press to confirm removing it

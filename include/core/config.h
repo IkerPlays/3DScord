@@ -131,6 +131,15 @@ class Config {
 	bool isShowHiddenChannelsEnabled() const { return showHiddenChannels; }
 	void setShowHiddenChannelsEnabled(bool enabled);
 
+	// Push to talk: 0 off, 1 hold R, 2 hold ZR (New 3DS).
+	int getPushToTalk() const { return pushToTalk; }
+	void setPushToTalk(int mode);
+	// How loud the microphone has to be to count as speaking: 0 (very sensitive) .. 10 (strict).
+	int getNoiseGate() const { return noiseGate; }
+	void setNoiseGate(int level);
+	bool isKeepCallsAwake() const { return keepCallsAwake; }
+	void setKeepCallsAwake(bool enabled);
+
 	bool isQuietHoursEnabled() const { return quietHours; }
 	void setQuietHoursEnabled(bool enabled);
 	int getQuietStart() const { return quietStart; }
@@ -178,6 +187,9 @@ class Config {
 	bool autoUpdate;
 	bool replyPing;
 	bool quietHours;
+	int pushToTalk;
+	int noiseGate;
+	bool keepCallsAwake;
 	int quietStart;
 	int quietEnd;
 	bool dmUnreadFirst;

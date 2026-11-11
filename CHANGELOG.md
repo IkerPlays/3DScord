@@ -1,15 +1,23 @@
 # Changelog
 
 ## Unreleased
+- **Voice Channels** (side menu > Quick Access): see who is in each voice channel of the server and join or leave with A.
+- **People in the Call** (Quick Access): change how loud each person sounds with A (+10%), X (-10%) and Y (100%); your own
+  row changes your microphone volume. The list shows who is speaking.
+- **Shortcuts in a call, on every screen:** ZL or L+X mutes, ZR or L+Y deafens.
+- **Push to Talk** (Settings > Voice): hold R (or ZR on a New 3DS) to talk.
+- **Noise Gate** (Settings > Voice): how loud you have to be to be heard, from 0 (sensitive) to 10 (strict).
+- **Keep Calls With Lid Closed** (Settings > Voice): the call keeps going when you close the console.
+- **Call Ringtone** (Settings > Voice): choose the sound that plays when someone calls you.
+
+## 0.4.0
+Friends, group chats, notification sounds and quiet hours.
+
 - **Sound per server or channel:** Channel Tools > Sound of This Channel / Sound of This Server. Pick a sound and hear it;
   the channel's own sound wins over the server's.
 - **Quiet Hours** (Settings > Chat): no message sounds between two hours of the day, even across midnight.
 - **While you were away:** when you log in, a message tells you how many mentions you have and in how many conversations.
 - **Unread DMs First** (Settings > Chat): unread direct messages go right after the pinned ones.
-
-## Pending 0.4.0
-These changes already shipped in a devbuild and will be part of the 0.4.0 release notes.
-
 - **Quick Access** in the side menu groups Find, Friends, New Group DM, Saved Messages and Mentions.
 - **Friends:** list of friends, pending requests and blocked people (Y changes the list). A messages a friend or accepts
   a request, X removes (press twice), R adds a friend by username.

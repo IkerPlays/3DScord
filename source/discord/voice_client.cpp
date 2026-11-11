@@ -236,6 +236,13 @@ void VoiceClient::stopOutgoingRing() {
 void VoiceClient::update() {
 	expireSpeaking();
 
+	// With the lid closed the console would sleep and the call would stop: keep it awake while a call is on.
+	const bool wantAwake = state == VoiceState::ESTABLISHED && Config::getInstance().isKeepCallsAwake();
+	if (wantAwake != sleepBlocked) {
+		sleepBlocked = wantAwake;
+		aptSetSleepAllowed(!wantAwake);
+	}
+
 	if (!outgoingRing) {
 		return;
 	}
@@ -924,7 +931,9 @@ void VoiceClient::pumpMicrophone(const std::string &selfId) {
 		}
 
 		// The echo canceller's residue must not count as the user speaking.
-		int gate = MIC_GATE;
+		// Settings > Voice > Noise Gate sets how loud the microphone has to be (level 5 is the usual -30 dBFS).
+		static const int GATE_LEVELS[11] = {150, 300, 500, 700, 900, MIC_GATE, 1300, 1700, 2200, 3000, 4000};
+		int gate = GATE_LEVELS[std::clamp(Config::getInstance().getNoiseGate(), 0, 10)];
 		if (echo.isRunning() && echo.isEnabled()) {
 			int farGate = audio.farLevel() * ECHO_GATE_PERCENT / 100;
 			if (farGate > ECHO_GATE_MAX) {
@@ -938,7 +947,10 @@ void VoiceClient::pumpMicrophone(const std::string &selfId) {
 
 		const bool muted = capture.isMuted();
 		const uint64_t now = osGetTime();
-		if (!muted && capture.lastPeak() >= gate) {
+		if (pttEnabled) {
+			// Push to talk: the button decides, the loudness does not.
+			transmitUntil = pttDown ? now + TRANSMIT_HOLD_MS : 0;
+		} else if (!muted && capture.lastPeak() >= gate) {
 			transmitUntil = now + TRANSMIT_HOLD_MS;
 		}
 		const bool active = daveReady && !muted && now < transmitUntil;
