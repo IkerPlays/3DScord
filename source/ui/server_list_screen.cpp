@@ -1637,6 +1637,12 @@ void ServerListScreen::drawChannelList(float x, float y, float alpha) {
 			drawRichText(nameX, dmY + dmHeight / 2.0f - 8.0f, 0.5f, 0.55f, 0.55f, dmColor,
 			             getTruncatedRichText(MessageUtils::getChannelDisplayName(ch), nameLimit, 0.55f, 0.55f));
 
+			// Someone is typing in this conversation.
+			if (!Discord::DiscordClient::getInstance().getTypingUsers(ch.id).empty()) {
+				drawText(nameX, dmY + dmHeight / 2.0f + 6.0f, 0.5f, 0.38f, 0.38f, ScreenManager::colorAccent(),
+				         TR("dm.typing"));
+			}
+
 			rendered++;
 			continue;
 		}

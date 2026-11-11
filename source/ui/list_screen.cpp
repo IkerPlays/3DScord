@@ -370,6 +370,18 @@ void ListScreen::loadLocal() {
 		}
 		break;
 	}
+	case Mode::FOLLOW: {
+		// Channels where this account may create webhooks, which is what following needs.
+		auto &client = Discord::DiscordClient::getInstance();
+		for (const auto &g : client.getGuilds()) {
+			for (const auto &ch : g.channels) {
+				if (ch.type == 0 && (client.getChannelPermissions(ch.id) & (1ULL << 29))) {
+					list.push_back({ch.id, "", "#" + ch.name, g.name});
+				}
+			}
+		}
+		break;
+	}
 	case Mode::SERVER: {
 		list = {{"s_nick", "", TR("server.nick"), TR("server.nick_desc")},
 		        {"s_bio", "", TR("server.bio"), TR("server.bio_desc")},
@@ -517,6 +529,7 @@ void ListScreen::loadLocal() {
 		        {"read", channelId, TR("list.mark_read"), TR("list.tools.read")},
 		        {"readserver", channelId, TR("list.mark_server_read"), TR("list.tools.read_server")},
 		        {"archive", channelId, TR("list.archive_thread"), TR("list.tools.archive")},
+		        {"follow", channelId, TR("follow.title"), TR("list.tools.follow")},
 		        {"photo", channelId, TR("photo.title"), TR("list.tools.photo")},
 		        {"commands", channelId, TR("commands.title"), TR("list.tools.commands")},
 		        {"themeshare", channelId, TR("theme.share"), TR("list.tools.theme_share")},
@@ -1029,6 +1042,8 @@ std::string ListScreen::headerTitle() const {
 		return TR("list.permissions");
 	case Mode::MOD:
 		return TR("mod.title") + (soundTargetName.empty() ? "" : ": " + soundTargetName);
+	case Mode::FOLLOW:
+		return TR("follow.title");
 	case Mode::COMMANDS:
 		return query.empty() ? TR("commands.title") : TR("commands.title") + ": " + query;
 	case Mode::SERVER:
@@ -1089,6 +1104,8 @@ std::string ListScreen::hintLine() const {
 		return TR("events.hint");
 	case Mode::MOD:
 		return TR("mod.hint");
+	case Mode::FOLLOW:
+		return TR("follow.hint");
 	case Mode::COMMANDS:
 		return TR("commands.hint");
 	case Mode::SERVER:
@@ -1193,6 +1210,14 @@ void ListScreen::primaryAction(const Entry &entry) {
 			r = Discord::GuildTools::timeout(modGuild, modUser, atol(entry.id.c_str() + 8));
 		}
 		sm.showToast(r.ok ? TR("mod.done") : r.message);
+		if (r.ok) {
+			sm.returnToPreviousScreen();
+		}
+		break;
+	}
+	case Mode::FOLLOW: {
+		const auto r = Discord::GuildTools::followAnnouncements(channelId, entry.id);
+		sm.showToast(r.ok ? TR("follow.done") : r.message);
 		if (r.ok) {
 			sm.returnToPreviousScreen();
 		}
@@ -1426,6 +1451,20 @@ void ListScreen::primaryAction(const Entry &entry) {
 			} else {
 				const Discord::Guild *g = client.getGuildPtr(guildId);
 				openSounds(guildId, g ? g->name : "");
+			}
+		} else if (entry.id == "follow") {
+			bool announcement = false;
+			for (const auto &g : client.getGuilds()) {
+				for (const auto &ch : g.channels) {
+					if (ch.id == channelId && ch.type == 5) {
+						announcement = true;
+					}
+				}
+			}
+			if (announcement) {
+				openReplacing(Mode::FOLLOW);
+			} else {
+				sm.showToast(TR("follow.not_announcement"));
 			}
 		} else if (entry.id == "photo") {
 			const std::string photo = Utils::Screenshot::takePhoto();

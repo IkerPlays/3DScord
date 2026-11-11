@@ -45,6 +45,18 @@ Result editGuildText(const std::string &guildId, const std::string &field, const
 	return Api::toResult(http.patch(base() + "/guilds/" + guildId, s.GetString()), "Guild");
 }
 
+Result followAnnouncements(const std::string &announcementChannelId, const std::string &targetChannelId) {
+	auto http = Api::authorized();
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> w(s);
+	w.StartObject();
+	w.Key("webhook_channel_id");
+	w.String(targetChannelId.c_str());
+	w.EndObject();
+	return Api::toResult(http.post(base() + "/channels/" + announcementChannelId + "/followers", s.GetString()),
+	                     "Guild");
+}
+
 Result setServerBio(const std::string &guildId, const std::string &bio) {
 	auto http = Api::authorized();
 	rapidjson::StringBuffer s;

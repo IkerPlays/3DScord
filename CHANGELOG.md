@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+- **Follow This Channel** (Channel Tools, in an announcement channel): pick one of your channels where you can create webhooks
+  and new posts are copied there.
+- **Typing indicator in the DM list:** a conversation shows "typing..." while the other person writes.
+
 ## 0.9.0
 GIF picker fixes, connections and activity in profiles, share and import themes, bot slash commands and photos from the 3DS camera.
 

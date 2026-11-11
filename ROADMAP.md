@@ -60,11 +60,11 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
 - [x] Search in DMs (Channel Tools > Search works in DMs; Find jumps to a DM by name)
 - [x] Quick Access in the side menu (Find, Friends, New Group DM, Saved, Mentions)
 - [x] Unread-first DM view (setting in Phase 6)
-- [ ] Typing indicator in the DM list
+- [x] Typing indicator in the DM list
 - [x] Carried over: upload photos from the 3DS camera (Channel Tools > Send a Photo)
 - [ ] Carried over: compress big images before uploading
 - [x] Carried over: voice messages recorded with the microphone
-- [ ] Carried over: follow announcement channels
+- [x] Carried over: follow announcement channels (Channel Tools > Follow This Channel)
 - [ ] Carried over: forum tags and filters
 - [ ] Carried over: reorder and pin favorite servers; editable folders
 - [ ] Carried over: full member list with presence (Discord only lets bots list every member)
