@@ -11,6 +11,40 @@ namespace {
 std::string base() { return Api::BASE; }
 } // namespace
 
+Result setNotifications(const std::string &guildId, const NotifyChange &c) {
+	auto http = Api::authorized();
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> w(s);
+	w.StartObject();
+	auto flag = [&](const char *key, int v) {
+		if (v >= 0) {
+			w.Key(key);
+			w.Bool(v != 0);
+		}
+	};
+	flag("muted", c.muted);
+	if (c.messageNotifications >= 0) {
+		w.Key("message_notifications");
+		w.Int(c.messageNotifications);
+	}
+	flag("suppress_everyone", c.suppressEveryone);
+	flag("suppress_roles", c.suppressRoles);
+	flag("mobile_push", c.mobilePush);
+	w.EndObject();
+	return Api::toResult(http.patch(base() + "/users/@me/guilds/" + guildId + "/settings", s.GetString()), "Guild");
+}
+
+Result editGuildText(const std::string &guildId, const std::string &field, const std::string &value) {
+	auto http = Api::authorized();
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> w(s);
+	w.StartObject();
+	w.Key(field.c_str());
+	w.String(value.c_str());
+	w.EndObject();
+	return Api::toResult(http.patch(base() + "/guilds/" + guildId, s.GetString()), "Guild");
+}
+
 Result joinInvite(const std::string &linkOrCode) {
 	std::string code = linkOrCode;
 	const size_t slash = code.rfind('/');

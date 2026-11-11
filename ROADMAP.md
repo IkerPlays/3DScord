@@ -126,10 +126,26 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
 - [x] Integrity (SHA-256) check of every downloaded update
 - [x] Diagnostics screen (memory, network, battery, SD space, Discord latency) and a report to send
 
-## Phase 12 — Extras
+## Phase 12 — Servers, profile and chat polish
+- [x] GIF picker preview fixed: a still shows at once, the animated GIF replaces it when it has loaded
+- [x] Join a reaction already on a message (message menu > Join a Reaction)
+- [x] Poll voting with A on a poll message (up/down to pick, A to vote or remove the vote)
+- [x] Server Settings (Channel Tools): nickname, mute, notification level, @everyone / role mentions, phone push, sound,
+  and the server name and description when you have Manage Server
+- [x] Profile theme colors (two-color gradient) next to pronouns, accent color, avatar and banner
+
+## Phase 13 — Sharing the screen (what the 3DS can do)
+- [ ] Send a screenshot of the top and bottom screens to a chat (one button)
+- [ ] "Snapshot sharing": send a screenshot every few seconds to a channel, edited into the same message
+- [ ] Compatibility modes (Old 3DS / New 3DS / 2DS): lighter settings chosen on first start
+- [ ] More profile: per-server nickname and bio, connections list, status with an expiry
+
+## Phase 14 — Extras
 - [ ] Spotify: see what you are listening to
 - [ ] Bot command mini-games with buttons
 - [ ] Share themes between consoles
+
+## Phase 15 — System integration (to be tried on a real console)
 - [ ] HOME menu widget with the latest message
 
 > Some items depend on what the 3DS system allows (background work, the HOME icon, the notification LED, playing audio
@@ -138,6 +154,9 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
 
 ## Not possible on the 3DS
 
+- **Live screen sharing** (3DS to Discord or Discord to 3DS). Discord streams are encoded video (H.264/VP8) over WebRTC.
+  The 3DS cannot encode video, and decoding a stream is only possible in hardware on the New 3DS with a decoder service
+  the app cannot use for this. What is possible is sending screenshots (Phase 13).
 - **Video calls.** Discord video needs a VP8 or H.264 encoder and a full WebRTC video stack with end-to-end encryption.
   The 3DS has no hardware video encoder (only a decoder, on the New 3DS), and encoding video with ffmpeg in software
   cannot keep up on its processor, even at a tiny size. Voice calls and voice messages are fully supported.

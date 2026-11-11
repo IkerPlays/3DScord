@@ -18,6 +18,19 @@ Result kick(const std::string &guildId, const std::string &userId);
 Result ban(const std::string &guildId, const std::string &userId);
 Result timeout(const std::string &guildId, const std::string &userId, long timeoutSeconds);
 
+// Your own notification settings for a server. Pass only the fields to change: -1 leaves an integer alone.
+struct NotifyChange {
+	int muted = -1;            // 0/1
+	int messageNotifications = -1; // 0 all, 1 only mentions, 2 nothing
+	int suppressEveryone = -1; // 0/1
+	int suppressRoles = -1;    // 0/1
+	int mobilePush = -1;       // 0/1
+};
+Result setNotifications(const std::string &guildId, const NotifyChange &change);
+
+// Server profile (needs Manage Server). Only the field named by `field` ("name" or "description") is sent.
+Result editGuildText(const std::string &guildId, const std::string &field, const std::string &value);
+
 // Tell Discord whether you are interested in a scheduled event.
 Result setEventInterest(const std::string &guildId, const std::string &eventId, bool interested);
 

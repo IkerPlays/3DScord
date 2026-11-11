@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- **GIF preview fixed:** the picker shows a small still of the selected GIF at once and swaps in the animated one as soon
+  as it has loaded (before, nothing appeared if the big file failed).
+- **Join a Reaction:** message menu > Join a Reaction adds the most popular reaction on that message that you have not used.
+- **Server Settings** (Channel Tools): nickname, mute, notification level, @everyone and role mentions, phone push,
+  server sound, and the server name and description if you can manage the server.
+- **Profile theme colors** (Settings > Discord Profile): the two colors of the gradient behind your profile.
+- Polls: A on a poll message picks an answer with up/down and votes (A again removes the vote).
 - **Events** (Channel Tools > Events): the scheduled events of the server with how many are interested; A marks you as
   interested, X removes it.
 - **Audit Log** (Channel Tools > Audit Log): the latest 30 actions of the moderators (needs the View Audit Log permission).

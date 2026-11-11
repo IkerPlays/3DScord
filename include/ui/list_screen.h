@@ -15,7 +15,7 @@ namespace UI {
 // quick replies and the formatting helpers. The mode is chosen with open() before the screen is created.
 class ListScreen : public Screen {
   public:
-	enum class Mode { TOOLS, PINS, SEARCH, MENTIONS, SAVED, DRAFTS, QUICK_REPLIES, FORMAT, GIFS, STICKERS, FIND, MEMBERS, THREADS, HUB, FRIENDS, GROUP_PICK, SOUNDS, VOICE_CHANNELS, VOICE_PEOPLE, GALLERY, THEME_EDIT, SESSIONS, EVENTS, AUDIT, PERMISSIONS, MOD, DIAG };
+	enum class Mode { TOOLS, PINS, SEARCH, MENTIONS, SAVED, DRAFTS, QUICK_REPLIES, FORMAT, GIFS, STICKERS, FIND, MEMBERS, THREADS, HUB, FRIENDS, GROUP_PICK, SOUNDS, VOICE_CHANNELS, VOICE_PEOPLE, GALLERY, THEME_EDIT, SESSIONS, EVENTS, AUDIT, PERMISSIONS, MOD, DIAG, SERVER };
 
 	static void open(Mode mode);
 	// Switches to another list without adding the current one to the back history.
@@ -43,6 +43,7 @@ class ListScreen : public Screen {
 		std::string title;
 		std::string body;
 		int kind = 0; // relationship type for the friends list
+		std::string animated; // animated version of the picture, loaded once the selection rests (GIFs)
 		std::string preview; // picture shown on the top screen while the row is selected (GIFs)
 	};
 

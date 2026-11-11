@@ -252,6 +252,20 @@ Result setAccentColor(int rgb) {
 	            }));
 }
 
+Result setThemeColors(int primary, int accent) {
+	return send("PATCH", "/users/@me/profile", buildJson([&](Writer &w) {
+		            w.Key("theme_colors");
+		            if (primary < 0 || accent < 0) {
+			            w.Null();
+		            } else {
+			            w.StartArray();
+			            w.Int(primary & 0xFFFFFF);
+			            w.Int(accent & 0xFFFFFF);
+			            w.EndArray();
+		            }
+	            }));
+}
+
 Result setCustomStatus(const std::string &text) {
 	return send("PATCH", "/users/@me/settings", buildJson([&](Writer &w) {
 		            w.Key("custom_status");

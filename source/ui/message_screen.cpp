@@ -822,6 +822,20 @@ void MessageScreen::update() {
 				}
 			} else if (action == "React") {
 				bottomMode = BottomScreenMode::EMOJI_PICKER;
+			} else if (action == "JoinReaction") {
+				// Adds the reaction already on the message that this user has not used yet, most popular first.
+				if (selectedIndex >= 0 && selectedIndex < (int)messages.size()) {
+					const auto &msg = messages[selectedIndex];
+					const Discord::Reaction *best = nullptr;
+					for (const auto &r : msg.reactions) {
+						if (!r.me && (!best || r.count > best->count)) {
+							best = &r;
+						}
+					}
+					if (best) {
+						Discord::DiscordClient::getInstance().addReaction(channelId, msg.id, best->emoji);
+					}
+				}
 			} else if (action == "Reply") {
 				if (selectedIndex >= 0 && selectedIndex < (int)messages.size()) {
 					std::string targetMsgId = messages[selectedIndex].id;
@@ -3600,6 +3614,10 @@ void MessageScreen::showMessageOptions() {
 	if (msg.isEphemeral()) {
 		addOption("Dismiss", "message.menu.dismiss");
 	} else {
+		if (canSend && std::any_of(msg.reactions.begin(), msg.reactions.end(),
+		                           [](const Discord::Reaction &r) { return !r.me; })) {
+			addOption("JoinReaction", "message.menu.join_reaction");
+		}
 		// A takes over the message once it has controls, so reacting needs another way in.
 		const auto controls = selectedControls();
 		if (std::any_of(controls.begin(), controls.end(),

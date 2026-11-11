@@ -645,6 +645,39 @@ void SettingsScreen::addAccountItems() {
 		}
 		report(r);
 	});
+	addAction(TR("account.theme_colors"), TR("account.desc.theme_colors"), []() {
+		// Two colours, asked one after the other. Leaving the first empty removes the theme.
+		auto ask = [](const char *hint, int &out) -> bool {
+			std::string text;
+			if (!promptText(hint, "", text, 7)) {
+				return false;
+			}
+			if (!text.empty() && text[0] == '#') {
+				text.erase(0, 1);
+			}
+			if (text.empty()) {
+				out = -1;
+				return true;
+			}
+			char *end = nullptr;
+			long v = strtol(text.c_str(), &end, 16);
+			if (*end != '\0' || text.size() != 6) {
+				ScreenManager::getInstance().showToast(TR("account.invalid_color"));
+				return false;
+			}
+			out = (int)v;
+			return true;
+		};
+		int primary = -1;
+		int accent = -1;
+		if (!ask("RRGGBB (1/2)", primary)) {
+			return;
+		}
+		if (primary >= 0 && !ask("RRGGBB (2/2)", accent)) {
+			return;
+		}
+		report(Discord::AccountSettings::setThemeColors(primary, accent));
+	});
 	addImageActions(TR("account.avatar"), TR("account.remove_avatar"), TR("account.desc.images"), false);
 	addImageActions(TR("account.banner"), TR("account.remove_banner"), TR("account.desc.images"), true);
 

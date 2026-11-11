@@ -361,6 +361,27 @@ void ListScreen::loadLocal() {
 		}
 		break;
 	}
+	case Mode::SERVER: {
+		list = {{"s_nick", "", TR("server.nick"), TR("server.nick_desc")},
+		        {"s_mute", "", TR("server.mute"), TR("server.mute_desc")},
+		        {"s_unmute", "", TR("server.unmute"), TR("server.unmute_desc")},
+		        {"s_all", "", TR("server.notify_all"), TR("server.notify_desc")},
+		        {"s_mentions", "", TR("server.notify_mentions"), TR("server.notify_desc")},
+		        {"s_none", "", TR("server.notify_none"), TR("server.notify_desc")},
+		        {"s_everyone_off", "", TR("server.everyone_off"), TR("server.everyone_desc")},
+		        {"s_everyone_on", "", TR("server.everyone_on"), TR("server.everyone_desc")},
+		        {"s_roles_off", "", TR("server.roles_off"), TR("server.roles_desc")},
+		        {"s_roles_on", "", TR("server.roles_on"), TR("server.roles_desc")},
+		        {"s_push_on", "", TR("server.push_on"), TR("server.push_desc")},
+		        {"s_push_off", "", TR("server.push_off"), TR("server.push_desc")},
+		        {"s_sound", "", TR("list.sound_guild"), TR("list.tools.sound_guild")}};
+		// Editing the server itself needs Manage Server.
+		if (Discord::DiscordClient::getInstance().getGuildPermissions(currentGuild()) & (1ULL << 5)) {
+			list.push_back({"s_name", "", TR("server.edit_name"), TR("server.edit_desc")});
+			list.push_back({"s_description", "", TR("server.edit_description"), TR("server.edit_desc")});
+		}
+		break;
+	}
 	case Mode::DIAG: {
 		auto add = [&](const std::string &title, const std::string &body) { list.push_back({"", "", title, body}); };
 		add(TR("diag.version"), Utils::Updater::currentVersionString() +
@@ -486,6 +507,7 @@ void ListScreen::loadLocal() {
 		        {"read", channelId, TR("list.mark_read"), TR("list.tools.read")},
 		        {"readserver", channelId, TR("list.mark_server_read"), TR("list.tools.read_server")},
 		        {"archive", channelId, TR("list.archive_thread"), TR("list.tools.archive")},
+		        {"server", channelId, TR("server.title"), TR("list.tools.server")},
 		        {"events", channelId, TR("list.events"), TR("list.tools.events")},
 		        {"audit", channelId, TR("list.audit"), TR("list.tools.audit")},
 		        {"perms", channelId, TR("list.permissions"), TR("list.tools.permissions")},
@@ -552,10 +574,12 @@ void ListScreen::fetch(const std::string &path) {
 					    }
 					    std::string title = str(g, "title");
 					    Entry e{link, "", title.empty() ? "GIF" : title, link};
-					    // gif_src is the animated picture, preview a small still of it.
-					    e.preview = str(g, "gif_src");
+					    // preview is a small still, gif_src the animated picture.
+					    e.preview = str(g, "preview");
+					    e.animated = str(g, "gif_src");
 					    if (e.preview.empty()) {
-						    e.preview = str(g, "preview");
+						    e.preview = e.animated;
+						    e.animated.clear();
 					    }
 					    list.push_back(e);
 				    }
@@ -949,6 +973,8 @@ std::string ListScreen::headerTitle() const {
 		return TR("list.permissions");
 	case Mode::MOD:
 		return TR("mod.title") + (soundTargetName.empty() ? "" : ": " + soundTargetName);
+	case Mode::SERVER:
+		return TR("server.title");
 	case Mode::DIAG:
 		return TR("settings.diagnostics");
 	case Mode::SESSIONS:
@@ -1005,6 +1031,8 @@ std::string ListScreen::hintLine() const {
 		return TR("events.hint");
 	case Mode::MOD:
 		return TR("mod.hint");
+	case Mode::SERVER:
+		return TR("server.hint");
 	case Mode::DIAG:
 		return TR("diag.hint");
 	case Mode::SESSIONS:
@@ -1108,6 +1136,54 @@ void ListScreen::primaryAction(const Entry &entry) {
 		if (r.ok) {
 			sm.returnToPreviousScreen();
 		}
+		break;
+	}
+	case Mode::SERVER: {
+		const std::string guildId = currentGuild();
+		if (guildId.empty()) {
+			break;
+		}
+		Discord::GuildTools::NotifyChange c;
+		const std::string &id = entry.id;
+		bool notify = true;
+		if (id == "s_mute" || id == "s_unmute") {
+			c.muted = id == "s_mute";
+		} else if (id == "s_all" || id == "s_mentions" || id == "s_none") {
+			c.messageNotifications = id == "s_all" ? 0 : id == "s_mentions" ? 1 : 2;
+		} else if (id == "s_everyone_on" || id == "s_everyone_off") {
+			c.suppressEveryone = id == "s_everyone_off";
+		} else if (id == "s_roles_on" || id == "s_roles_off") {
+			c.suppressRoles = id == "s_roles_off";
+		} else if (id == "s_push_on" || id == "s_push_off") {
+			c.mobilePush = id == "s_push_on";
+		} else {
+			notify = false;
+		}
+		Discord::GuildTools::Result r{true, 0, ""};
+		if (notify) {
+			r = Discord::GuildTools::setNotifications(guildId, c);
+		} else if (id == "s_nick") {
+			std::string nick;
+			if (!askText(TR("list.nick_hint"), "", nick, 32, false)) {
+				break;
+			}
+			r = Discord::Social::setMyNickname(guildId, nick);
+		} else if (id == "s_sound") {
+			const Discord::Guild *g = client.getGuildPtr(guildId);
+			openSounds(guildId, g ? g->name : "");
+			break;
+		} else if (id == "s_name" || id == "s_description") {
+			const Discord::Guild *g = client.getGuildPtr(guildId);
+			const bool isName = id == "s_name";
+			std::string value;
+			if (!askText(TR(isName ? "server.name_hint" : "server.description_hint"),
+			             g ? (isName ? g->name : g->description) : "", value, isName ? 100 : 120, false) ||
+			    (isName && value.empty())) {
+				break;
+			}
+			r = Discord::GuildTools::editGuildText(guildId, isName ? "name" : "description", value);
+		}
+		sm.showToast(r.ok ? TR("account.saved") : r.message);
 		break;
 	}
 	case Mode::SESSIONS: {
@@ -1256,6 +1332,12 @@ void ListScreen::primaryAction(const Entry &entry) {
 			} else {
 				const Discord::Guild *g = client.getGuildPtr(guildId);
 				openSounds(guildId, g ? g->name : "");
+			}
+		} else if (entry.id == "server") {
+			if (currentGuild().empty()) {
+				sm.showToast(TR("list.members_need_server"));
+			} else {
+				openReplacing(Mode::SERVER);
 			}
 		} else if (entry.id == "events") {
 			openReplacing(Mode::EVENTS);
@@ -1721,7 +1803,17 @@ void ListScreen::renderTop(C3D_RenderTarget *target) {
 	if (mode == Mode::GIFS && !e.preview.empty()) {
 		// The picture of the selected GIF, animated, once the selection has rested for a moment.
 		drawText(10.0f, 34.0f, 0.5f, 0.42f, 0.42f, ScreenManager::colorAccent(), fitLine(e.title, 380.0f, 0.42f));
-		const auto info = ImageManager::getInstance().getImageInfo(e.preview);
+		auto &images = ImageManager::getInstance();
+		auto info = images.getImageInfo(e.preview);
+		// The still shows at once, the heavier animated picture replaces it when it has loaded.
+		if (!e.animated.empty()) {
+			const auto anim = images.getImageInfo(e.animated);
+			if (anim.tex && anim.originalW > 0 && anim.originalH > 0) {
+				info = anim;
+			} else if (stableFrames > 15 && !anim.failed) {
+				images.prefetch(e.animated, 0, 0, Network::RequestPriority::INTERACTIVE);
+			}
+		}
 		if (info.tex && info.originalW > 0 && info.originalH > 0) {
 			const float areaW = 380.0f;
 			const float areaH = 170.0f;
@@ -1733,16 +1825,14 @@ void ListScreen::renderTop(C3D_RenderTarget *target) {
 			Tex3DS_SubTexture subtex = {(u16)info.originalW, (u16)info.originalH, 0.0f, 1.0f, uMax, 1.0f - vMax};
 			C2D_DrawImageAt({info.tex, &subtex}, (TOP_SCREEN_WIDTH - w) / 2.0f, 56.0f + (areaH - h) / 2.0f, 0.5f,
 			                nullptr, scale, scale);
-			ImageManager::getInstance().markDrawn(info.animation);
+			images.markDrawn(info.animation);
 		} else if (info.failed) {
 			drawCenteredText(130.0f, 0.5f, 0.42f, 0.42f, ScreenManager::colorTextMuted(), TR("gif.no_preview"),
 			                 TOP_SCREEN_WIDTH);
 		} else {
 			drawCenteredText(130.0f, 0.5f, 0.42f, 0.42f, ScreenManager::colorTextMuted(), TR("common.loading"),
 			                 TOP_SCREEN_WIDTH);
-			if (stableFrames > 15) {
-				ImageManager::getInstance().prefetch(e.preview, 0, 0, Network::RequestPriority::INTERACTIVE);
-			}
+			images.prefetch(e.preview, 0, 0, Network::RequestPriority::INTERACTIVE);
 		}
 		return;
 	}
