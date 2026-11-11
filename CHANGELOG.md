@@ -9,7 +9,9 @@
 - **Pinned DMs:** press X on a direct message to keep it at the top of the list.
 - **My Nickname Here** in Channel Tools changes your nickname in the current server.
 
-## Unreleased
+## 0.3.0
+Sending media, profiles and threads, and a more reliable updater.
+
 - **Profiles:** open anyone's profile from the message menu (View Profile): banner, avatar, names, pronouns,
   About Me, account age and, in servers, join date and roles.
 - **Members:** Channel Tools > Members searches the members of a server by name and opens their profile.
@@ -21,10 +23,6 @@
   in `sdmc:/3ds/3DScord` so a failed update can be diagnosed.
 - **Devbuild numbers** now follow the next stable version (`0.3.0-dev.1`, `0.3.0-dev.2`, ...) with no gaps, and the
   release notes are cleaner.
-
-## Pending 0.3.0
-These changes already shipped in a devbuild and will be part of the 0.3.0 release notes.
-
 - **File browser:** Channel Tools > Upload File opens a browser of the SD card; pick any file (up to 4 MB) and send it.
   Avatar and banner in Settings use the same browser, so no special folder is needed.
 - **GIFs:** Channel Tools > GIFs searches Tenor (or shows what is trending) and sends the one you pick.
