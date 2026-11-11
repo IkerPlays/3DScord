@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.8.0
+Screenshots to the chat, a compatibility mode for New 3DS, a status that expires and an About Me per server.
+
 - **Status that expires** (Settings > Discord Status): a custom status that clears itself after the minutes you choose.
 - **About Me per server** (Channel Tools > Server Settings): a different bio only for that server.
 - **Send Screenshot** (Channel Tools): sends a picture of both screens to the chat (also saved in `screenshots/` on the
