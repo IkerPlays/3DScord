@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- **Bot Commands** (Channel Tools): lists the slash commands of the bots in the channel (Y searches) and runs them,
+  asking for the text or numbers they need. With the buttons of the bot messages you can already play bot games.
+  Commands that need a user, channel, role, file or subcommand are not supported.
 - **Share My Theme / Import a Theme** (Channel Tools): sends the theme in use to the chat as a `.json` file, and imports
   one from the SD card (for example a file saved from a chat) and turns it on.
 - **What they listen to or play:** a profile shows the Spotify song or the game when Discord sends it (it only does so for

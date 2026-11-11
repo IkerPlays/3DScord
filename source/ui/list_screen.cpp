@@ -8,6 +8,9 @@
 #include "network/http_client.h"
 #include "network/network_manager.h"
 #include "ui/file_browser_screen.h"
+#include "discord/commands.h"
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
 #include "ui/image_manager.h"
 #include "ui/image_viewer_screen.h"
 #include "utils/color_utils.h"
@@ -235,6 +238,10 @@ void ListScreen::load() {
 		break;
 	case Mode::SEARCH:
 		startSearch();
+		break;
+	case Mode::COMMANDS:
+		fetch("/channels/" + channelId + "/application-commands/search?type=1&limit=25&include_applications=false&query=" +
+		      urlEncode(query));
 		break;
 	case Mode::GIFS:
 		startGifSearch();
@@ -510,6 +517,7 @@ void ListScreen::loadLocal() {
 		        {"read", channelId, TR("list.mark_read"), TR("list.tools.read")},
 		        {"readserver", channelId, TR("list.mark_server_read"), TR("list.tools.read_server")},
 		        {"archive", channelId, TR("list.archive_thread"), TR("list.tools.archive")},
+		        {"commands", channelId, TR("commands.title"), TR("list.tools.commands")},
 		        {"themeshare", channelId, TR("theme.share"), TR("list.tools.theme_share")},
 		        {"themeimport", channelId, TR("theme.import"), TR("list.tools.theme_import")},
 		        {"shot", channelId, TR("screenshot.title"), TR("list.tools.shot")},
@@ -614,6 +622,20 @@ void ListScreen::fetch(const std::string &path) {
 					    }
 					    e.preview = usable(still) ? still : moving;
 					    e.animated = e.preview == moving ? std::string() : moving;
+					    list.push_back(e);
+				    }
+			    }
+		    } else if (fetchMode == Mode::COMMANDS) {
+			    if (doc.IsObject() && doc.HasMember("application_commands") && doc["application_commands"].IsArray()) {
+				    for (const auto &c : doc["application_commands"].GetArray()) {
+					    if (!c.IsObject() || str(c, "id").empty()) {
+						    continue;
+					    }
+					    rapidjson::StringBuffer sb;
+					    rapidjson::Writer<rapidjson::StringBuffer> wr(sb);
+					    c.Accept(wr);
+					    Entry e{str(c, "id"), "", "/" + str(c, "name"), str(c, "description")};
+					    e.data = sb.GetString();
 					    list.push_back(e);
 				    }
 			    }
@@ -1006,6 +1028,8 @@ std::string ListScreen::headerTitle() const {
 		return TR("list.permissions");
 	case Mode::MOD:
 		return TR("mod.title") + (soundTargetName.empty() ? "" : ": " + soundTargetName);
+	case Mode::COMMANDS:
+		return query.empty() ? TR("commands.title") : TR("commands.title") + ": " + query;
 	case Mode::SERVER:
 		return TR("server.title");
 	case Mode::DIAG:
@@ -1064,6 +1088,8 @@ std::string ListScreen::hintLine() const {
 		return TR("events.hint");
 	case Mode::MOD:
 		return TR("mod.hint");
+	case Mode::COMMANDS:
+		return TR("commands.hint");
 	case Mode::SERVER:
 		return TR("server.hint");
 	case Mode::DIAG:
@@ -1166,6 +1192,34 @@ void ListScreen::primaryAction(const Entry &entry) {
 			r = Discord::GuildTools::timeout(modGuild, modUser, atol(entry.id.c_str() + 8));
 		}
 		sm.showToast(r.ok ? TR("mod.done") : r.message);
+		if (r.ok) {
+			sm.returnToPreviousScreen();
+		}
+		break;
+	}
+	case Mode::COMMANDS: {
+		std::vector<Discord::Commands::Option> options;
+		bool supported = true;
+		if (!Discord::Commands::readOptions(entry.data, options, supported) || !supported) {
+			sm.showToast(TR("commands.unsupported"));
+			break;
+		}
+		std::vector<std::pair<std::string, std::string>> values;
+		for (const auto &opt : options) {
+			std::string value;
+			if (!askText(opt.name + (opt.description.empty() ? "" : ": " + opt.description), "", value, 200, false)) {
+				values.clear();
+				options.clear();
+				sm.showToast(TR("commands.cancelled"));
+				break;
+			}
+			values.push_back({opt.name, value});
+		}
+		if (values.size() != options.size() || (options.empty() && false)) {
+			break;
+		}
+		const auto r = Discord::Commands::invoke(channelId, currentGuild(), client.getSessionId(), entry.data, values);
+		sm.showToast(r.ok ? TR("commands.sent") : r.message);
 		if (r.ok) {
 			sm.returnToPreviousScreen();
 		}
@@ -1372,6 +1426,8 @@ void ListScreen::primaryAction(const Entry &entry) {
 				const Discord::Guild *g = client.getGuildPtr(guildId);
 				openSounds(guildId, g ? g->name : "");
 			}
+		} else if (entry.id == "commands") {
+			openReplacing(Mode::COMMANDS);
 		} else if (entry.id == "themeshare") {
 			// The theme in use goes to themes/ and from there to the chat as a .json file anyone can import.
 			Theme theme = Config::getInstance().getTheme();
@@ -1677,6 +1733,14 @@ void ListScreen::tertiaryAction() {
 		includeArchived = !includeArchived;
 		load();
 		break;
+	case Mode::COMMANDS: {
+		std::string text;
+		if (askText(TR("list.search_hint"), query, text, 50, false)) {
+			query = text;
+			load();
+		}
+		break;
+	}
 	case Mode::VOICE_PEOPLE:
 		if (selected >= 0 && selected < (int)entries.size()) {
 			changePersonVolume(entries[selected].id, 0);
