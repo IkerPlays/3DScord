@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.7.0
+Server settings, events, audit log and moderation, safer updates, a fixed GIF preview and quieter voice messages.
+
 - **Voice messages are quieter:** they start at 40% volume (the 3DS microphone is very loud). After recording, Left/Right
   on the D-pad change the volume from 5% to 300% before sending; the message is encoded with that volume when you press A.
 - **GIF preview fixed:** the picker shows a small still of the selected GIF at once and swaps in the animated one as soon
