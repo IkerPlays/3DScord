@@ -28,6 +28,7 @@ void HamburgerMenu::refreshStrings() {
 	if (inMessages) {
 		items.push_back({TR("menu.channel_tools"), MenuItemType::CHANNEL_TOOLS});
 	}
+	items.push_back({TR("menu.find"), MenuItemType::FIND});
 	items.push_back({TR("menu.saved"), MenuItemType::SAVED});
 	items.push_back({TR("menu.mentions"), MenuItemType::MENTIONS});
 	items.push_back({TR("menu.settings"), MenuItemType::SETTINGS});
@@ -138,6 +139,10 @@ void HamburgerMenu::update() {
 					return;
 				case MenuItemType::CHANNEL_TOOLS:
 					ListScreen::open(ListScreen::Mode::TOOLS);
+					close();
+					return;
+				case MenuItemType::FIND:
+					ListScreen::open(ListScreen::Mode::FIND);
 					close();
 					return;
 				case MenuItemType::SAVED:
@@ -330,8 +335,8 @@ void HamburgerMenu::render() {
 	C2D_DrawRectSolid(x + MENU_WIDTH - 1, 0, 0.975f, 1, 240, C2D_Color32(255, 255, 255, 30));
 
 	if (state == State::OPEN || state == State::OPENING || state == State::CLOSING) {
-		float y = 10.0f;
 		const float step = itemStep();
+		float y = step < 26.0f ? 6.0f : 10.0f;
 		for (size_t i = 0; i < items.size(); i++) {
 			drawMenuItem(i, y, alpha);
 			y += step;
@@ -495,7 +500,9 @@ void HamburgerMenu::drawMenuItem(int index, float y, float alpha) {
 	}
 
 	const bool roomy = itemStep() > 30.0f;
-	drawText(x + 20.0f, y + (roomy ? 5.0f : 3.0f), 0.98f, roomy ? 0.6f : 0.5f, roomy ? 0.6f : 0.5f, textColor,
+	const bool tight = itemStep() < 26.0f;
+	const float textScale = roomy ? 0.6f : tight ? 0.45f : 0.5f;
+	drawText(x + 20.0f, y + (roomy ? 5.0f : tight ? 1.5f : 3.0f), 0.98f, textScale, textScale, textColor,
 	         items[index].label);
 }
 

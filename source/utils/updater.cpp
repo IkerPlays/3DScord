@@ -161,7 +161,7 @@ void Updater::startInstall() {
 
 void Updater::runCheck(bool includeDevBuilds) {
 	Network::HttpClient http;
-	http.setTimeout(10);
+	http.setTimeout(8);
 	Network::HttpResponse resp = http.get(RELEASES_URL, {{"Accept", "application/vnd.github+json"}});
 	if (!resp.success) {
 		fail("Update check failed (HTTP " + std::to_string(resp.statusCode) + ")");

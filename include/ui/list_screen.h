@@ -13,7 +13,7 @@ namespace UI {
 // quick replies and the formatting helpers. The mode is chosen with open() before the screen is created.
 class ListScreen : public Screen {
   public:
-	enum class Mode { TOOLS, PINS, SEARCH, MENTIONS, SAVED, DRAFTS, QUICK_REPLIES, FORMAT, GIFS, STICKERS };
+	enum class Mode { TOOLS, PINS, SEARCH, MENTIONS, SAVED, DRAFTS, QUICK_REPLIES, FORMAT, GIFS, STICKERS, FIND, MEMBERS, THREADS };
 
 	static void open(Mode mode);
 	// Switches to another list without adding the current one to the back history.
@@ -50,6 +50,8 @@ class ListScreen : public Screen {
 	void fetch(const std::string &path);
 	void startSearch();
 	void startGifSearch();
+	void startFind();
+	void startMembers();
 	void primaryAction(const Entry &entry);
 	void secondaryAction(const Entry &entry);
 	void tertiaryAction();
@@ -70,6 +72,7 @@ class ListScreen : public Screen {
 	int selected;
 	float scroll;
 	std::string query;
+	bool includeArchived = false;
 };
 
 } // namespace UI

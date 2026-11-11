@@ -20,6 +20,9 @@ See [ROADMAP.md](ROADMAP.md) for what is planned and [CHANGELOG.md](CHANGELOG.md
 - **Chat:** text, emoji, attachments, embeds, stickers, reactions, replies, edit and delete, spoilers, polls, GIF /
   APNG / Lottie animations, pin and unpin messages, jump to the message you replied to, reply with or without ping.
 - **Servers:** server list with folders, channels, forum threads, direct messages and group chats.
+- **Find and look up:** find a server or channel by name, search server members, open user profiles, create and join threads.
+- **Channel Tools:** pinned messages, message search, quick replies, drafts, formatting helpers, GIFs, stickers, file uploads
+  (with a file browser) and mark as read. Saved messages and recent mentions are in the side menu.
 - **Voice:** voice channels and calls with end-to-end encryption (DAVE), mic and per-user volume.
 - **Your Discord account (Settings):** display name, About Me, pronouns, profile color, avatar and banner (from files on
   the SD card), status and custom status, message display options and privacy options.

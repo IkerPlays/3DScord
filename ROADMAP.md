@@ -42,17 +42,12 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
 - [x] Save received images and files to the SD card
 - [x] Image viewer with pan and zoom
 
-## Phase 4 — Camera, voice and servers
-- [ ] Upload photos from the 3DS camera
-- [ ] Compress big images before uploading
-- [ ] Voice messages recorded with the microphone
-- [ ] Threads: create, join, archive
-- [ ] Follow announcement channels
-- [ ] Forum tags and filters
-- [ ] Search servers and channels by name
-- [ ] Reorder and pin favorite servers; editable folders
-- [ ] Member list with roles and presence
-- [ ] Full user profile (banner, bio, roles)
+## Phase 4 — Servers and people
+- [x] Threads: create from a message, list, join, archive
+- [x] Find a server or channel by name (side menu)
+- [x] Search the members of a server and open their profile
+- [x] Full user profile (banner, bio, pronouns, account age, join date, roles)
+- [x] The update check can no longer slow down the start
 
 ## Phase 5 — Friends and DMs
 - [ ] Friends list with pending requests; send and accept requests
@@ -61,6 +56,13 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
 - [ ] Private notes on users; per-server nicknames
 - [ ] Pinned DMs on top; unread-first DM view
 - [ ] Search in DMs; typing indicator in the list
+- [ ] Carried over: upload photos from the 3DS camera
+- [ ] Carried over: compress big images before uploading
+- [ ] Carried over: voice messages recorded with the microphone
+- [ ] Carried over: follow announcement channels
+- [ ] Carried over: forum tags and filters
+- [ ] Carried over: reorder and pin favorite servers; editable folders
+- [ ] Carried over: full member list with presence (Discord only lets bots list every member)
 
 ## Phase 6 — Notifications
 - [ ] Background notifications by polling (StreetPass / SpotPass-like)

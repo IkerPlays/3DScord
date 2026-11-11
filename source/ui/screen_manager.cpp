@@ -15,6 +15,7 @@
 #include "ui/list_screen.h"
 #include "ui/login_screen.h"
 #include "ui/message_screen.h"
+#include "ui/profile_screen.h"
 #include "ui/server_list_screen.h"
 #include "ui/settings_screen.h"
 #include "ui/text_measure_cache.h"
@@ -378,6 +379,9 @@ void ScreenManager::setScreen(ScreenType type) {
 		break;
 	case ScreenType::FILE_BROWSER:
 		currentScreen = std::make_unique<FileBrowserScreen>();
+		break;
+	case ScreenType::PROFILE:
+		currentScreen = std::make_unique<ProfileScreen>();
 		break;
 	}
 

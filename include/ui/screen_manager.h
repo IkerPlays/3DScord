@@ -28,7 +28,8 @@ enum class ScreenType {
 	UPDATER,
 	LIST,
 	IMAGE_VIEWER,
-	FILE_BROWSER
+	FILE_BROWSER,
+	PROFILE
 };
 
 class Screen {

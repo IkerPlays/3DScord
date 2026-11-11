@@ -31,6 +31,7 @@ class UpdaterScreen : public Screen {
 	bool installStarted;
 	bool finished;
 	int graceFrames;
+	int checkFrames;
 };
 
 } // namespace UI

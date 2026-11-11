@@ -7,11 +7,16 @@
 #include "network/network_manager.h"
 #include "ui/file_browser_screen.h"
 #include "ui/message_screen.h"
+#include "ui/profile_screen.h"
+#include "discord/threads.h"
 #include "utils/message_utils.h"
+#include "utils/redraw.h"
 #include "utils/transfers.h"
 #include "utils/utf8_utils.h"
 #include <3ds.h>
 #include <algorithm>
+#include <cctype>
+#include <cstdlib>
 #include <rapidjson/document.h>
 
 namespace UI {
@@ -165,6 +170,25 @@ void ListScreen::load() {
 	case Mode::GIFS:
 		startGifSearch();
 		break;
+	case Mode::FIND:
+		startFind();
+		break;
+	case Mode::MEMBERS:
+		startMembers();
+		break;
+	case Mode::THREADS: {
+		const std::string guildId = Discord::DiscordClient::getInstance().getGuildIdFromChannel(channelId);
+		if (guildId.empty() || guildId == "DM") {
+			std::lock_guard<std::mutex> lock(shared->mutex);
+			shared->error = TR("list.threads_need_server");
+			shared->loading = false;
+			shared->version++;
+		} else {
+			fetch("/channels/" + channelId + "/threads/search?archived=" + (includeArchived ? "true" : "false") +
+			      "&sort_by=last_message_time&sort_order=desc&limit=25");
+		}
+		break;
+	}
 	case Mode::STICKERS: {
 		const std::string guildId = Discord::DiscordClient::getInstance().getGuildIdFromChannel(channelId);
 		if (guildId.empty() || guildId == "DM") {
@@ -210,11 +234,14 @@ void ListScreen::loadLocal() {
 		        {"files", channelId, TR("list.files"), TR("list.tools.files")},
 		        {"gifs", channelId, TR("list.gifs"), TR("list.tools.gifs")},
 		        {"stickers", channelId, TR("list.stickers"), TR("list.tools.stickers")},
+		        {"threads", channelId, TR("list.threads"), TR("list.tools.threads")},
+		        {"members", channelId, TR("list.members"), TR("list.tools.members")},
 		        {"quick", channelId, TR("list.quick_replies"), TR("list.tools.quick")},
 		        {"drafts", channelId, TR("list.drafts"), TR("list.tools.drafts")},
 		        {"format", channelId, TR("list.format"), TR("list.tools.format")},
 		        {"read", channelId, TR("list.mark_read"), TR("list.tools.read")},
-		        {"readserver", channelId, TR("list.mark_server_read"), TR("list.tools.read_server")}};
+		        {"readserver", channelId, TR("list.mark_server_read"), TR("list.tools.read_server")},
+		        {"archive", channelId, TR("list.archive_thread"), TR("list.tools.archive")}};
 		break;
 	case Mode::FORMAT:
 		list = {{"quote", channelId, TR("format.quote"), "> text"},
@@ -277,6 +304,40 @@ void ListScreen::fetch(const std::string &path) {
 					    list.push_back({link, "", title.empty() ? "GIF" : title, link});
 				    }
 			    }
+		    } else if (fetchMode == Mode::THREADS) {
+			    if (doc.IsObject() && doc.HasMember("threads") && doc["threads"].IsArray()) {
+				    for (const auto &t : doc["threads"].GetArray()) {
+					    if (!t.IsObject() || str(t, "id").empty()) {
+						    continue;
+					    }
+					    std::string info = (t.HasMember("message_count") && t["message_count"].IsInt())
+					                           ? std::to_string(t["message_count"].GetInt()) + " " + TR("list.messages")
+					                           : "";
+					    if (t.HasMember("thread_metadata") && t["thread_metadata"].IsObject() &&
+					        t["thread_metadata"].HasMember("archived") && t["thread_metadata"]["archived"].IsBool() &&
+					        t["thread_metadata"]["archived"].GetBool()) {
+						    info += (info.empty() ? "" : "  ") + TR("list.archived");
+					    }
+					    list.push_back({str(t, "id"), str(t, "id"), str(t, "name"), info});
+				    }
+			    }
+		    } else if (fetchMode == Mode::MEMBERS) {
+			    if (doc.IsArray()) {
+				    for (const auto &m : doc.GetArray()) {
+					    if (!m.IsObject() || !m.HasMember("user") || !m["user"].IsObject()) {
+						    continue;
+					    }
+					    const auto &u = m["user"];
+					    std::string name = str(m, "nick");
+					    if (name.empty()) {
+						    name = str(u, "global_name");
+					    }
+					    if (name.empty()) {
+						    name = str(u, "username");
+					    }
+					    list.push_back({str(u, "id"), "", name, "@" + str(u, "username")});
+				    }
+			    }
 		    } else if (fetchMode == Mode::STICKERS) {
 			    if (doc.IsArray()) {
 				    for (const auto &st : doc.GetArray()) {
@@ -334,6 +395,70 @@ void ListScreen::fetch(const std::string &path) {
 		    state->version++;
 	    },
 	    {{"Authorization", token}});
+}
+
+void ListScreen::startFind() {
+	std::string text;
+	std::vector<Entry> list;
+	if (askText(TR("list.find_hint"), query, text, 60, false) && !text.empty()) {
+		query = text;
+		auto lower = [](std::string s) {
+			std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+			return s;
+		};
+		const std::string needle = lower(query);
+		auto &client = Discord::DiscordClient::getInstance();
+		for (const auto &g : client.getGuilds()) {
+			if (lower(g.name).find(needle) != std::string::npos) {
+				list.push_back({"guild:" + g.id, "", TR("list.server"), g.name});
+			}
+			for (const auto &ch : g.channels) {
+				// Text, announcement and forum channels.
+				if ((ch.type != 0 && ch.type != 5 && ch.type != 15) || !ch.viewable) {
+					continue;
+				}
+				if (lower(ch.name).find(needle) != std::string::npos) {
+					list.push_back({"chan:" + ch.id + ":" + std::to_string(ch.type), ch.id, g.name, "#" + ch.name});
+				}
+			}
+			if (list.size() >= 80) {
+				break;
+			}
+		}
+		for (const auto &ch : client.getPrivateChannels()) {
+			std::string name = ch.name;
+			if (name.empty() && !ch.recipients.empty()) {
+				name = ch.recipients[0].global_name.empty() ? ch.recipients[0].username : ch.recipients[0].global_name;
+			}
+			if (!name.empty() && lower(name).find(needle) != std::string::npos) {
+				list.push_back({"chan:" + ch.id + ":" + std::to_string(ch.type), ch.id, TR("list.direct_message"), name});
+			}
+		}
+	}
+	std::lock_guard<std::mutex> lock(shared->mutex);
+	shared->entries = std::move(list);
+	shared->loading = false;
+	shared->version++;
+}
+
+void ListScreen::startMembers() {
+	const std::string guildId = Discord::DiscordClient::getInstance().getGuildIdFromChannel(channelId);
+	std::string text;
+	if (guildId.empty() || guildId == "DM") {
+		std::lock_guard<std::mutex> lock(shared->mutex);
+		shared->error = TR("list.members_need_server");
+		shared->loading = false;
+		shared->version++;
+		return;
+	}
+	if (!askText(TR("list.member_hint"), query, text, 40, false) || text.empty()) {
+		std::lock_guard<std::mutex> lock(shared->mutex);
+		shared->loading = false;
+		shared->version++;
+		return;
+	}
+	query = text;
+	fetch("/guilds/" + guildId + "/members/search?query=" + urlEncode(query) + "&limit=25");
 }
 
 void ListScreen::startGifSearch() {
@@ -401,6 +526,12 @@ std::string ListScreen::headerTitle() const {
 		return query.empty() ? TR("list.gifs") : TR("list.gifs") + ": " + query;
 	case Mode::STICKERS:
 		return TR("list.stickers");
+	case Mode::FIND:
+		return query.empty() ? TR("list.find") : TR("list.find") + ": " + query;
+	case Mode::MEMBERS:
+		return query.empty() ? TR("list.members") : TR("list.members") + ": " + query;
+	case Mode::THREADS:
+		return TR("list.threads");
 	case Mode::PINS:
 		return TR("list.pins");
 	case Mode::SEARCH:
@@ -427,6 +558,12 @@ std::string ListScreen::hintLine() const {
 		return TR("list.hint.gifs");
 	case Mode::STICKERS:
 		return TR("list.hint.stickers");
+	case Mode::FIND:
+		return TR("list.hint.find");
+	case Mode::MEMBERS:
+		return TR("list.hint.members");
+	case Mode::THREADS:
+		return TR("list.hint.threads");
 	case Mode::SEARCH:
 		return TR("list.hint.search");
 	case Mode::MENTIONS:
@@ -484,6 +621,16 @@ void ListScreen::primaryAction(const Entry &entry) {
 			openReplacing(Mode::GIFS);
 		} else if (entry.id == "stickers") {
 			openReplacing(Mode::STICKERS);
+		} else if (entry.id == "threads") {
+			openReplacing(Mode::THREADS);
+		} else if (entry.id == "members") {
+			openReplacing(Mode::MEMBERS);
+		} else if (entry.id == "archive") {
+			const auto r = Discord::Threads::setArchived(channelId, true);
+			sm.showToast(r.ok ? TR("list.archived_done") : r.message);
+			if (r.ok) {
+				sm.returnToPreviousScreen();
+			}
 		} else if (entry.id == "quick") {
 			openReplacing(Mode::QUICK_REPLIES);
 		} else if (entry.id == "drafts") {
@@ -512,6 +659,33 @@ void ListScreen::primaryAction(const Entry &entry) {
 			client.sendMessage(channelId, entry.body);
 			sm.returnToPreviousScreen();
 		}
+		break;
+	case Mode::FIND: {
+		if (entry.id.rfind("guild:", 0) == 0) {
+			sm.setSelectedGuildId(entry.id.substr(6));
+			sm.setScreen(ScreenType::GUILD_LIST);
+		} else if (entry.id.rfind("chan:", 0) == 0) {
+			// "chan:<id>:<type>"; forum channels open as a list of posts.
+			const std::string rest = entry.id.substr(5);
+			const size_t colon = rest.rfind(':');
+			const std::string chId = rest.substr(0, colon);
+			const int type = colon == std::string::npos ? 0 : atoi(rest.c_str() + colon + 1);
+			if (type == 15) {
+				sm.setForumChannelId(chId);
+				sm.setScreen(ScreenType::FORUM_CHANNEL);
+			} else {
+				client.setSelectedChannelId(chId);
+				sm.setScreen(ScreenType::MESSAGES);
+			}
+		}
+		break;
+	}
+	case Mode::MEMBERS:
+		ProfileScreen::open(entry.id, client.getGuildIdFromChannel(channelId));
+		break;
+	case Mode::THREADS:
+		client.setSelectedChannelId(entry.id);
+		sm.setScreen(ScreenType::MESSAGES);
 		break;
 	case Mode::STICKERS:
 		if (!client.canSendMessage(channelId)) {
@@ -598,6 +772,11 @@ void ListScreen::secondaryAction(const Entry &entry) {
 		store.removeDraft((size_t)selected);
 		load();
 		break;
+	case Mode::THREADS: {
+		const auto r = Discord::Threads::join(entry.id);
+		ScreenManager::getInstance().showToast(r.ok ? TR("list.thread_joined") : r.message);
+		break;
+	}
 	case Mode::QUICK_REPLIES: {
 		std::string text;
 		if (askText(TR("list.edit_reply"), entry.body, text, 200, false)) {
@@ -617,6 +796,12 @@ void ListScreen::tertiaryAction() {
 	switch (mode) {
 	case Mode::SEARCH:
 	case Mode::GIFS:
+	case Mode::FIND:
+	case Mode::MEMBERS:
+		load();
+		break;
+	case Mode::THREADS:
+		includeArchived = !includeArchived;
 		load();
 		break;
 	case Mode::QUICK_REPLIES:
@@ -642,6 +827,7 @@ void ListScreen::update() {
 		std::lock_guard<std::mutex> lock(shared->mutex);
 		if (shared->version != seenVersion) {
 			seenVersion = shared->version;
+			Utils::requestRedraw();
 			entries = shared->entries;
 			error = shared->error;
 			loading = shared->loading;

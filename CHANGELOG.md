@@ -1,6 +1,17 @@
 # Changelog
 
 ## Unreleased
+- **Profiles:** open anyone's profile from the message menu (View Profile): banner, avatar, names, pronouns,
+  About Me, account age and, in servers, join date and roles.
+- **Members:** Channel Tools > Members searches the members of a server by name and opens their profile.
+- **Find Server / Channel** in the side menu: type part of a name to jump to a server, channel or direct message.
+- **Threads:** Channel Tools > Threads lists the active threads (Y: show archived), A opens one, X joins it.
+  The message menu has **Create Thread**, and Channel Tools has **Archive This Thread**.
+- The update check can no longer hold the app on a slow network: it gives up after a few seconds and starts normally.
+
+## Pending 0.3.0
+These changes already shipped in a devbuild and will be part of the 0.3.0 release notes.
+
 - **File browser:** Channel Tools > Upload File opens a browser of the SD card; pick any file (up to 4 MB) and send it.
   Avatar and banner in Settings use the same browser, so no special folder is needed.
 - **GIFs:** Channel Tools > GIFs searches Tenor (or shows what is trending) and sends the one you pick.

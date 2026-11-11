@@ -19,6 +19,7 @@ bool UpdaterScreen::manualCheck = false;
 namespace {
 
 constexpr float NOTE_ROWS = 11.0f;
+constexpr int CHECK_TIMEOUT_FRAMES = 60 * 9;
 
 // Release notes are Markdown; the screen shows them as plain wrapped lines.
 std::vector<std::string> buildNoteLines(const std::string &notes) {
@@ -67,12 +68,12 @@ std::vector<std::string> buildNoteLines(const std::string &notes) {
 
 } // namespace
 
-UpdaterScreen::UpdaterScreen() : angle(0.0f), noteScroll(0.0f), notesBuilt(false), installStarted(false), finished(false), graceFrames(0) {}
+UpdaterScreen::UpdaterScreen() : angle(0.0f), noteScroll(0.0f), notesBuilt(false), installStarted(false), finished(false), graceFrames(0), checkFrames(0) {}
 
 UpdaterScreen::~UpdaterScreen() {
-	// A finished or abandoned worker must not outlive the screen that reads its state.
+	// The worker belongs to the Updater singleton, which outlives this screen: only ask it to stop. Waiting for it
+	// here would hold the app on a slow network.
 	Updater::getInstance().cancel();
-	Updater::getInstance().join();
 }
 
 void UpdaterScreen::onEnter() {
@@ -92,7 +93,8 @@ void UpdaterScreen::update() {
 
 	switch (updater.getState()) {
 	case Updater::State::CHECKING:
-		if (kDown & KEY_B) {
+		// Never hold the app for long: a slow or missing network just skips the update check.
+		if ((kDown & KEY_B) || ++checkFrames > CHECK_TIMEOUT_FRAMES) {
 			updater.cancel();
 			ScreenManager::getInstance().enterMainScreen();
 		}

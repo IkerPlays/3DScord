@@ -1,6 +1,8 @@
 #include "ui/message_screen.h"
 #include "core/local_store.h"
+#include "discord/threads.h"
 #include "ui/image_viewer_screen.h"
+#include "ui/profile_screen.h"
 #include "utils/transfers.h"
 #include "core/config.h"
 #include "core/i18n.h"
@@ -885,6 +887,27 @@ void MessageScreen::update() {
 							ImageViewerScreen::open(attachmentUrl(*chosen), chosen->filename);
 						} else {
 							Utils::Transfers::getInstance().saveAttachment(chosen->url, chosen->filename, chosen->size);
+						}
+					}
+				}
+			} else if (action == "ViewProfile") {
+				if (selectedIndex >= 0 && selectedIndex < (int)messages.size()) {
+					ProfileScreen::open(messages[selectedIndex].author.id, client.getGuildIdFromChannel(channelId));
+				}
+			} else if (action == "CreateThread") {
+				if (selectedIndex >= 0 && selectedIndex < (int)messages.size()) {
+					const std::string targetId = messages[selectedIndex].id;
+					updateLock.unlock();
+					auto res = runKeyboard(TR("thread.name_hint"), "", false, 100);
+					updateLock.lock();
+					if (res.button == SWKBD_BUTTON_RIGHT && !res.text.empty()) {
+						const auto created = Discord::Threads::createFromMessage(channelId, targetId, res.text);
+						if (created.result.ok && !created.threadId.empty()) {
+							ScreenManager::getInstance().showToast(TR("thread.created"));
+							client.setSelectedChannelId(created.threadId);
+							ScreenManager::getInstance().setScreen(ScreenType::MESSAGES);
+						} else {
+							ScreenManager::getInstance().showToast(created.result.message);
 						}
 					}
 				}
@@ -3580,6 +3603,16 @@ void MessageScreen::showMessageOptions() {
 		if (msg.showsContent()) {
 			addOption(Core::LocalStore::getInstance().isSaved(msg.id) ? "Unsave" : "Save",
 			          Core::LocalStore::getInstance().isSaved(msg.id) ? "message.menu.unsave" : "message.menu.save");
+		}
+
+		if (msg.showsContent() && !msg.author.id.empty()) {
+			addOption("ViewProfile", "message.menu.view_profile");
+		}
+		{
+			const std::string guildOfChannel = client.getGuildIdFromChannel(channelId);
+			if (msg.showsContent() && canSend && !guildOfChannel.empty() && guildOfChannel != "DM") {
+				addOption("CreateThread", "message.menu.create_thread");
+			}
 		}
 
 		if (client.canManageMessages(channelId)) {
