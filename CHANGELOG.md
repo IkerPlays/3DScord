@@ -1,6 +1,6 @@
 # Changelog
 
-## Next devbuild
+## Unreleased
 - **Quick Access** in the side menu groups Find, Friends, New Group DM, Saved Messages and Mentions.
 - **Friends:** list of friends, pending requests and blocked people (Y changes the list). A messages a friend or accepts
   a request, X removes (press twice), R adds a friend by username.
