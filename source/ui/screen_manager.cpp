@@ -25,6 +25,7 @@
 #include "ui/updater_screen.h"
 #include "ui/voice_recorder_screen.h"
 #include "utils/redraw.h"
+#include "utils/screenshot.h"
 #include "utils/transfers.h"
 #include "utils/utf8_utils.h"
 #include <algorithm>
@@ -605,6 +606,7 @@ bool ScreenManager::shouldRender() {
 }
 
 void ScreenManager::render() {
+	Utils::Screenshot::tick();
 	C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
 
 	if (textBuf) {

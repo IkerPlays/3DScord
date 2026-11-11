@@ -158,6 +158,8 @@ class Config {
 	void setLeftHanded(bool enabled);
 	bool isBatterySaver() const { return batterySaver; }
 	void setBatterySaver(bool enabled);
+	bool isLightMode() const { return lightMode; }
+	void setLightMode(bool enabled);
 	// Themes built into the app: 0 dark, 1 light, 2 AMOLED, 3 Nintendo, 4 Retro, 5 Midnight.
 	static constexpr int THEME_PRESET_COUNT = 6;
 	static Theme presetTheme(int type) { return getPreset(type); }
@@ -215,6 +217,7 @@ class Config {
 	std::string pinHash;
 	std::string pinSalt;
 	bool batterySaver;
+	bool lightMode = false;
 	int imageCache;
 	int pushToTalk;
 	int noiseGate;

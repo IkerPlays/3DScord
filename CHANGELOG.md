@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+- **Send Screenshot** (Channel Tools): sends a picture of both screens to the chat (also saved in `screenshots/` on the
+  SD card). Live screen sharing is not possible on the 3DS.
+- **Compatibility Mode** (Settings > Controls and Battery): makes a New 3DS behave like an Old 3DS (smaller queues and
+  lighter images) if the app crashes or runs out of memory.
+
 ## 0.7.0
 Server settings, events, audit log and moderation, safer updates, a fixed GIF preview and quieter voice messages.
 

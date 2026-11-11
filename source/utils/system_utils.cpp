@@ -45,6 +45,12 @@ const std::string &getDeviceModelName() {
 	return name;
 }
 
+namespace {
+bool lightMode = false;
+}
+
+void setLightMode(bool enabled) { lightMode = enabled; }
+
 bool isNew3DS() {
 	static const bool isNew = [] {
 		bool value = false;
@@ -52,7 +58,7 @@ bool isNew3DS() {
 		Logger::log("[System] APT_CheckNew3DS rc=0x%08lX new3ds=%d", (unsigned long)rc, value ? 1 : 0);
 		return R_SUCCEEDED(rc) && value;
 	}();
-	return isNew;
+	return isNew && !lightMode;
 }
 
 // Heap that newlib's arena has not claimed yet is free too.

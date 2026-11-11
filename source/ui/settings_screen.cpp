@@ -456,6 +456,17 @@ void SettingsScreen::onEnter() {
 	saver.onUpdate = [](int val) { Config::getInstance().setBatterySaver(val == 1); };
 	allItems.push_back(saver);
 
+	SettingItem light;
+	light.label = TR("settings.light_mode");
+	light.description = TR("settings.desc.light_mode");
+	light.type = SettingItemType::TOGGLE;
+	light.value = Config::getInstance().isLightMode() ? 1 : 0;
+	light.min = 0;
+	light.max = 1;
+	light.valueFormatter = [](int val) { return (val == 1) ? TR("common.enabled") : TR("common.disabled"); };
+	light.onUpdate = [](int val) { Config::getInstance().setLightMode(val == 1); };
+	allItems.push_back(light);
+
 	// VOICE
 	allItems.push_back({TR("settings.section.voice"), "", SettingItemType::SECTION_HEADER});
 

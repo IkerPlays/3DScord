@@ -347,6 +347,10 @@ void Config::loadSettings() {
 			if (doc.HasMember("battery_saver") && doc["battery_saver"].IsBool()) {
 				batterySaver = doc["battery_saver"].GetBool();
 			}
+			if (doc.HasMember("light_mode") && doc["light_mode"].IsBool()) {
+				lightMode = doc["light_mode"].GetBool();
+				Utils::System::setLightMode(lightMode);
+			}
 			if (doc.HasMember("image_cache") && doc["image_cache"].IsInt()) {
 				imageCache = std::clamp(doc["image_cache"].GetInt(), 0, 2);
 			}
@@ -441,6 +445,8 @@ void Config::saveSettings() {
 	writer.Bool(leftHanded);
 	writer.Key("battery_saver");
 	writer.Bool(batterySaver);
+	writer.Key("light_mode");
+	writer.Bool(lightMode);
 	writer.Key("image_cache");
 	writer.Int(imageCache);
 	writer.Key("push_to_talk");
@@ -615,6 +621,12 @@ bool Config::importSettings(const std::string &path) {
 void Config::setLeftHanded(bool enabled) {
 	leftHanded = enabled;
 	Utils::KeyMap::leftHanded = enabled;
+	saveSettings();
+}
+
+void Config::setLightMode(bool enabled) {
+	lightMode = enabled;
+	Utils::System::setLightMode(enabled);
 	saveSettings();
 }
 

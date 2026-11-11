@@ -1,4 +1,5 @@
 #include "ui/list_screen.h"
+#include "utils/screenshot.h"
 #include "core/config.h"
 #include "core/i18n.h"
 #include "core/local_store.h"
@@ -507,6 +508,7 @@ void ListScreen::loadLocal() {
 		        {"read", channelId, TR("list.mark_read"), TR("list.tools.read")},
 		        {"readserver", channelId, TR("list.mark_server_read"), TR("list.tools.read_server")},
 		        {"archive", channelId, TR("list.archive_thread"), TR("list.tools.archive")},
+		        {"shot", channelId, TR("screenshot.title"), TR("list.tools.shot")},
 		        {"server", channelId, TR("server.title"), TR("list.tools.server")},
 		        {"events", channelId, TR("list.events"), TR("list.tools.events")},
 		        {"audit", channelId, TR("list.audit"), TR("list.tools.audit")},
@@ -1333,6 +1335,10 @@ void ListScreen::primaryAction(const Entry &entry) {
 				const Discord::Guild *g = client.getGuildPtr(guildId);
 				openSounds(guildId, g ? g->name : "");
 			}
+		} else if (entry.id == "shot") {
+			// Close this list first so the picture shows the chat, not the menu.
+			sm.returnToPreviousScreen();
+			Utils::Screenshot::request(channelId);
 		} else if (entry.id == "server") {
 			if (currentGuild().empty()) {
 				sm.showToast(TR("list.members_need_server"));
