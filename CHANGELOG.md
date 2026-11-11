@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- **Send a Photo** (Channel Tools): takes a picture with the outer camera and sends it to the chat.
 - **Bot Commands** (Channel Tools): lists the slash commands of the bots in the channel (Y searches) and runs them,
   asking for the text or numbers they need. With the buttons of the bot messages you can already play bot games.
   Commands that need a user, channel, role, file or subcommand are not supported.

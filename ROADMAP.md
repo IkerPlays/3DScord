@@ -10,7 +10,8 @@ Work is split into **phases**. Every finished phase is published as a **devbuild
 | 5 + 6 | 0.4.0 |
 | 7 + 8 | 0.5.0 |
 | 9 + 10 | 0.6.0 |
-| 11 + 12 | 0.7.0 |
+| 11 + 12 | 0.7.0 (released) |
+| 13 + 14 | 0.9.0 (0.8.0 was released between) |
 
 Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase can change.
 
@@ -60,9 +61,9 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
 - [x] Quick Access in the side menu (Find, Friends, New Group DM, Saved, Mentions)
 - [x] Unread-first DM view (setting in Phase 6)
 - [ ] Typing indicator in the DM list
-- [ ] Carried over: upload photos from the 3DS camera
+- [x] Carried over: upload photos from the 3DS camera (Channel Tools > Send a Photo)
 - [ ] Carried over: compress big images before uploading
-- [ ] Carried over: voice messages recorded with the microphone
+- [x] Carried over: voice messages recorded with the microphone
 - [ ] Carried over: follow announcement channels
 - [ ] Carried over: forum tags and filters
 - [ ] Carried over: reorder and pin favorite servers; editable folders

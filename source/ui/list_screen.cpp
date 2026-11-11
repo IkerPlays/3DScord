@@ -517,6 +517,7 @@ void ListScreen::loadLocal() {
 		        {"read", channelId, TR("list.mark_read"), TR("list.tools.read")},
 		        {"readserver", channelId, TR("list.mark_server_read"), TR("list.tools.read_server")},
 		        {"archive", channelId, TR("list.archive_thread"), TR("list.tools.archive")},
+		        {"photo", channelId, TR("photo.title"), TR("list.tools.photo")},
 		        {"commands", channelId, TR("commands.title"), TR("list.tools.commands")},
 		        {"themeshare", channelId, TR("theme.share"), TR("list.tools.theme_share")},
 		        {"themeimport", channelId, TR("theme.import"), TR("list.tools.theme_import")},
@@ -1425,6 +1426,14 @@ void ListScreen::primaryAction(const Entry &entry) {
 			} else {
 				const Discord::Guild *g = client.getGuildPtr(guildId);
 				openSounds(guildId, g ? g->name : "");
+			}
+		} else if (entry.id == "photo") {
+			const std::string photo = Utils::Screenshot::takePhoto();
+			if (photo.empty()) {
+				sm.showToast(TR("photo.failed"));
+			} else {
+				Utils::Transfers::getInstance().uploadFile(channelId, photo, "");
+				sm.returnToPreviousScreen();
 			}
 		} else if (entry.id == "commands") {
 			openReplacing(Mode::COMMANDS);

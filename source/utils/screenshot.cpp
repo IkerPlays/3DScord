@@ -8,6 +8,7 @@
 #include <3ds.h>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <ctime>
 #include <sys/stat.h>
 #include <vector>
@@ -57,52 +58,6 @@ void chunk(std::string &out, const char *type, const std::string &data) {
 	body += data;
 	out += body;
 	put32(out, crc32(0, (const uint8_t *)body.data(), body.size()));
-}
-
-// PNG with "stored" deflate blocks: no compression, but any viewer opens it and it needs no library.
-std::string encodePng(const std::vector<uint8_t> &rgb, int w, int h) {
-	std::string raw;
-	raw.reserve((size_t)(w * 3 + 1) * h);
-	for (int y = 0; y < h; y++) {
-		raw.push_back(0);
-		raw.append((const char *)&rgb[(size_t)y * w * 3], (size_t)w * 3);
-	}
-
-	std::string z;
-	z.push_back(0x78);
-	z.push_back(0x01);
-	size_t pos = 0;
-	do {
-		const size_t n = std::min<size_t>(65535, raw.size() - pos);
-		const bool last = pos + n >= raw.size();
-		z.push_back(last ? 1 : 0);
-		z.push_back((char)(n & 0xFF));
-		z.push_back((char)(n >> 8));
-		z.push_back((char)(~n & 0xFF));
-		z.push_back((char)((~n >> 8) & 0xFF));
-		z.append(raw, pos, n);
-		pos += n;
-	} while (pos < raw.size());
-	uint32_t a = 1, b = 0;
-	for (unsigned char c : raw) {
-		a = (a + c) % 65521;
-		b = (b + a) % 65521;
-	}
-	put32(z, (b << 16) | a);
-
-	std::string out("\x89PNG\r\n\x1a\n", 8);
-	std::string ihdr;
-	put32(ihdr, (uint32_t)w);
-	put32(ihdr, (uint32_t)h);
-	ihdr.push_back(8); // bit depth
-	ihdr.push_back(2); // RGB
-	ihdr.push_back(0);
-	ihdr.push_back(0);
-	ihdr.push_back(0);
-	chunk(out, "IHDR", ihdr);
-	chunk(out, "IDAT", z);
-	chunk(out, "IEND", "");
-	return out;
 }
 
 // The framebuffers are stored rotated: column by column, bottom to top, three bytes (B, G, R) per pixel.
@@ -158,6 +113,116 @@ void capture() {
 }
 
 } // namespace
+
+// PNG with "stored" deflate blocks: no compression, but any viewer opens it and it needs no library.
+std::string encodePng(const std::vector<uint8_t> &rgb, int w, int h) {
+	std::string raw;
+	raw.reserve((size_t)(w * 3 + 1) * h);
+	for (int y = 0; y < h; y++) {
+		raw.push_back(0);
+		raw.append((const char *)&rgb[(size_t)y * w * 3], (size_t)w * 3);
+	}
+
+	std::string z;
+	z.push_back(0x78);
+	z.push_back(0x01);
+	size_t pos = 0;
+	do {
+		const size_t n = std::min<size_t>(65535, raw.size() - pos);
+		const bool last = pos + n >= raw.size();
+		z.push_back(last ? 1 : 0);
+		z.push_back((char)(n & 0xFF));
+		z.push_back((char)(n >> 8));
+		z.push_back((char)(~n & 0xFF));
+		z.push_back((char)((~n >> 8) & 0xFF));
+		z.append(raw, pos, n);
+		pos += n;
+	} while (pos < raw.size());
+	uint32_t a = 1, b = 0;
+	for (unsigned char c : raw) {
+		a = (a + c) % 65521;
+		b = (b + a) % 65521;
+	}
+	put32(z, (b << 16) | a);
+
+	std::string out("\x89PNG\r\n\x1a\n", 8);
+	std::string ihdr;
+	put32(ihdr, (uint32_t)w);
+	put32(ihdr, (uint32_t)h);
+	ihdr.push_back(8); // bit depth
+	ihdr.push_back(2); // RGB
+	ihdr.push_back(0);
+	ihdr.push_back(0);
+	ihdr.push_back(0);
+	chunk(out, "IHDR", ihdr);
+	chunk(out, "IDAT", z);
+	chunk(out, "IEND", "");
+	return out;
+}
+
+std::string takePhoto() {
+	constexpr int W = 400;
+	constexpr int H = 240;
+	if (R_FAILED(camInit())) {
+		return "";
+	}
+	std::string result;
+	u32 maxBytes = 0;
+	std::vector<uint8_t> frame;
+	u16 *buf = (u16 *)malloc((size_t)W * H * 2);
+	bool ok = buf != nullptr;
+	ok = ok && R_SUCCEEDED(CAMU_SetSize(SELECT_OUT1, SIZE_CTR_TOP_LCD, CONTEXT_A));
+	ok = ok && R_SUCCEEDED(CAMU_SetOutputFormat(SELECT_OUT1, OUTPUT_RGB_565, CONTEXT_A));
+	ok = ok && R_SUCCEEDED(CAMU_SetNoiseFilter(SELECT_OUT1, true));
+	ok = ok && R_SUCCEEDED(CAMU_SetAutoExposure(SELECT_OUT1, true));
+	ok = ok && R_SUCCEEDED(CAMU_SetAutoWhiteBalance(SELECT_OUT1, true));
+	ok = ok && R_SUCCEEDED(CAMU_SetTrimming(PORT_CAM1, false));
+	ok = ok && R_SUCCEEDED(CAMU_GetMaxBytes(&maxBytes, W, H));
+	ok = ok && R_SUCCEEDED(CAMU_SetTransferBytes(PORT_CAM1, maxBytes, W, H));
+	ok = ok && R_SUCCEEDED(CAMU_Activate(SELECT_OUT1));
+	if (ok) {
+		CAMU_ClearBuffer(PORT_CAM1);
+		CAMU_StartCapture(PORT_CAM1);
+		// The first frames are dark while the exposure settles: the sixth one is kept.
+		for (int i = 0; i < 6 && ok; i++) {
+			Handle event = 0;
+			ok = R_SUCCEEDED(CAMU_SetReceiving(&event, buf, PORT_CAM1, (u32)W * H * 2, (s16)maxBytes)) &&
+			     R_SUCCEEDED(svcWaitSynchronization(event, 1000000000LL));
+			if (event) {
+				svcCloseHandle(event);
+			}
+		}
+		CAMU_StopCapture(PORT_CAM1);
+	}
+	CAMU_Activate(SELECT_NONE);
+	camExit();
+	if (ok) {
+		frame.resize((size_t)W * H * 3);
+		for (int i = 0; i < W * H; i++) {
+			const u16 p = buf[i];
+			frame[i * 3] = (uint8_t)(((p >> 11) & 31) * 255 / 31);
+			frame[i * 3 + 1] = (uint8_t)(((p >> 5) & 63) * 255 / 63);
+			frame[i * 3 + 2] = (uint8_t)((p & 31) * 255 / 31);
+		}
+		const std::string png = encodePng(frame, W, H);
+		const std::string dir = std::string(CONFIG_DIR_PATH) + "/screenshots";
+		mkdir("sdmc:/3ds", 0777);
+		mkdir(CONFIG_DIR_PATH, 0777);
+		mkdir(dir.c_str(), 0777);
+		char name[64];
+		const time_t now = time(nullptr);
+		strftime(name, sizeof(name), "/photo_%Y%m%d_%H%M%S.png", gmtime(&now));
+		FILE *f = fopen((dir + name).c_str(), "wb");
+		if (f) {
+			if (fwrite(png.data(), 1, png.size(), f) == png.size()) {
+				result = dir + name;
+			}
+			fclose(f);
+		}
+	}
+	free(buf);
+	return result;
+}
 
 void request(const std::string &channelId) {
 	targetChannel = channelId;
