@@ -4,11 +4,52 @@
 #include "log.h"
 #include "ui/screen_manager.h"
 #include "utils/message_utils.h"
+#include "discord/account_settings.h"
 #include "discord/avatar_cache.h"
+#include "discord/discord_client.h"
+#include "ui/updater_screen.h"
+#include "utils/updater.h"
+#include <cstdlib>
+#include <sys/stat.h>
+#include <memory>
 #include <3ds.h>
 #include <algorithm>
 
 namespace UI {
+
+namespace {
+
+using Discord::AccountSettings::Result;
+using Discord::AccountSettings::Snapshot;
+
+// What the server reported when the screen was first opened; kept up to date as options change.
+Snapshot cachedSnapshot;
+bool snapshotFetched = false;
+std::string snapshotUserId;
+
+bool promptText(const std::string &hint, const std::string &initial, std::string &out, int maxLen,
+                bool multiline = false) {
+	SwkbdState swkbd;
+	swkbdInit(&swkbd, SWKBD_TYPE_NORMAL, 2, maxLen);
+	swkbdSetFeatures(&swkbd, SWKBD_DARKEN_TOP_SCREEN | (multiline ? SWKBD_MULTILINE : 0));
+	swkbdSetValidation(&swkbd, SWKBD_ANYTHING, 0, 0);
+	swkbdSetHintText(&swkbd, hint.c_str());
+	if (!initial.empty()) {
+		swkbdSetInitialText(&swkbd, initial.c_str());
+	}
+	std::vector<char> buffer(maxLen * 4 + 8, 0);
+	if (swkbdInputText(&swkbd, buffer.data(), buffer.size()) != SWKBD_BUTTON_CONFIRM) {
+		return false;
+	}
+	out = buffer.data();
+	return true;
+}
+
+void report(const Result &r) {
+	ScreenManager::getInstance().showToast(r.ok ? TR("account.saved") : r.message);
+}
+
+} // namespace
 
 SettingsScreen::SettingsScreen()
     : selectedIndex(0), scrollOffset(0.0f), repeatTimer(0), lastKey(0), isDeveloperMode(false), popupActive(false),
@@ -209,6 +250,9 @@ void SettingsScreen::onEnter() {
 	notificationSound.onUpdate = [](int val) { Config::getInstance().setNotificationSoundEnabled(val == 1); };
 	allItems.push_back(notificationSound);
 
+	addAccountItems();
+	addUpdateItems();
+
 	// DEVELOPER
 	SettingItem devSection;
 	devSection.label = "Developer Options";
@@ -229,6 +273,292 @@ void SettingsScreen::onEnter() {
 	allItems.push_back(fileLogging);
 
 	refreshVisibleItems();
+}
+
+void SettingsScreen::addAccountItems() {
+	using namespace Discord;
+	auto &client = DiscordClient::getInstance();
+	if (client.getState() != ConnectionState::READY) {
+		return;
+	}
+	const User me = client.getCurrentUser();
+	if (!snapshotFetched || snapshotUserId != me.id) {
+		cachedSnapshot = AccountSettings::fetch();
+		snapshotFetched = true;
+		snapshotUserId = me.id;
+	}
+	mkdir("sdmc:/3ds", 0777);
+	mkdir(CONFIG_DIR_PATH, 0777);
+	mkdir(UPLOAD_DIR_PATH, 0777);
+
+	auto addAction = [this](const std::string &label, const std::string &desc, std::function<void()> fn) {
+		SettingItem item;
+		item.label = label;
+		item.description = desc;
+		item.type = SettingItemType::ACTION;
+		item.action = std::move(fn);
+		allItems.push_back(item);
+	};
+
+	auto addToggle = [this](const std::string &label, const std::string &desc, const char *apiKey,
+	                        bool Snapshot::*field) {
+		SettingItem item;
+		item.label = label;
+		item.description = desc;
+		item.type = SettingItemType::TOGGLE;
+		item.value = (cachedSnapshot.*field) ? 1 : 0;
+		item.min = 0;
+		item.max = 1;
+		item.valueFormatter = [](int val) { return (val == 1) ? TR("common.enabled") : TR("common.disabled"); };
+		item.onUpdate = [this, apiKey, field](int val) {
+			Result r = AccountSettings::setBoolSetting(apiKey, val == 1);
+			if (r.ok) {
+				cachedSnapshot.*field = (val == 1);
+			} else {
+				scheduleRefresh = true;
+			}
+			report(r);
+		};
+		allItems.push_back(item);
+	};
+
+	// Image pickers list the files of the upload folder; 0 = nothing chosen, 1 = remove the current image.
+	auto addImagePicker = [this](const std::string &label, const std::string &desc, bool banner) {
+		auto files = std::make_shared<std::vector<std::string>>(AccountSettings::listUploadFiles());
+		SettingItem item;
+		item.label = label;
+		item.description = desc;
+		item.type = SettingItemType::INTEGER;
+		item.value = 0;
+		item.min = 0;
+		item.max = 1 + (int)files->size();
+		item.valueFormatter = [files](int val) -> std::string {
+			if (val == 0) {
+				return TR("account.choose_image");
+			}
+			if (val == 1) {
+				return TR("account.remove_image");
+			}
+			return (*files)[val - 2];
+		};
+		item.onUpdate = [this, files, banner](int val) {
+			if (val == 0) {
+				return;
+			}
+			ScreenManager::getInstance().showToast(TR("account.uploading"));
+			Result r;
+			if (val == 1) {
+				r = banner ? AccountSettings::removeBanner() : AccountSettings::removeAvatar();
+			} else {
+				const std::string path = std::string(UPLOAD_DIR_PATH) + "/" + (*files)[val - 2];
+				r = banner ? AccountSettings::setBannerFromFile(path) : AccountSettings::setAvatarFromFile(path);
+			}
+			report(r);
+			scheduleRefresh = true;
+		};
+		allItems.push_back(item);
+	};
+
+	// PROFILE
+	allItems.push_back({TR("settings.section.profile"), "", SettingItemType::SECTION_HEADER});
+
+	addAction(TR("account.display_name"), TR("account.desc.display_name"), [me]() {
+		std::string text;
+		if (promptText(TR("account.display_name"), me.global_name, text, 32)) {
+			report(Discord::AccountSettings::setDisplayName(text));
+		}
+	});
+	addAction(TR("account.bio"), TR("account.desc.bio"), []() {
+		std::string text;
+		if (promptText(TR("account.bio"), cachedSnapshot.bio, text, 190, true)) {
+			Result r = Discord::AccountSettings::setBio(text);
+			if (r.ok) {
+				cachedSnapshot.bio = text;
+			}
+			report(r);
+		}
+	});
+	addAction(TR("account.pronouns"), TR("account.desc.pronouns"), []() {
+		std::string text;
+		if (promptText(TR("account.pronouns"), cachedSnapshot.pronouns, text, 40)) {
+			Result r = Discord::AccountSettings::setPronouns(text);
+			if (r.ok) {
+				cachedSnapshot.pronouns = text;
+			}
+			report(r);
+		}
+	});
+	addAction(TR("account.accent_color"), TR("account.desc.accent_color"), []() {
+		char initial[16] = "";
+		if (cachedSnapshot.accentColor >= 0) {
+			snprintf(initial, sizeof(initial), "%06X", cachedSnapshot.accentColor & 0xFFFFFF);
+		}
+		std::string text;
+		if (!promptText("RRGGBB", initial, text, 7)) {
+			return;
+		}
+		if (!text.empty() && text[0] == '#') {
+			text.erase(0, 1);
+		}
+		int rgb = -1;
+		if (!text.empty()) {
+			char *end = nullptr;
+			long v = strtol(text.c_str(), &end, 16);
+			if (*end != '\0' || text.size() != 6) {
+				ScreenManager::getInstance().showToast(TR("account.invalid_color"));
+				return;
+			}
+			rgb = (int)v;
+		}
+		Result r = Discord::AccountSettings::setAccentColor(rgb);
+		if (r.ok) {
+			cachedSnapshot.accentColor = rgb;
+		}
+		report(r);
+	});
+	addImagePicker(TR("account.avatar"), TR("account.desc.images"), false);
+	addImagePicker(TR("account.banner"), TR("account.desc.images"), true);
+
+	// STATUS
+	allItems.push_back({TR("settings.section.status"), "", SettingItemType::SECTION_HEADER});
+
+	SettingItem status;
+	status.label = TR("account.status");
+	status.description = TR("account.desc.status");
+	status.type = SettingItemType::INTEGER;
+	status.value = me.status == UserStatus::IDLE ? 1 : me.status == UserStatus::DND ? 2
+	               : me.status == UserStatus::INVISIBLE ? 3 : 0;
+	status.min = 0;
+	status.max = 3;
+	status.valueFormatter = [](int val) -> std::string {
+		return TR(val == 1 ? "account.status.idle"
+		                   : val == 2 ? "account.status.dnd" : val == 3 ? "account.status.invisible" : "account.status.online");
+	};
+	status.onUpdate = [](int val) {
+		DiscordClient::getInstance().updatePresence(val == 1   ? UserStatus::IDLE
+		                                            : val == 2 ? UserStatus::DND
+		                                            : val == 3 ? UserStatus::INVISIBLE
+		                                                       : UserStatus::ONLINE);
+	};
+	allItems.push_back(status);
+
+	addAction(TR("account.custom_status"), TR("account.desc.custom_status"), []() {
+		std::string text;
+		if (promptText(TR("account.custom_status"), cachedSnapshot.customStatus, text, 128)) {
+			Result r = Discord::AccountSettings::setCustomStatus(text);
+			if (r.ok) {
+				cachedSnapshot.customStatus = text;
+			}
+			report(r);
+		}
+	});
+	addToggle(TR("account.show_current_game"), TR("account.desc.show_current_game"), "show_current_game",
+	          &Snapshot::showCurrentGame);
+
+	// DISCORD CHAT
+	allItems.push_back({TR("settings.section.discord_chat"), "", SettingItemType::SECTION_HEADER});
+	addToggle(TR("account.compact"), TR("account.desc.compact"), "message_display_compact",
+	          &Snapshot::compactMessages);
+	addToggle(TR("account.render_embeds"), TR("account.desc.render_embeds"), "render_embeds", &Snapshot::renderEmbeds);
+	addToggle(TR("account.render_reactions"), TR("account.desc.render_reactions"), "render_reactions",
+	          &Snapshot::renderReactions);
+	addToggle(TR("account.animate_emoji"), TR("account.desc.animate_emoji"), "animate_emoji", &Snapshot::animateEmoji);
+	addToggle(TR("account.gif_auto_play"), TR("account.desc.gif_auto_play"), "gif_auto_play", &Snapshot::gifAutoPlay);
+	addToggle(TR("account.inline_embed_media"), TR("account.desc.inline_embed_media"), "inline_embed_media",
+	          &Snapshot::inlineEmbedMedia);
+	addToggle(TR("account.inline_attachment_media"), TR("account.desc.inline_attachment_media"),
+	          "inline_attachment_media", &Snapshot::inlineAttachmentMedia);
+	addToggle(TR("account.convert_emoticons"), TR("account.desc.convert_emoticons"), "convert_emoticons",
+	          &Snapshot::convertEmoticons);
+	addToggle(TR("account.developer_mode"), TR("account.desc.developer_mode"), "developer_mode",
+	          &Snapshot::developerMode);
+
+	// PRIVACY
+	allItems.push_back({TR("settings.section.privacy"), "", SettingItemType::SECTION_HEADER});
+	addToggle(TR("account.restrict_dms"), TR("account.desc.restrict_dms"), "default_guilds_restricted",
+	          &Snapshot::restrictNewServerDms);
+
+	SettingItem filter;
+	filter.label = TR("account.explicit_filter");
+	filter.description = TR("account.desc.explicit_filter");
+	filter.type = SettingItemType::INTEGER;
+	filter.value = cachedSnapshot.explicitContentFilter;
+	filter.min = 0;
+	filter.max = 2;
+	filter.valueFormatter = [](int val) -> std::string {
+		return TR(val == 0 ? "account.filter.off" : val == 1 ? "account.filter.no_roles" : "account.filter.all");
+	};
+	filter.onUpdate = [this](int val) {
+		Result r = Discord::AccountSettings::setIntSetting("explicit_content_filter", val);
+		if (r.ok) {
+			cachedSnapshot.explicitContentFilter = val;
+		} else {
+			scheduleRefresh = true;
+		}
+		report(r);
+	};
+	allItems.push_back(filter);
+
+	SettingItem theme;
+	theme.label = TR("account.discord_theme");
+	theme.description = TR("account.desc.discord_theme");
+	theme.type = SettingItemType::STEPPER;
+	theme.value = cachedSnapshot.lightTheme ? 1 : 0;
+	theme.min = 0;
+	theme.max = 1;
+	theme.valueFormatter = [](int val) { return val == 1 ? TR("settings.theme.light") : TR("settings.theme.dark"); };
+	theme.onUpdate = [this](int val) {
+		Result r = Discord::AccountSettings::setThemeSetting(val == 1);
+		if (r.ok) {
+			cachedSnapshot.lightTheme = (val == 1);
+		} else {
+			scheduleRefresh = true;
+		}
+		report(r);
+	};
+	allItems.push_back(theme);
+}
+
+void SettingsScreen::addUpdateItems() {
+	allItems.push_back({TR("settings.section.updates"), "", SettingItemType::SECTION_HEADER});
+
+	SettingItem version;
+	version.label = TR("updater.version") + ": " + Utils::Updater::currentVersionString();
+	version.description = TR("updater.desc.version");
+	version.type = SettingItemType::ACTION;
+	allItems.push_back(version);
+
+	SettingItem check;
+	check.label = TR("updater.check_now");
+	check.description = TR("updater.desc.check_now");
+	check.type = SettingItemType::ACTION;
+	check.action = []() {
+		UpdaterScreen::manualCheck = true;
+		ScreenManager::getInstance().setScreen(ScreenType::UPDATER);
+	};
+	allItems.push_back(check);
+
+	SettingItem autoUpdate;
+	autoUpdate.label = TR("updater.auto");
+	autoUpdate.description = TR("updater.desc.auto");
+	autoUpdate.type = SettingItemType::TOGGLE;
+	autoUpdate.value = Config::getInstance().isAutoUpdateEnabled() ? 1 : 0;
+	autoUpdate.min = 0;
+	autoUpdate.max = 1;
+	autoUpdate.valueFormatter = [](int val) { return (val == 1) ? TR("common.enabled") : TR("common.disabled"); };
+	autoUpdate.onUpdate = [](int val) { Config::getInstance().setAutoUpdateEnabled(val == 1); };
+	allItems.push_back(autoUpdate);
+
+	SettingItem dev;
+	dev.label = TR("updater.devbuilds");
+	dev.description = TR("updater.desc.devbuilds");
+	dev.type = SettingItemType::TOGGLE;
+	dev.value = Config::getInstance().isDevBuildUpdatesEnabled() ? 1 : 0;
+	dev.min = 0;
+	dev.max = 1;
+	dev.valueFormatter = [](int val) { return (val == 1) ? TR("common.enabled") : TR("common.disabled"); };
+	dev.onUpdate = [](int val) { Config::getInstance().setDevBuildUpdatesEnabled(val == 1); };
+	allItems.push_back(dev);
 }
 
 void SettingsScreen::refreshVisibleItems() {

@@ -55,6 +55,8 @@ class SettingsScreen : public Screen {
 	bool scheduleRefresh = false;
 
 	void refreshVisibleItems();
+	void addAccountItems();
+	void addUpdateItems();
 };
 
 } // namespace UI

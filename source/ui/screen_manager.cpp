@@ -16,6 +16,7 @@
 #include "ui/settings_screen.h"
 #include "ui/text_measure_cache.h"
 #include "ui/theme_manager_screen.h"
+#include "ui/updater_screen.h"
 #include "utils/redraw.h"
 #include "utils/utf8_utils.h"
 #include <algorithm>
@@ -214,7 +215,15 @@ void ScreenManager::init() {
 
 	if (!Config::getInstance().isDisclaimerAccepted()) {
 		setScreen(ScreenType::DISCLAIMER);
-	} else if (Discord::DiscordClient::getInstance().getState() == Discord::ConnectionState::READY) {
+	} else if (Config::getInstance().isAutoUpdateEnabled()) {
+		setScreen(ScreenType::UPDATER);
+	} else {
+		enterMainScreen();
+	}
+}
+
+void ScreenManager::enterMainScreen() {
+	if (Discord::DiscordClient::getInstance().getState() == Discord::ConnectionState::READY) {
 		setScreen(ScreenType::GUILD_LIST);
 	} else {
 		setScreen(ScreenType::LOGIN);
@@ -265,13 +274,14 @@ void ScreenManager::setScreen(ScreenType type) {
 	}
 
 	if (type == ScreenType::LOGIN || type == ScreenType::GUILD_LIST || type == ScreenType::ADD_ACCOUNT ||
-	    type == ScreenType::DISCLAIMER) {
+	    type == ScreenType::DISCLAIMER || type == ScreenType::UPDATER) {
 		screenHistory.clear();
 	}
 
 	currentType = type;
 
-	if (type == ScreenType::LOGIN || type == ScreenType::ADD_ACCOUNT || type == ScreenType::DISCLAIMER) {
+	if (type == ScreenType::LOGIN || type == ScreenType::ADD_ACCOUNT || type == ScreenType::DISCLAIMER ||
+	    type == ScreenType::UPDATER) {
 		hamburgerMenu.reset();
 	}
 
@@ -341,6 +351,9 @@ void ScreenManager::setScreen(ScreenType type) {
 		break;
 	case ScreenType::THEME_MANAGER:
 		currentScreen = std::make_unique<ThemeManagerScreen>();
+		break;
+	case ScreenType::UPDATER:
+		currentScreen = std::make_unique<UpdaterScreen>();
 		break;
 	}
 

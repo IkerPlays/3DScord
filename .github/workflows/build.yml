@@ -21,11 +21,35 @@ defaults:
     shell: bash
 
 jobs:
+  # Version of this build: "<core>-dev.<run number>". <core> is the version of resources/AppInfo, but never lower
+  # than the latest stable release + 1 patch, so a devbuild is always newer than the stable one it follows.
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      core: ${{ steps.ver.outputs.core }}
+      version: ${{ steps.ver.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: ver
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          get() { sed -n "s/^$1 *= *\([0-9]*\).*/\1/p" resources/AppInfo; }
+          core="$(get APP_VERSION_MAJOR).$(get APP_VERSION_MINOR).$(get APP_VERSION_MICRO)"
+          stable=$(gh release list --repo "$GITHUB_REPOSITORY" --exclude-pre-releases --limit 100 \
+                     --json tagName --jq '.[].tagName' | sed 's/^v//' \
+                     | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1 || true)
+          if [ -n "$stable" ] && [ "$(printf '%s\n%s\n' "$core" "$stable" | sort -V | tail -1)" = "$stable" ]; then
+            IFS=. read -r a b c <<< "$stable"
+            core="$a.$b.$((c + 1))"
+          fi
+          echo "core=$core" >> "$GITHUB_OUTPUT"
+          echo "version=${core}-dev.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+
   build:
+    needs: version
     runs-on: ubuntu-latest
     container: devkitpro/devkitarm:latest
-    outputs:
-      version: ${{ steps.ver.outputs.version }}
     steps:
       - uses: actions/checkout@v4
 
@@ -45,14 +69,20 @@ jobs:
           make -C /tmp/bannertool/b -j"$(nproc)"
           cp /tmp/bannertool/b/bannertool /usr/local/bin/
 
+      - name: Set devbuild version
+        env:
+          CORE: ${{ needs.version.outputs.core }}
+        run: |
+          IFS=. read -r a b c <<< "$CORE"
+          sed -i -e "s/^APP_VERSION_MAJOR.*/APP_VERSION_MAJOR = $a/" \
+                 -e "s/^APP_VERSION_MINOR.*/APP_VERSION_MINOR = $b/" \
+                 -e "s/^APP_VERSION_MICRO.*/APP_VERSION_MICRO = $c/" resources/AppInfo
+
       - name: Build .3dsx and .cia
-        run: make -j"$(nproc)" MAKEROM=makerom BANNERTOOL=bannertool
+        run: make -j"$(nproc)" MAKEROM=makerom BANNERTOOL=bannertool APP_DEV_BUILD=${{ github.run_number }}
 
       - name: Collect files
-        id: ver
         run: |
-          get() { sed -n "s/^$1 *= *\([0-9]*\).*/\1/p" resources/AppInfo; }
-          echo "version=$(get APP_VERSION_MAJOR).$(get APP_VERSION_MINOR).$(get APP_VERSION_MICRO)-dev.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
           mkdir dist
           cp TriCord.cia dist/3DScord.cia
           cp TriCord.3dsx dist/3DScord.3dsx
@@ -63,7 +93,7 @@ jobs:
           path: dist/
 
   release:
-    needs: build
+    needs: [version, build]
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
@@ -75,7 +105,7 @@ jobs:
       - name: Publish devbuild
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ needs.build.outputs.version }}
+          VERSION: ${{ needs.version.outputs.version }}
         run: |
           gh release create "v${VERSION}" dist/3DScord.cia dist/3DScord.3dsx \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \

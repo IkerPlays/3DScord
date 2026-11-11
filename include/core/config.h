@@ -14,6 +14,9 @@
 #define APP_VERSION                                                                                                    \
 	TOSTRING(APP_VERSION_MAJOR)                                                                                        \
 	"." TOSTRING(APP_VERSION_MINOR) "." TOSTRING(APP_VERSION_MICRO)
+#ifndef APP_DEV_BUILD
+#define APP_DEV_BUILD 0
+#endif
 #define APP_USER_AGENT "TriCord/" APP_VERSION " (Nintendo 3DS)"
 
 #define HTTP_TIMEOUT_SECONDS 30
@@ -24,6 +27,7 @@
 #define BOTTOM_SCREEN_HEIGHT 240
 
 #define CONFIG_DIR_PATH "sdmc:/3ds/TriCord"
+#define UPDATE_REPO "IkerPlays/3DScord"
 
 #include "core/i18n.h"
 #include <3ds.h>
@@ -126,6 +130,11 @@ class Config {
 	bool isShowHiddenChannelsEnabled() const { return showHiddenChannels; }
 	void setShowHiddenChannelsEnabled(bool enabled);
 
+	bool isAutoUpdateEnabled() const { return autoUpdate; }
+	void setAutoUpdateEnabled(bool enabled);
+	bool isDevBuildUpdatesEnabled() const { return devBuildUpdates; }
+	void setDevBuildUpdatesEnabled(bool enabled);
+
 	bool isDisclaimerAccepted() const { return disclaimerAccepted; }
 	void setDisclaimerAccepted(bool accepted);
 
@@ -155,6 +164,8 @@ class Config {
 	bool showAvatars;
 	bool showServerIcons;
 	bool showHiddenChannels;
+	bool autoUpdate;
+	bool devBuildUpdates;
 
 	int micVolume;
 	std::unordered_map<std::string, int> userVolumes;

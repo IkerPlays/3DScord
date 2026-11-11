@@ -9,6 +9,7 @@
 #include "utils/message_utils.h"
 #include "utils/sound_player.h"
 #include "utils/system_utils.h"
+#include "utils/updater.h"
 #include <3ds.h>
 #include <citro2d.h>
 #include <citro3d.h>
@@ -102,6 +103,7 @@ int main(int argc, char **argv) {
 		Logger::log("SSL service unavailable, TLS has no entropy");
 	}
 
+	Utils::Updater::getInstance().setLaunchPath(argc > 0 ? argv[0] : nullptr);
 	Config::getInstance().load();
 	if (Utils::System::isNew3DS()) {
 		Network::NetworkManager::getInstance().init(3, 2);
@@ -139,6 +141,9 @@ int main(int argc, char **argv) {
 
 	// Its destructor would otherwise run after socExit and ndspExit.
 	Discord::VoiceClient::getInstance().disconnect();
+
+	Utils::Updater::getInstance().cancel();
+	Utils::Updater::getInstance().join();
 
 	// Network first: its workers run callbacks into everything below.
 	Network::NetworkManager::getInstance().shutdown();

@@ -24,7 +24,8 @@ enum class ScreenType {
 	SETTINGS,
 	ABOUT,
 	DISCLAIMER,
-	THEME_MANAGER
+	THEME_MANAGER,
+	UPDATER
 };
 
 class Screen {
@@ -55,6 +56,8 @@ class ScreenManager {
 	void shutdown();
 
 	void setScreen(ScreenType type);
+	// Leaves the startup updater for the screen the app would normally open on.
+	void enterMainScreen();
 	void pushScreen(ScreenType type);
 	ScreenType getCurrentType() const { return currentType; }
 	void returnToPreviousScreen();

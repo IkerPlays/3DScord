@@ -24,7 +24,7 @@
 Config::Config()
     : currentAccountIndex(-1), timezoneOffset(0), language("en_US"), themeType(0), typingIndicatorEnabled(true),
       notificationSound(true), fileLoggingEnabled(false), disclaimerAccepted(false), showAvatars(true),
-      showServerIcons(true), showHiddenChannels(false), micVolume(100), customThemeEnabled(false),
+      showServerIcons(true), showHiddenChannels(false), autoUpdate(true), devBuildUpdates(false), micVolume(100), customThemeEnabled(false),
       selectedThemeName("") {
 	customTheme = getDarkPreset();
 	customTheme.name = "Custom Theme";
@@ -242,6 +242,12 @@ void Config::loadSettings() {
 			if (doc.HasMember("show_hidden_channels") && doc["show_hidden_channels"].IsBool()) {
 				showHiddenChannels = doc["show_hidden_channels"].GetBool();
 			}
+			if (doc.HasMember("auto_update") && doc["auto_update"].IsBool()) {
+				autoUpdate = doc["auto_update"].GetBool();
+			}
+			if (doc.HasMember("dev_build_updates") && doc["dev_build_updates"].IsBool()) {
+				devBuildUpdates = doc["dev_build_updates"].GetBool();
+			}
 			if (doc.HasMember("mic_volume") && doc["mic_volume"].IsInt()) {
 				micVolume = std::clamp(doc["mic_volume"].GetInt(), 0, 200);
 			}
@@ -295,6 +301,10 @@ void Config::saveSettings() {
 	writer.Bool(showServerIcons);
 	writer.Key("show_hidden_channels");
 	writer.Bool(showHiddenChannels);
+	writer.Key("auto_update");
+	writer.Bool(autoUpdate);
+	writer.Key("dev_build_updates");
+	writer.Bool(devBuildUpdates);
 	writer.Key("mic_volume");
 	writer.Int(micVolume);
 	writer.Key("user_volumes");
@@ -374,6 +384,16 @@ void Config::setShowServerIconsEnabled(bool enabled) {
 
 void Config::setShowHiddenChannelsEnabled(bool enabled) {
 	showHiddenChannels = enabled;
+	saveSettings();
+}
+
+void Config::setAutoUpdateEnabled(bool enabled) {
+	autoUpdate = enabled;
+	saveSettings();
+}
+
+void Config::setDevBuildUpdatesEnabled(bool enabled) {
+	devBuildUpdates = enabled;
 	saveSettings();
 }
 

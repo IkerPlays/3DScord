@@ -4,6 +4,7 @@
 #include "ui/image_manager.h"
 #include "ui/screen_manager.h"
 #include "utils/message_utils.h"
+#include "utils/updater.h"
 #include <3ds.h>
 #include <cmath>
 
@@ -97,7 +98,7 @@ void AboutScreen::renderTop(C3D_RenderTarget *target) {
 
 	drawCenteredRichText(centerY + 30.0f, 0.5f, 0.8f, 0.8f, ScreenManager::colorText(), "TriCord", 400.0f);
 
-	std::string verStr = "Version " + std::string(APP_VERSION);
+	std::string verStr = "Version " + Utils::Updater::currentVersionString();
 	drawCenteredText(centerY + 55.0f, 0.5f, 0.5f, 0.5f, ScreenManager::colorTextMuted(), verStr, 400.0f);
 
 	float lineW = 100.0f;
