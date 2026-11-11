@@ -803,6 +803,8 @@
     "voice.unmuted": "Micrófono activado",
     "voice.user_volume": "User Volume",
     "voice.volume": "Volumen",
+    "voice_msg.encoding": "Preparando el mensaje...",
+    "voice_msg.volume": "Volumen",
     "voice_msg.failed": "No se pudo enviar el mensaje de voz",
     "voice_msg.hint_back": "B: Atrás",
     "voice_msg.hint_cancel": "B: Cancelar",
