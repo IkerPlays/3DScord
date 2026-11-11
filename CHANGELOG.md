@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.6.0
+Themes, voice messages, PIN lock and a Spanish translation.
+
 - **Voice messages:** the new **Rec** button in the chat records with the microphone (A starts and stops, X records again,
   B cancels) and sends the message as a real Discord voice message, up to two minutes. You cannot record while you are in
   a voice call, because the call is using the microphone.
@@ -11,10 +13,6 @@
 - **Export / Import Settings** (same place): save your settings to `sdmc:/3ds/3DScord/settings_backup.json` and restore
   them on another console. Accounts and the PIN are not included.
 - **Spanish:** every text of the app is now translated into Spanish.
-
-## Pending 0.6.0
-These changes already shipped in a devbuild and will be part of the 0.6.0 release notes.
-
 - **More themes:** AMOLED (real black), Nintendo (white and red), Retro (green terminal) and Midnight (deep blue), next to
   Dark and Light (Settings > Appearance > Theme).
 - **Theme Editor** (Settings > Appearance): change any color of the app by typing its hex code, see it on the real screens
