@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+- **What they listen to or play:** a profile shows the Spotify song or the game when Discord sends it (it only does so for
+  friends and for people it has recently seen online).
+- **GIF picker:** trending GIFs now load (Discord answers them in a different shape than searches), video-only results
+  are skipped and an unexpected answer is written to the log.
+- **Connections** (Spotify, Steam, GitHub...) now show in a user's profile.
+
 ## 0.8.0
 Screenshots to the chat, a compatibility mode for New 3DS, a status that expires and an About Me per server.
 

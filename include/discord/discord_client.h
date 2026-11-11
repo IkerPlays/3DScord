@@ -186,6 +186,8 @@ class DiscordClient {
 	}
 
 	void setSelectedGuildId(const std::string &id) { selectedGuildId = id; }
+	// What the user is playing or listening to (for example a Spotify track), empty when Discord has not said.
+	std::string getUserActivity(const std::string &userId);
 	std::string getSelectedGuildId() const { return selectedGuildId; }
 
 	void setSelectedChannelId(const std::string &id) { selectedChannelId = id; }
@@ -343,6 +345,7 @@ class DiscordClient {
 	                                      const std::vector<std::string> &values, const std::string &nonce);
 	std::string buildModalSubmit(const Modal &modal, const std::string &nonce);
 	void handlePresenceUpdate(const rapidjson::Value &d);
+	std::map<std::string, std::string> userActivities; // what each user is listening to or playing, from presences
 	void handleUserSettingsUpdate(const rapidjson::Value &d);
 	void handleUserGuildSettingsUpdate(const rapidjson::Value &d);
 	void handleSessionsReplace(const rapidjson::Value &d);

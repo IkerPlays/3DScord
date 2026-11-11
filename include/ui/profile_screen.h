@@ -35,6 +35,7 @@ class ProfileScreen : public Screen {
 		std::string bio;
 		std::string pronouns;
 		std::string joinedAt;
+		std::vector<std::string> connections; // "Type: name" of each linked account
 		std::vector<std::string> roleIds;
 		int accentColor = -1;
 		bool bot = false;

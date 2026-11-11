@@ -84,6 +84,15 @@ void ProfileScreen::onEnter() {
 				    p.bio = str(doc["user_profile"], "bio");
 				    p.pronouns = str(doc["user_profile"], "pronouns");
 			    }
+			    if (doc.HasMember("connected_accounts") && doc["connected_accounts"].IsArray()) {
+				    for (const auto &c : doc["connected_accounts"].GetArray()) {
+					    if (c.IsObject() && !str(c, "type").empty() && !str(c, "name").empty()) {
+						    std::string type = str(c, "type");
+						    type[0] = (char)toupper((unsigned char)type[0]);
+						    p.connections.push_back(type + ": " + str(c, "name"));
+					    }
+				    }
+			    }
 			    if (doc.HasMember("guild_member") && doc["guild_member"].IsObject()) {
 				    const auto &m = doc["guild_member"];
 				    p.nickname = str(m, "nick");
@@ -144,6 +153,13 @@ void ProfileScreen::buildBodyLines() {
 		}
 	};
 
+	const std::string activity = Discord::DiscordClient::getInstance().getUserActivity(profile.id);
+	if (!activity.empty()) {
+		bodyLines.push_back("# " + TR("profile.activity"));
+		add(activity);
+		bodyLines.push_back("");
+	}
+
 	if (!profile.bio.empty()) {
 		bodyLines.push_back("# " + TR("profile.about"));
 		add(profile.bio);
@@ -157,6 +173,14 @@ void ProfileScreen::buildBodyLines() {
 		bodyLines.push_back("");
 		bodyLines.push_back("# " + TR("profile.joined_server"));
 		add(datePart(profile.joinedAt));
+	}
+
+	if (!profile.connections.empty()) {
+		bodyLines.push_back("");
+		bodyLines.push_back("# " + TR("profile.connections"));
+		for (const auto &c : profile.connections) {
+			add(c);
+		}
 	}
 
 	if (!note.empty()) {

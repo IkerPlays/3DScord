@@ -139,10 +139,10 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
 - [ ] "Snapshot sharing": send a screenshot every few seconds to a channel, edited into the same message
 - [x] Compatibility Mode: a New 3DS can behave like an Old 3DS (Settings)
 - [x] More profile: per-server nickname and bio, status with an expiry
-- [ ] Connections list in profiles
+- [x] Connections list in profiles
 
 ## Phase 14 — Extras
-- [ ] Spotify: see what you are listening to
+- [x] Spotify: see what people are listening to (in their profile, when Discord sends it)
 - [ ] Bot command mini-games with buttons
 - [ ] Share themes between consoles
 

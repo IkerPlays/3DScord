@@ -2301,12 +2301,48 @@ void DiscordClient::handlePollVote(const rapidjson::Value &d, bool added) {
 	                 Utils::Json::getString(d, "user_id"), Utils::Json::getInt(d, "answer_id"), added);
 }
 
+std::string DiscordClient::getUserActivity(const std::string &userId) {
+	std::lock_guard<std::recursive_mutex> lock(clientMutex);
+	auto it = userActivities.find(userId);
+	return it == userActivities.end() ? std::string() : it->second;
+}
+
 void DiscordClient::handlePresenceUpdate(const rapidjson::Value &d) {
 	std::lock_guard<std::recursive_mutex> lock(clientMutex);
 	if (!d.HasMember("user") || !d["user"].IsObject()) {
 		return;
 	}
 	std::string userId = Utils::Json::getString(d["user"], "id");
+
+	// Spotify and games arrive as activities: type 0 playing, 2 listening.
+	std::string activity;
+	if (d.HasMember("activities") && d["activities"].IsArray()) {
+		for (const auto &a : d["activities"].GetArray()) {
+			if (!a.IsObject()) {
+				continue;
+			}
+			const int type = Utils::Json::getInt(a, "type", -1);
+			const std::string name = Utils::Json::getString(a, "name");
+			if (type == 2) {
+				std::string song = Utils::Json::getString(a, "details");
+				std::string artist = Utils::Json::getString(a, "state");
+				activity = TR("profile.listening") + " " + (song.empty() ? name : song) +
+				           (artist.empty() ? "" : " - " + artist);
+				break;
+			}
+			if (type == 0 && activity.empty() && !name.empty()) {
+				activity = TR("profile.playing") + " " + name;
+			}
+		}
+	}
+	if (activity.empty()) {
+		userActivities.erase(userId);
+	} else {
+		if (userActivities.size() > 2000) {
+			userActivities.clear();
+		}
+		userActivities[userId] = activity;
+	}
 
 	if (userId == currentUser.id) {
 		std::string statusStr = Utils::Json::getString(d, "status");
