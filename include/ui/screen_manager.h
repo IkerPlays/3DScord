@@ -30,7 +30,9 @@ enum class ScreenType {
 	IMAGE_VIEWER,
 	FILE_BROWSER,
 	PROFILE,
-	FILE_PREVIEW
+	FILE_PREVIEW,
+	VOICE_RECORDER,
+	PIN_LOCK
 };
 
 class Screen {
@@ -63,6 +65,8 @@ class ScreenManager {
 	void setScreen(ScreenType type);
 	// Leaves the startup updater for the screen the app would normally open on.
 	void enterMainScreen();
+	// The normal start of the app: disclaimer, update check or the main screen. Runs after the PIN lock, if any.
+	void startFlow();
 	void pushScreen(ScreenType type);
 	ScreenType getCurrentType() const { return currentType; }
 	void returnToPreviousScreen();

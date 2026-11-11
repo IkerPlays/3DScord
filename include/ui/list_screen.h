@@ -15,7 +15,7 @@ namespace UI {
 // quick replies and the formatting helpers. The mode is chosen with open() before the screen is created.
 class ListScreen : public Screen {
   public:
-	enum class Mode { TOOLS, PINS, SEARCH, MENTIONS, SAVED, DRAFTS, QUICK_REPLIES, FORMAT, GIFS, STICKERS, FIND, MEMBERS, THREADS, HUB, FRIENDS, GROUP_PICK, SOUNDS, VOICE_CHANNELS, VOICE_PEOPLE, GALLERY, THEME_EDIT };
+	enum class Mode { TOOLS, PINS, SEARCH, MENTIONS, SAVED, DRAFTS, QUICK_REPLIES, FORMAT, GIFS, STICKERS, FIND, MEMBERS, THREADS, HUB, FRIENDS, GROUP_PICK, SOUNDS, VOICE_CHANNELS, VOICE_PEOPLE, GALLERY, THEME_EDIT, SESSIONS };
 
 	static void open(Mode mode);
 	// Switches to another list without adding the current one to the back history.
@@ -32,7 +32,7 @@ class ListScreen : public Screen {
 	void renderBottom(C3D_RenderTarget *target) override;
 	bool hidesMenu() const override { return false; }
 	// The people in a call change all the time (speaking, volume), so that list keeps redrawing.
-	bool isAnimating() const override { return mode == Mode::VOICE_PEOPLE; }
+	bool isAnimating() const override { return mode == Mode::VOICE_PEOPLE || mode == Mode::GIFS; }
 
   private:
 	struct Entry {
@@ -41,6 +41,7 @@ class ListScreen : public Screen {
 		std::string title;
 		std::string body;
 		int kind = 0; // relationship type for the friends list
+		std::string preview; // picture shown on the top screen while the row is selected (GIFs)
 	};
 
 	// Filled by network callbacks, which may outlive the screen.
@@ -89,6 +90,8 @@ class ListScreen : public Screen {
 	std::string soundTargetName;
 	bool includeArchived = false;
 	int refreshTick = 0;
+	int stableFrames = 0; // frames the same row has been selected: the GIF is only fetched once you stop on it
+	int lastSelected = -1;
 	int friendFilter = 0; // 0 friends, 1 pending, 2 blocked
 	std::set<std::string> groupIds;
 	std::string confirmId; // entry waiting for a second press to confirm removing it

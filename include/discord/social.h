@@ -32,6 +32,9 @@ Result block(const std::string &userId);
 std::string getNote(const std::string &userId);
 Result setNote(const std::string &userId, const std::string &note);
 
+// Logs another device out of your account (by the hash Discord gives each session).
+Result logoutSession(const std::string &sessionHash);
+
 // Your own nickname in one server (empty clears it).
 Result setMyNickname(const std::string &guildId, const std::string &nickname);
 

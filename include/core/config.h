@@ -145,6 +145,15 @@ class Config {
 	int getImageCacheLevel() const { return imageCache; }
 	void setImageCacheLevel(int level);
 
+	// PIN lock: the PIN is never stored, only a salted SHA-256 of it.
+	bool hasPin() const { return !pinHash.empty(); }
+	bool checkPin(const std::string &pin) const;
+	void setPin(const std::string &pin); // empty removes the PIN
+	// Copies the settings (not the accounts) to sdmc:/3ds/3DScord/settings_backup.json.
+	bool exportSettings();
+	// Replaces the settings with the ones in a backup file made by exportSettings.
+	bool importSettings(const std::string &path);
+
 	bool isLeftHanded() const { return leftHanded; }
 	void setLeftHanded(bool enabled);
 	bool isBatterySaver() const { return batterySaver; }
@@ -203,6 +212,8 @@ class Config {
 	bool replyPing;
 	bool quietHours;
 	bool leftHanded;
+	std::string pinHash;
+	std::string pinSalt;
 	bool batterySaver;
 	int imageCache;
 	int pushToTalk;

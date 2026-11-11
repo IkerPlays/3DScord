@@ -16,16 +16,19 @@
 #include "ui/list_screen.h"
 #include "ui/login_screen.h"
 #include "ui/message_screen.h"
+#include "ui/pin_lock_screen.h"
 #include "ui/profile_screen.h"
 #include "ui/server_list_screen.h"
 #include "ui/settings_screen.h"
 #include "ui/text_measure_cache.h"
 #include "ui/theme_manager_screen.h"
 #include "ui/updater_screen.h"
+#include "ui/voice_recorder_screen.h"
 #include "utils/redraw.h"
 #include "utils/transfers.h"
 #include "utils/utf8_utils.h"
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <cstdarg>
 #include <cstdio>
@@ -190,6 +193,9 @@ ScreenManager &ScreenManager::getInstance() {
 	return instance;
 }
 
+// Set when the console wakes from sleep: the PIN lock (if any) closes over whatever was on screen.
+static std::atomic<bool> lockOnWake{false};
+
 void ScreenManager::init() {
 	Config::getInstance().loadTheme();
 	topTarget = C2D_CreateScreenTarget(GFX_TOP, GFX_LEFT);
@@ -225,11 +231,23 @@ void ScreenManager::init() {
 			    wentIdle = false;
 			    client.updatePresence(Discord::UserStatus::ONLINE);
 		    }
+		    if (hook == APTHOOK_ONWAKEUP) {
+			    lockOnWake = true;
+		    }
 	    },
 	    nullptr);
 
 	Logger::log("[UI] Screen manager initialized");
 
+	if (Config::getInstance().hasPin()) {
+		PinLockScreen::atStartup = true;
+		setScreen(ScreenType::PIN_LOCK);
+	} else {
+		startFlow();
+	}
+}
+
+void ScreenManager::startFlow() {
 	if (!Config::getInstance().isDisclaimerAccepted()) {
 		setScreen(ScreenType::DISCLAIMER);
 	} else if (Config::getInstance().isAutoUpdateEnabled()) {
@@ -291,14 +309,15 @@ void ScreenManager::setScreen(ScreenType type) {
 	}
 
 	if (type == ScreenType::LOGIN || type == ScreenType::GUILD_LIST || type == ScreenType::ADD_ACCOUNT ||
-	    type == ScreenType::DISCLAIMER || type == ScreenType::UPDATER) {
+	    type == ScreenType::DISCLAIMER || type == ScreenType::UPDATER ||
+	    (type == ScreenType::PIN_LOCK && PinLockScreen::atStartup)) {
 		screenHistory.clear();
 	}
 
 	currentType = type;
 
 	if (type == ScreenType::LOGIN || type == ScreenType::ADD_ACCOUNT || type == ScreenType::DISCLAIMER ||
-	    type == ScreenType::UPDATER) {
+	    type == ScreenType::UPDATER || type == ScreenType::PIN_LOCK) {
 		hamburgerMenu.reset();
 	}
 
@@ -409,6 +428,12 @@ void ScreenManager::setScreen(ScreenType type) {
 	case ScreenType::FILE_PREVIEW:
 		currentScreen = std::make_unique<FilePreviewScreen>();
 		break;
+	case ScreenType::VOICE_RECORDER:
+		currentScreen = std::make_unique<VoiceRecorderScreen>();
+		break;
+	case ScreenType::PIN_LOCK:
+		currentScreen = std::make_unique<PinLockScreen>();
+		break;
 	}
 
 	if (currentScreen) {
@@ -445,6 +470,12 @@ void ScreenManager::update() {
 	Discord::VoiceClient::getInstance().update();
 
 	hamburgerMenu.update();
+
+	if (lockOnWake.exchange(false) && Config::getInstance().hasPin() && currentType != ScreenType::PIN_LOCK &&
+	    currentType != ScreenType::UPDATER && currentType != ScreenType::DISCLAIMER) {
+		PinLockScreen::atStartup = false;
+		pushScreen(ScreenType::PIN_LOCK);
+	}
 
 	// Results of the background saves and uploads.
 	{

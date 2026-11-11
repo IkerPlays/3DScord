@@ -21,6 +21,7 @@
 #include "log.h"
 #include "utils/color_utils.h"
 #include "utils/file_utils.h"
+#include "utils/sha256.h"
 
 Config::Config()
     : currentAccountIndex(-1), timezoneOffset(0), language("en_US"), themeType(0), typingIndicatorEnabled(true),
@@ -333,6 +334,12 @@ void Config::loadSettings() {
 			if (doc.HasMember("show_hidden_channels") && doc["show_hidden_channels"].IsBool()) {
 				showHiddenChannels = doc["show_hidden_channels"].GetBool();
 			}
+			if (doc.HasMember("pin_hash") && doc["pin_hash"].IsString()) {
+				pinHash = doc["pin_hash"].GetString();
+			}
+			if (doc.HasMember("pin_salt") && doc["pin_salt"].IsString()) {
+				pinSalt = doc["pin_salt"].GetString();
+			}
 			if (doc.HasMember("left_handed") && doc["left_handed"].IsBool()) {
 				leftHanded = doc["left_handed"].GetBool();
 				Utils::KeyMap::leftHanded = leftHanded;
@@ -426,6 +433,10 @@ void Config::saveSettings() {
 	writer.Bool(showServerIcons);
 	writer.Key("show_hidden_channels");
 	writer.Bool(showHiddenChannels);
+	writer.Key("pin_hash");
+	writer.String(pinHash.c_str());
+	writer.Key("pin_salt");
+	writer.String(pinSalt.c_str());
 	writer.Key("left_handed");
 	writer.Bool(leftHanded);
 	writer.Key("battery_saver");
@@ -535,6 +546,71 @@ void Config::setShowHiddenChannelsEnabled(bool enabled) {
 }
 
 bool Utils::KeyMap::leftHanded = false;
+
+bool Config::checkPin(const std::string &pin) const {
+	return !pinHash.empty() && Utils::sha256Hex(pinSalt + pin) == pinHash;
+}
+
+void Config::setPin(const std::string &pin) {
+	if (pin.empty()) {
+		pinHash.clear();
+		pinSalt.clear();
+	} else {
+		char salt[17];
+		snprintf(salt, sizeof(salt), "%08x%08x", (unsigned)rand(), (unsigned)osGetTime());
+		pinSalt = salt;
+		pinHash = Utils::sha256Hex(pinSalt + pin);
+	}
+	saveSettings();
+}
+
+bool Config::exportSettings() {
+	saveSettings();
+	std::vector<char> data = Utils::File::readFile(std::string(CONFIG_DIR_PATH) + "/settings.json");
+	if (data.empty()) {
+		return false;
+	}
+	// The PIN stays on this console: a backup restored elsewhere must not lock it with a PIN it does not know.
+	rapidjson::Document doc;
+	doc.Parse(data.data());
+	if (doc.HasParseError() || !doc.IsObject()) {
+		return false;
+	}
+	doc.RemoveMember("pin_hash");
+	doc.RemoveMember("pin_salt");
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> w(s);
+	doc.Accept(w);
+	return Utils::File::writeFile(std::string(CONFIG_DIR_PATH) + "/settings_backup.json", std::string(s.GetString()));
+}
+
+bool Config::importSettings(const std::string &path) {
+	std::vector<char> data = Utils::File::readFile(path);
+	if (data.empty()) {
+		return false;
+	}
+	rapidjson::Document doc;
+	doc.Parse(data.data());
+	// A settings file always has these; anything else is some other JSON.
+	if (doc.HasParseError() || !doc.IsObject() || !doc.HasMember("theme_type")) {
+		return false;
+	}
+	const std::string keepHash = pinHash;
+	const std::string keepSalt = pinSalt;
+	doc.RemoveMember("pin_hash");
+	doc.RemoveMember("pin_salt");
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> w(s);
+	doc.Accept(w);
+	if (!Utils::File::writeFile(std::string(CONFIG_DIR_PATH) + "/settings.json", std::string(s.GetString()))) {
+		return false;
+	}
+	loadSettings();
+	pinHash = keepHash;
+	pinSalt = keepSalt;
+	saveSettings();
+	return true;
+}
 
 void Config::setLeftHanded(bool enabled) {
 	leftHanded = enabled;

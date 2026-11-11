@@ -105,13 +105,16 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
       used), 3D depth, a context panel and swipe gestures (they would need a redesign of the screens)
 
 ## Phase 10 — Languages and account
-- [ ] Translate the new strings into every language
-- [ ] On-demand message translation
-- [ ] Region date and time format; automatic timezone
-- [ ] Faster remembered QR login; quick account switching
-- [ ] PIN lock
-- [ ] Log out other devices; view and close active sessions
-- [ ] Export and import settings
+- [x] Spanish translation of every text of the app (the other languages fall back to English until they are translated)
+- [x] PIN lock (at start and after the console wakes up)
+- [x] See active sessions and log other devices out
+- [x] Export and import settings
+- [x] Voice messages (Rec button in the chat)
+- [x] GIF previews in the GIF picker
+- [x] Quick account switching (already in the side menu, on the account card)
+- [ ] Translate the new texts into the other languages
+- [ ] Not possible: on-demand message translation (it needs an outside translation service) and the time zone from the
+      system (the 3DS does not tell the app its time zone; it is set by hand in Settings)
 
 ## Phase 11 — Server tools
 - [ ] Scheduled events
@@ -131,3 +134,15 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
 
 > Some items depend on what the 3DS system allows (background work, the HOME icon, the notification LED, playing audio
 > with the lid closed). They will be tried on a real console and may change or be dropped.
+
+
+## Not possible on the 3DS
+
+- **Video calls.** Discord video needs a VP8 or H.264 encoder and a full WebRTC video stack with end-to-end encryption.
+  The 3DS has no hardware video encoder (only a decoder, on the New 3DS), and encoding video with ffmpeg in software
+  cannot keep up on its processor, even at a tiny size. Voice calls and voice messages are fully supported.
+- Notifications while the app is closed or the console sleeps, the notification LED and a counter on the HOME icon: the
+  system does not let apps do these.
+- Playing videos or music attachments, WebP pictures: the app has no decoder for them; the preview shows the file
+  information instead.
+

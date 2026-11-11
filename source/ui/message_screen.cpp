@@ -4,6 +4,7 @@
 #include "ui/image_viewer_screen.h"
 #include "ui/list_screen.h"
 #include "ui/upload_flow.h"
+#include "ui/voice_recorder_screen.h"
 #include "ui/profile_screen.h"
 #include "utils/transfers.h"
 #include "core/config.h"
@@ -105,9 +106,9 @@ constexpr float TOOLBAR_Y = 37.0f;
 constexpr float TOOLBAR_H = 22.0f;
 constexpr float BODY_TOP = 66.0f;
 
-enum ToolbarButton { TB_FILE, TB_GIF, TB_STICKER, TB_PINS, TB_SEARCH, TB_VOICE, TB_MORE, TB_COUNT };
-constexpr float TOOLBAR_BTN_W = 40.0f;
-constexpr float TOOLBAR_BTN_GAP = 5.0f;
+enum ToolbarButton { TB_FILE, TB_GIF, TB_STICKER, TB_PINS, TB_SEARCH, TB_VOICE, TB_REC, TB_MORE, TB_COUNT };
+constexpr float TOOLBAR_BTN_W = 36.0f;
+constexpr float TOOLBAR_BTN_GAP = 4.0f;
 constexpr float TOOLBAR_X = (320.0f - (TB_COUNT * TOOLBAR_BTN_W + (TB_COUNT - 1) * TOOLBAR_BTN_GAP)) / 2.0f;
 
 float toolbarButtonX(int index) { return TOOLBAR_X + index * (TOOLBAR_BTN_W + TOOLBAR_BTN_GAP); }
@@ -4565,8 +4566,8 @@ void MessageScreen::renderCallParticipants(float y, const std::vector<Discord::V
 
 void MessageScreen::renderToolbar() {
 	// Same order as ToolbarButton. Short labels: the buttons are small.
-	const char *keys[TB_COUNT] = {"chat.btn.file", "chat.btn.gif",    "chat.btn.sticker", "chat.btn.pins",
-	                              "chat.btn.search", "chat.btn.voice", "chat.btn.more"};
+	const char *keys[TB_COUNT] = {"chat.btn.file",   "chat.btn.gif",   "chat.btn.sticker", "chat.btn.pins",
+	                              "chat.btn.search", "chat.btn.voice", "chat.btn.rec",     "chat.btn.more"};
 	const bool canSend = canSendCached;
 	for (int i = 0; i < TB_COUNT; i++) {
 		const bool needsSend = i == TB_FILE || i == TB_GIF || i == TB_STICKER;
@@ -4619,6 +4620,9 @@ void MessageScreen::handleToolbarTouch(int index) {
 		}
 		break;
 	}
+	case TB_REC:
+		VoiceRecorderScreen::open(channelId);
+		break;
 	case TB_MORE:
 		ListScreen::open(ListScreen::Mode::TOOLS);
 		break;

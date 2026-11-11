@@ -107,6 +107,17 @@ Result setNote(const std::string &userId, const std::string &note) {
 	                     "Social");
 }
 
+Result logoutSession(const std::string &sessionHash) {
+	auto http = Api::authorized();
+	return Api::toResult(http.post(base() + "/auth/sessions/logout", json([&](Writer &w) {
+		                               w.Key("session_id_hashes");
+		                               w.StartArray();
+		                               w.String(sessionHash.c_str());
+		                               w.EndArray();
+	                               })),
+	                     "Social");
+}
+
 Result setMyNickname(const std::string &guildId, const std::string &nickname) {
 	auto http = Api::authorized();
 	return Api::toResult(http.patch(base() + "/guilds/" + guildId + "/members/@me", json([&](Writer &w) {

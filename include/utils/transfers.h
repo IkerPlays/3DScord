@@ -23,6 +23,8 @@ class Transfers {
 	void saveAttachment(const std::string &url, const std::string &filename, long long size);
 	void uploadFile(const std::string &channelId, const std::string &path, const std::string &caption);
 	void sendSticker(const std::string &channelId, const std::string &stickerId);
+	// A voice message: an Ogg Opus file, its length in seconds and the waveform (bytes, base64) that Discord draws.
+	void sendVoiceMessage(const std::string &channelId, std::string oggData, double seconds, std::string waveform);
 
 	// Empty when there is nothing new to report.
 	std::string takeMessage();

@@ -6,6 +6,7 @@
 #include "log.h"
 #include "network/network_manager.h"
 #include "ui/file_browser_screen.h"
+#include "ui/image_manager.h"
 #include "ui/image_viewer_screen.h"
 #include "utils/color_utils.h"
 #include "ui/message_screen.h"
@@ -222,6 +223,9 @@ void ListScreen::load() {
 		break;
 	case Mode::GALLERY:
 		fetch("/channels/" + channelId + "/messages?limit=100");
+		break;
+	case Mode::SESSIONS:
+		fetch("/auth/sessions");
 		break;
 	case Mode::FRIENDS:
 	case Mode::GROUP_PICK:
@@ -445,7 +449,13 @@ void ListScreen::fetch(const std::string &path) {
 						    continue;
 					    }
 					    std::string title = str(g, "title");
-					    list.push_back({link, "", title.empty() ? "GIF" : title, link});
+					    Entry e{link, "", title.empty() ? "GIF" : title, link};
+					    // gif_src is the animated picture, preview a small still of it.
+					    e.preview = str(g, "gif_src");
+					    if (e.preview.empty()) {
+						    e.preview = str(g, "preview");
+					    }
+					    list.push_back(e);
 				    }
 			    }
 		    } else if (fetchMode == Mode::FRIENDS || fetchMode == Mode::GROUP_PICK) {
@@ -485,6 +495,31 @@ void ListScreen::fetch(const std::string &path) {
 				    std::sort(list.begin(), list.end(), [](const Entry &a, const Entry &b) {
 					    return strcasecmp(a.title.c_str(), b.title.c_str()) < 0;
 				    });
+			    }
+		    } else if (fetchMode == Mode::SESSIONS) {
+			    if (doc.IsObject() && doc.HasMember("user_sessions") && doc["user_sessions"].IsArray()) {
+				    for (const auto &u : doc["user_sessions"].GetArray()) {
+					    if (!u.IsObject() || str(u, "id_hash").empty()) {
+						    continue;
+					    }
+					    std::string device = "?";
+					    std::string place;
+					    if (u.HasMember("client_info") && u["client_info"].IsObject()) {
+						    const auto &ci = u["client_info"];
+						    device = str(ci, "os");
+						    const std::string platform = str(ci, "platform");
+						    if (!platform.empty()) {
+							    device += (device.empty() ? "" : " - ") + platform;
+						    }
+						    place = str(ci, "location");
+					    }
+					    std::string info = place;
+					    const std::string last = str(u, "approx_last_used_time");
+					    if (!last.empty()) {
+						    info += (info.empty() ? "" : "  ") + UI::MessageUtils::formatTimestamp(last);
+					    }
+					    list.push_back({str(u, "id_hash"), "", device.empty() ? "?" : device, info});
+				    }
 			    }
 		    } else if (fetchMode == Mode::GALLERY) {
 			    if (doc.IsArray()) {
@@ -747,6 +782,8 @@ std::string ListScreen::headerTitle() const {
 		return query.empty() ? TR("list.members") : TR("list.members") + ": " + query;
 	case Mode::THREADS:
 		return TR("list.threads");
+	case Mode::SESSIONS:
+		return TR("sessions.title");
 	case Mode::THEME_EDIT:
 		return TR("settings.theme_editor");
 	case Mode::GALLERY:
@@ -795,6 +832,8 @@ std::string ListScreen::hintLine() const {
 		return TR("list.hint.members");
 	case Mode::THREADS:
 		return TR("list.hint.threads");
+	case Mode::SESSIONS:
+		return TR("sessions.hint");
 	case Mode::THEME_EDIT:
 		return TR("theme.hint");
 	case Mode::GALLERY:
@@ -868,6 +907,19 @@ void ListScreen::primaryAction(const Entry &entry) {
 	case Mode::VOICE_PEOPLE:
 		changePersonVolume(entry.id, +10);
 		break;
+	case Mode::SESSIONS: {
+		// Logging a device out takes a second press on the same row.
+		if (confirmId != entry.id) {
+			confirmId = entry.id;
+			sm.showToast(TR("sessions.confirm"));
+			break;
+		}
+		confirmId.clear();
+		const auto r = Discord::Social::logoutSession(entry.id);
+		sm.showToast(r.ok ? TR("sessions.done") : r.message);
+		load();
+		break;
+	}
 	case Mode::THEME_EDIT: {
 		const int index = atoi(entry.id.c_str());
 		if (index < 0 || index >= (int)(sizeof(THEME_FIELDS) / sizeof(THEME_FIELDS[0]))) {
@@ -1312,6 +1364,13 @@ void ListScreen::update() {
 	}
 	clampSelection();
 
+	if (selected != lastSelected) {
+		lastSelected = selected;
+		stableFrames = 0;
+	} else if (stableFrames < 1000) {
+		stableFrames++;
+	}
+
 	const u32 kDown = hidKeysDown();
 	if (kDown & KEY_B) {
 		ScreenManager::getInstance().returnToPreviousScreen();
@@ -1382,6 +1441,34 @@ void ListScreen::renderTop(C3D_RenderTarget *target) {
 	}
 
 	const Entry &e = entries[selected];
+	if (mode == Mode::GIFS && !e.preview.empty()) {
+		// The picture of the selected GIF, animated, once the selection has rested for a moment.
+		drawText(10.0f, 34.0f, 0.5f, 0.42f, 0.42f, ScreenManager::colorAccent(), fitLine(e.title, 380.0f, 0.42f));
+		const auto info = ImageManager::getInstance().getImageInfo(e.preview);
+		if (info.tex && info.originalW > 0 && info.originalH > 0) {
+			const float areaW = 380.0f;
+			const float areaH = 170.0f;
+			const float scale = std::min(areaW / info.originalW, areaH / info.originalH);
+			const float w = info.originalW * scale;
+			const float h = info.originalH * scale;
+			const float uMax = (float)info.originalW / info.tex->width;
+			const float vMax = (float)info.originalH / info.tex->height;
+			Tex3DS_SubTexture subtex = {(u16)info.originalW, (u16)info.originalH, 0.0f, 1.0f, uMax, 1.0f - vMax};
+			C2D_DrawImageAt({info.tex, &subtex}, (TOP_SCREEN_WIDTH - w) / 2.0f, 56.0f + (areaH - h) / 2.0f, 0.5f,
+			                nullptr, scale, scale);
+			ImageManager::getInstance().markDrawn(info.animation);
+		} else if (info.failed) {
+			drawCenteredText(130.0f, 0.5f, 0.42f, 0.42f, ScreenManager::colorTextMuted(), TR("gif.no_preview"),
+			                 TOP_SCREEN_WIDTH);
+		} else {
+			drawCenteredText(130.0f, 0.5f, 0.42f, 0.42f, ScreenManager::colorTextMuted(), TR("common.loading"),
+			                 TOP_SCREEN_WIDTH);
+			if (stableFrames > 15) {
+				ImageManager::getInstance().prefetch(e.preview, 0, 0, Network::RequestPriority::INTERACTIVE);
+			}
+		}
+		return;
+	}
 	if (!e.title.empty()) {
 		drawText(10.0f, 36.0f, 0.5f, 0.42f, 0.42f, ScreenManager::colorAccent(), fitLine(e.title, 380.0f, 0.42f));
 	}

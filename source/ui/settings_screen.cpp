@@ -9,6 +9,7 @@
 #include "discord/discord_client.h"
 #include "ui/file_browser_screen.h"
 #include "ui/list_screen.h"
+#include "ui/pin_lock_screen.h"
 #include "ui/updater_screen.h"
 #include "utils/updater.h"
 #include <cstdlib>
@@ -339,6 +340,96 @@ void SettingsScreen::onEnter() {
 
 	addAccountItems();
 	addUpdateItems();
+
+	// SECURITY AND BACKUP
+	allItems.push_back({TR("settings.section.security"), "", SettingItemType::SECTION_HEADER});
+
+	SettingItem pin;
+	pin.label = TR("settings.pin");
+	pin.description = TR("settings.desc.pin");
+	pin.type = SettingItemType::ACTION;
+	pin.action = []() {
+		auto &cfg = Config::getInstance();
+		auto &sm = ScreenManager::getInstance();
+		std::string current;
+		if (cfg.hasPin()) {
+			if (!promptPin(TR("pin.enter_current"), current)) {
+				return;
+			}
+			if (!cfg.checkPin(current)) {
+				sm.showToast(TR("pin.wrong"));
+				return;
+			}
+		}
+		std::string next;
+		// With a PIN set, an empty answer cannot be typed: removing it has its own question.
+		if (cfg.hasPin()) {
+			SwkbdState ask;
+			swkbdInit(&ask, SWKBD_TYPE_NORMAL, 2, 40);
+			swkbdSetValidation(&ask, SWKBD_ANYTHING, 0, 0);
+			swkbdSetHintText(&ask, TR("pin.remove_hint").c_str());
+			char answer[160] = {0};
+			if (swkbdInputText(&ask, answer, sizeof(answer)) != SWKBD_BUTTON_CONFIRM) {
+				return;
+			}
+			if (std::string(answer) == "1") {
+				cfg.setPin("");
+				sm.showToast(TR("pin.removed"));
+				return;
+			}
+		}
+		if (!promptPin(TR("pin.enter_new"), next)) {
+			return;
+		}
+		if (next.size() < 4) {
+			sm.showToast(TR("pin.too_short"));
+			return;
+		}
+		std::string again;
+		if (!promptPin(TR("pin.repeat"), again)) {
+			return;
+		}
+		if (again != next) {
+			sm.showToast(TR("pin.mismatch"));
+			return;
+		}
+		cfg.setPin(next);
+		sm.showToast(TR("pin.set"));
+	};
+	allItems.push_back(pin);
+
+	SettingItem sessions;
+	sessions.label = TR("settings.sessions");
+	sessions.description = TR("settings.desc.sessions");
+	sessions.type = SettingItemType::ACTION;
+	sessions.action = []() { ListScreen::open(ListScreen::Mode::SESSIONS); };
+	allItems.push_back(sessions);
+
+	SettingItem exportSettings;
+	exportSettings.label = TR("settings.export");
+	exportSettings.description = TR("settings.desc.export");
+	exportSettings.type = SettingItemType::ACTION;
+	exportSettings.action = []() {
+		ScreenManager::getInstance().showToast(Config::getInstance().exportSettings() ? TR("settings.exported")
+		                                                                                : TR("settings.export_failed"));
+	};
+	allItems.push_back(exportSettings);
+
+	SettingItem importSettings;
+	importSettings.label = TR("settings.import");
+	importSettings.description = TR("settings.desc.import");
+	importSettings.type = SettingItemType::ACTION;
+	importSettings.action = []() {
+		FileBrowserScreen::open(
+		    TR("settings.import"), FileBrowserScreen::Filter::ANY,
+		    [](const std::string &path) {
+			    ScreenManager::getInstance().showToast(Config::getInstance().importSettings(path)
+			                                               ? TR("settings.imported")
+			                                               : TR("settings.import_failed"));
+		    },
+		    false, 256LL * 1024);
+	};
+	allItems.push_back(importSettings);
 
 	// CONTROLS AND BATTERY
 	allItems.push_back({TR("settings.section.controls"), "", SettingItemType::SECTION_HEADER});

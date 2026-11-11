@@ -245,6 +245,95 @@ void Transfers::uploadFile(const std::string &channelId, const std::string &path
 	});
 }
 
+void Transfers::sendVoiceMessage(const std::string &channelId, std::string oggData, double seconds,
+                                 std::string waveform) {
+	report(TR("transfer.uploading"));
+	enqueue([this, channelId, data = std::move(oggData), seconds, waveform = std::move(waveform)]() mutable {
+		const std::string token = Config::getInstance().getToken();
+		const std::string base = "https://discord.com/api/v10/channels/" + channelId;
+		Network::HttpClient http;
+		http.setAuthToken(token);
+		http.setTimeout(30);
+
+		// 1. Ask Discord where the file goes.
+		rapidjson::StringBuffer ask;
+		rapidjson::Writer<rapidjson::StringBuffer> aw(ask);
+		aw.StartObject();
+		aw.Key("files");
+		aw.StartArray();
+		aw.StartObject();
+		aw.Key("filename");
+		aw.String("voice-message.ogg");
+		aw.Key("file_size");
+		aw.Uint64(data.size());
+		aw.Key("id");
+		aw.String("0");
+		aw.EndObject();
+		aw.EndArray();
+		aw.EndObject();
+		Network::HttpResponse slot = http.post(base + "/attachments", ask.GetString());
+		if (!slot.success) {
+			report(apiError(slot));
+			return;
+		}
+		rapidjson::Document doc;
+		doc.Parse(slot.body.c_str());
+		std::string uploadUrl;
+		std::string uploadName;
+		if (!doc.HasParseError() && doc.IsObject() && doc.HasMember("attachments") && doc["attachments"].IsArray() &&
+		    doc["attachments"].Size() > 0) {
+			const auto &a = doc["attachments"][0];
+			if (a.HasMember("upload_url") && a["upload_url"].IsString()) {
+				uploadUrl = a["upload_url"].GetString();
+			}
+			if (a.HasMember("upload_filename") && a["upload_filename"].IsString()) {
+				uploadName = a["upload_filename"].GetString();
+			}
+		}
+		if (uploadUrl.empty() || uploadName.empty()) {
+			report(TR("voice_msg.failed"));
+			return;
+		}
+
+		// 2. Put the file there. This is another server: it must not get the account token.
+		Network::HttpClient storage;
+		storage.setTimeout(120);
+		Network::HttpResponse put = storage.put(uploadUrl, data, {{"Content-Type", "audio/ogg"}});
+		if (!put.success) {
+			Logger::log("[Transfers] Voice upload failed: %ld", put.statusCode);
+			report(TR("voice_msg.failed"));
+			return;
+		}
+
+		// 3. Send the message that points to the uploaded file (flag 8192 = voice message).
+		rapidjson::StringBuffer msg;
+		rapidjson::Writer<rapidjson::StringBuffer> mw(msg);
+		mw.StartObject();
+		mw.Key("content");
+		mw.String("");
+		mw.Key("flags");
+		mw.Int(8192);
+		mw.Key("attachments");
+		mw.StartArray();
+		mw.StartObject();
+		mw.Key("id");
+		mw.String("0");
+		mw.Key("filename");
+		mw.String("voice-message.ogg");
+		mw.Key("uploaded_filename");
+		mw.String(uploadName.c_str());
+		mw.Key("duration_secs");
+		mw.Double(seconds);
+		mw.Key("waveform");
+		mw.String(waveform.c_str());
+		mw.EndObject();
+		mw.EndArray();
+		mw.EndObject();
+		Network::HttpResponse sent = http.post(base + "/messages", msg.GetString());
+		report(sent.success ? TR("voice_msg.sent") : apiError(sent));
+	});
+}
+
 void Transfers::sendSticker(const std::string &channelId, const std::string &stickerId) {
 	enqueue([this, channelId, stickerId] {
 		rapidjson::StringBuffer s;
