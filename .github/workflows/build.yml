@@ -143,14 +143,15 @@ jobs:
           } > notes.md
           cat notes.md
 
-      # The tag is made on the commit the workflow runs on (GITHUB_SHA): GitHub refuses to tag an older commit with the
-      # default token when workflow files changed since then. The files attached are built from the requested commit.
+      # The tag is made on the current tip of main: with the default token GitHub refuses to tag any commit whose
+      # .github/workflows files differ from the ones on the branch ("Resource not accessible by integration").
+      # The files attached are built from the requested commit, and the notes say which one.
       - name: Publish devbuild
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.version.outputs.version }}
         run: |
           gh release create "v${VERSION}" dist/3DScord.cia dist/3DScord.3dsx \
-            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
+            --repo "$GITHUB_REPOSITORY" --target main --prerelease \
             --title "3DScord ${VERSION} (devbuild)" \
             --notes-file notes.md

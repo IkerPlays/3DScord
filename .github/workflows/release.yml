@@ -134,6 +134,6 @@ jobs:
           } > notes.md
           extra=""; [ "$DRAFT" = "true" ] && extra="--draft"
           gh release create "v${VERSION}" dist/3DScord.cia dist/3DScord.3dsx \
-            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --latest $extra \
+            --repo "$GITHUB_REPOSITORY" --target main --latest $extra \
             --title "3DScord ${VERSION}" \
             --notes-file notes.md
