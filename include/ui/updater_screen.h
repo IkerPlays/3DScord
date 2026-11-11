@@ -2,6 +2,8 @@
 #define UPDATER_SCREEN_H
 
 #include "screen_manager.h"
+#include <string>
+#include <vector>
 
 namespace UI {
 
@@ -23,6 +25,9 @@ class UpdaterScreen : public Screen {
 
   private:
 	float angle;
+	float noteScroll;
+	std::vector<std::string> noteLines;
+	bool notesBuilt;
 	bool installStarted;
 	bool finished;
 	int graceFrames;

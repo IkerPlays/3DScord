@@ -3091,6 +3091,7 @@ Message DiscordClient::parseSingleMessage(const rapidjson::Value &d) {
 	msg.type = Utils::Json::getInt(d, "type");
 
 	msg.flags = Utils::Json::getInt(d, "flags");
+	msg.pinned = Utils::Json::getBool(d, "pinned");
 	msg.applicationId = Utils::Json::getString(d, "application_id");
 
 	if (hasArray(d, "components")) {
@@ -3836,6 +3837,20 @@ void DiscordClient::postMessage(const std::string &channelId, const std::string 
 		writer.EndObject();
 	}
 
+	if (!replyId.empty() && !Config::getInstance().isReplyPingEnabled()) {
+		writer.Key("allowed_mentions");
+		writer.StartObject();
+		writer.Key("parse");
+		writer.StartArray();
+		writer.String("users");
+		writer.String("roles");
+		writer.String("everyone");
+		writer.EndArray();
+		writer.Key("replied_user");
+		writer.Bool(false);
+		writer.EndObject();
+	}
+
 	writer.Key("tts");
 	writer.Bool(false);
 	writer.Key("flags");
@@ -4132,6 +4147,23 @@ bool DiscordClient::deleteMessage(const std::string &channelId, const std::strin
 	http.setAuthToken(token);
 
 	Network::HttpResponse resp = http.del(url);
+	return resp.success;
+}
+
+bool DiscordClient::pinMessage(const std::string &channelId, const std::string &messageId, bool pin) {
+	if (token.empty() || channelId.empty() || messageId.empty()) {
+		return false;
+	}
+
+	std::string url = "https://discord.com/api/v10/channels/" + channelId + "/pins/" + messageId;
+
+	Network::HttpClient http;
+	http.setAuthToken(token);
+
+	Network::HttpResponse resp = pin ? http.put(url) : http.del(url);
+	if (!resp.success) {
+		Logger::log("[API] %s failed: %ld", pin ? "Pin" : "Unpin", resp.statusCode);
+	}
 	return resp.success;
 }
 

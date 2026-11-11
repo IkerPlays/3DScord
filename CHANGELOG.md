@@ -1,11 +1,14 @@
 # Changelog
 
 ## Unreleased
-- Auto-updater: at startup, while the Discord logo spins, the app looks for a newer release, downloads it, installs it
-  (CIA via the system installer, 3DSX by replacing the file) and restarts. Optional devbuild updates.
-- New Settings sections: Discord profile (display name, About Me, pronouns, color, avatar, banner), status and custom
-  status, chat/message display options, privacy options, and Updates.
-- Devbuilds are numbered `x.y.z-dev.N` and the number is built into the app.
+- The app is now called **3DScord** (your TriCord files are moved to `sdmc:/3ds/3DScord` automatically).
+- Updater: when a new version exists it now shows the release notes and asks before installing (A: update, B: later).
+- Devbuilds now have release notes, shown in the app before updating.
+- Pin and unpin messages from the message menu (needs Manage Messages).
+- New "Jump to Original" option on replies.
+- New setting: **Ping on Reply** (Settings > Chat).
+- Goes idle when you close the lid and comes back online when you open it.
+- New README and ROADMAP.
 
 ## 0.1.0
 - First 3DScord release, based on TriCord (2b-zipper, GPLv3).

@@ -20,7 +20,7 @@ constexpr const char *RELEASES_URL = "https://api.github.com/repos/" UPDATE_REPO
 constexpr const char *TEMP_FILE = CONFIG_DIR_PATH "/update.tmp";
 constexpr const char *CIA_ASSET = "3DScord.cia";
 constexpr const char *DSX_ASSET = "3DScord.3dsx";
-constexpr const char *DEFAULT_3DSX_PATH = "sdmc:/3ds/TriCord/TriCord.3dsx";
+constexpr const char *DEFAULT_3DSX_PATH = "sdmc:/3ds/3DScord/3DScord.3dsx";
 
 struct DownloadContext {
 	FILE *file;
@@ -114,6 +114,11 @@ bool Updater::isNewer(const Version &candidate, const Version &base) { return ve
 void Updater::setLaunchPath(const char *path) {
 	if (path && *path) {
 		launchPath = path;
+		// The config folder was renamed from TriCord to 3DScord when the app moved there.
+		const std::string legacy = std::string(LEGACY_CONFIG_DIR_PATH) + "/";
+		if (launchPath.rfind(legacy, 0) == 0) {
+			launchPath = std::string(CONFIG_DIR_PATH) + "/" + launchPath.substr(legacy.size());
+		}
 	}
 }
 

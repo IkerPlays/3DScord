@@ -6,7 +6,7 @@
 #define DISCORD_REMOTE_AUTH_URL "wss://remote-auth-gateway.discord.gg/?v=2"
 #define DISCORD_QR_BASE_URL "https://discord.com/ra/"
 
-#define APP_NAME "TriCord"
+#define APP_NAME "3DScord"
 
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
@@ -17,7 +17,7 @@
 #ifndef APP_DEV_BUILD
 #define APP_DEV_BUILD 0
 #endif
-#define APP_USER_AGENT "TriCord/" APP_VERSION " (Nintendo 3DS)"
+#define APP_USER_AGENT "3DScord/" APP_VERSION " (Nintendo 3DS)"
 
 #define HTTP_TIMEOUT_SECONDS 30
 
@@ -26,7 +26,8 @@
 #define BOTTOM_SCREEN_WIDTH 320
 #define BOTTOM_SCREEN_HEIGHT 240
 
-#define CONFIG_DIR_PATH "sdmc:/3ds/TriCord"
+#define CONFIG_DIR_PATH "sdmc:/3ds/3DScord"
+#define LEGACY_CONFIG_DIR_PATH "sdmc:/3ds/TriCord"
 #define UPDATE_REPO "IkerPlays/3DScord"
 
 #include "core/i18n.h"
@@ -130,6 +131,8 @@ class Config {
 	bool isShowHiddenChannelsEnabled() const { return showHiddenChannels; }
 	void setShowHiddenChannelsEnabled(bool enabled);
 
+	bool isReplyPingEnabled() const { return replyPing; }
+	void setReplyPingEnabled(bool enabled);
 	bool isAutoUpdateEnabled() const { return autoUpdate; }
 	void setAutoUpdateEnabled(bool enabled);
 	bool isDevBuildUpdatesEnabled() const { return devBuildUpdates; }
@@ -165,6 +168,7 @@ class Config {
 	bool showServerIcons;
 	bool showHiddenChannels;
 	bool autoUpdate;
+	bool replyPing;
 	bool devBuildUpdates;
 
 	int micVolume;

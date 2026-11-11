@@ -205,6 +205,7 @@ class DiscordClient {
 	void editMessageAsync(const std::string &channelId, const std::string &messageId, const std::string &content,
 	                      SuccessCallback cb);
 	bool deleteMessage(const std::string &channelId, const std::string &messageId);
+	bool pinMessage(const std::string &channelId, const std::string &messageId, bool pin);
 	void deleteMessageAsync(const std::string &channelId, const std::string &messageId, SuccessCallback cb);
 	void fetchForumThreads(const std::string &channelId, ThreadsCallback cb);
 	void hasArchivedThreads(const std::string &channelId, std::function<void(bool)> cb);

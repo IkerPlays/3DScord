@@ -96,7 +96,7 @@ void AboutScreen::renderTop(C3D_RenderTarget *target) {
 		C2D_DrawImageAtRotated(img, centerX, centerY - 20.0f + logoBounce, 0.5f, -M_PI / 2.0f, nullptr, scale, scale);
 	}
 
-	drawCenteredRichText(centerY + 30.0f, 0.5f, 0.8f, 0.8f, ScreenManager::colorText(), "TriCord", 400.0f);
+	drawCenteredRichText(centerY + 30.0f, 0.5f, 0.8f, 0.8f, ScreenManager::colorText(), "3DScord", 400.0f);
 
 	std::string verStr = "Version " + Utils::Updater::currentVersionString();
 	drawCenteredText(centerY + 55.0f, 0.5f, 0.5f, 0.5f, ScreenManager::colorTextMuted(), verStr, 400.0f);
@@ -165,7 +165,7 @@ void AboutScreen::renderBottom(C3D_RenderTarget *target) {
 	drawSectionTitle("Source Code");
 	drawText(x + 8.0f, y, 0.5f, 0.36f, 0.36f, ScreenManager::colorTextMuted(), "Licensed under GPL v3.0");
 	y += 13.0f;
-	drawRichText(x + 8.0f, y, 0.5f, 0.36f, 0.36f, ScreenManager::colorLink(), "https://github.com/2b-zipper/TriCord");
+	drawRichText(x + 8.0f, y, 0.5f, 0.36f, 0.36f, ScreenManager::colorLink(), "https://github.com/IkerPlays/3DScord");
 
 	y += 25.0f;
 	C2D_DrawRectSolid(x, y, 0.5f, 280.0f, 1.0f, ScreenManager::colorSeparator());
@@ -194,7 +194,7 @@ void AboutScreen::renderBottom(C3D_RenderTarget *target) {
 	maxScroll = std::max(0.0f, (y + scrollOffset) - (BOTTOM_SCREEN_HEIGHT - 35.0f));
 
 	C2D_DrawRectSolid(0.0f, 0.0f, 0.8f, 320.0f, 35.0f, ScreenManager::colorBackgroundDark());
-	drawText(35.0f, 10.0f, 0.85f, 0.5f, 0.5f, ScreenManager::colorText(), "About TriCord");
+	drawText(35.0f, 10.0f, 0.85f, 0.5f, 0.5f, ScreenManager::colorText(), "About 3DScord");
 	C2D_DrawRectSolid(10.0f, 32.0f, 0.85f, 300.0f, 1.0f, ScreenManager::colorSeparator());
 
 	drawCenteredText(240.0f - 22.0f, 0.9f, 0.4f, 0.4f, ScreenManager::colorTextMuted(),

@@ -29,7 +29,7 @@ include $(DEVKITARM)/3ds_rules
 #     - icon.png
 #     - <libctru folder>/default_icon.png
 #---------------------------------------------------------------------------------
-TARGET		:=	TriCord
+TARGET		:=	3DScord
 BUILD		:=	build
 SOURCES		:=	source source/core source/network source/discord source/ui source/ui/forum source/utils library/qrcodegen \
 			library/mlspp/src library/mlspp/hpke_src \
@@ -50,9 +50,9 @@ INCLUDES	:=	include include/core include/ui library library/stb_image library/qr
 GRAPHICS	:=	gfx
 GFXBUILD	:=	$(BUILD)
 ROMFS		:=	romfs
-APP_TITLE	:=	TriCord
+APP_TITLE	:=	3DScord
 APP_DESCRIPTION	:=	Discord client for Nintendo 3DS
-APP_AUTHOR	:=	2b-zipper
+APP_AUTHOR	:=	IkerPlays
 
 APP_PRODUCT_CODE := CTR-N-TRCD
 APP_UNIQUE_ID := 0xTRCD

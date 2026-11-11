@@ -1,148 +1,108 @@
 # 3DScord
 
-Fork of [TriCord](https://github.com/2b-zipper/TriCord) by 2b-zipper (GPLv3), maintained by IkerPlays.
-Prebuilt `.cia` and `.3dsx` files are on the [Releases](../../releases) page; every push to `main` is built by GitHub Actions.
-
 ![License](https://img.shields.io/badge/license-GPLv3-green)
 ![Platform](https://img.shields.io/badge/platform-Nintendo%203DS-red)
-![Downloads](https://img.shields.io/github/downloads/2b-zipper/TriCord/total?style=flat&color=blue)
-[![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?style=flat&logo=discord&logoColor=white)](https://discord.gg/quYy9fK8tJ)
+[![Build](https://github.com/IkerPlays/3DScord/actions/workflows/build.yml/badge.svg)](https://github.com/IkerPlays/3DScord/actions/workflows/build.yml)
+[![Latest release](https://img.shields.io/github/v/release/IkerPlays/3DScord?label=release)](https://github.com/IkerPlays/3DScord/releases/latest)
 
-Discord client for Nintendo 3DS.
+**A Discord client for the Nintendo 3DS.** Chat, voice calls, your profile and your servers, on both screens.
 
-## Disclaimer
+3DScord is a fork of [TriCord](https://github.com/2b-zipper/TriCord) by 2b-zipper (GPLv3), maintained by IkerPlays.
+See [ROADMAP.md](ROADMAP.md) for what is planned and [CHANGELOG.md](CHANGELOG.md) for what changed.
 
-> **This project is developed for educational purposes only.**
-> This is an unofficial Discord client and is not affiliated with or endorsed by Discord Inc.
-
-This software is provided **"as is"**, and you use it at your own risk. The use of this application is entirely the user's own responsibility. The developers assume no responsibility for:
-* Any damages, data loss, or account-related issues.
-* Violations of Discord's **Terms of Service (ToS)** resulting from the use of this software.
-
-## Screenshots
-![login](screenshots/1.png)
-![serverlist](screenshots/2.png)
-![hamburger](screenshots/3.png)
-![chat](screenshots/4.png)
+> **Disclaimer.** This is an unofficial client made for educational purposes. It is not affiliated with or endorsed by
+> Discord Inc. You use it at your own risk: the authors are not responsible for data loss, account problems or
+> violations of Discord's Terms of Service.
 
 ## Features
-- QR code and email/password authentication
-- Text messaging with emoji, attachments, embeds, reactions, and replies
-- Multi-account support
-- Server, channel, and forum thread navigation
-- Customizable [themes](THEME_FORMAT.md) and internationalization (EN/JA)
-- And More!
 
-## Custom Themes
-TriCord supports custom themes. You can create your own theme by following the **[Theme Format Specification](THEME_FORMAT.md)**.
-Check out the [TriCord-Themes](https://github.com/2b-zipper/TriCord-Themes) repository for sample themes.
+- **Login:** QR code, email/password, or a `token.txt` file; several accounts with quick switching.
+- **Chat:** text, emoji, attachments, embeds, stickers, reactions, replies, edit and delete, spoilers, polls, GIF /
+  APNG / Lottie animations, pin and unpin messages, jump to the message you replied to, reply with or without ping.
+- **Servers:** server list with folders, channels, forum threads, direct messages and group chats.
+- **Voice:** voice channels and calls with end-to-end encryption (DAVE), mic and per-user volume.
+- **Your Discord account (Settings):** display name, About Me, pronouns, profile color, avatar and banner (from files on
+  the SD card), status and custom status, message display options and privacy options.
+- **Auto-updater:** at startup, while the Discord logo spins, 3DScord looks for a new version. It shows the release
+  notes, asks if you want to update, installs it and restarts. Devbuilds are optional.
+- **Themes and languages:** custom [themes](THEME_FORMAT.md) and several languages.
+- Goes idle automatically when you close the lid.
 
 ## Installation
-1. Download the latest release (CIA or 3DSX)
-2. Install via FBI (CIA) or place in `/3ds/` (3DSX)
-3. Launch and log in with QR code or email/password
 
-### Login Methods
+1. Download `3DScord.cia` or `3DScord.3dsx` from the [latest release](https://github.com/IkerPlays/3DScord/releases/latest).
+2. **CIA:** install it with FBI. **3DSX:** copy it to `/3ds/3DScord/` on the SD card and start it from the Homebrew Launcher.
+3. Start 3DScord and log in.
 
-**QR Code** — Scan using the Discord mobile app.
+Updates are then offered inside the app. The CIA restarts by itself after updating; the 3DSX has to be started again
+from the Homebrew Launcher.
 
-**Email / Password** — Enter your credentials directly on the bottom screen.
+> If you used TriCord before, 3DScord moves your `sdmc:/3ds/TriCord` folder to `sdmc:/3ds/3DScord` on first start, so
+> your accounts, settings and themes are kept.
 
-**token.txt** — If you cannot use the above methods, you can log in using your Discord token:
-1. Create a file named `token.txt` at `sdmc:/3ds/TriCord/token.txt`
-2. Paste your Discord token inside (plain text, no extra whitespace)
-3. Launch TriCord — it will automatically read the token, log in, and delete the file
+### Releases
 
-> ⚠️ Never share your Discord token with anyone. Treat it like a password.
+| Kind | What it is |
+| --- | --- |
+| **Stable** (`v0.2.0`) | Tested versions. Every second devbuild cycle ends in one. |
+| **Devbuild** (`v0.2.1-dev.12`) | Work in progress, published after each finished phase of the roadmap. Turn on **Settings > Updates > Include Devbuilds** to receive them. |
 
-### ⚠️ Security Notice
-The account information is stored in `/3ds/TriCord/accounts`. **Although this file is encrypted, never share it with others.** Sharing this file may allow unauthorized access to your Discord account.
+### Login methods
 
-## Building from Source
+- **QR code:** scan it with the Discord mobile app.
+- **Email / password:** type them on the bottom screen.
+- **`token.txt`:** create `sdmc:/3ds/3DScord/token.txt` with your token (plain text, no extra whitespace). The app reads
+  it, logs in and deletes the file.
 
-### Prerequisites
-- [devkitPro](https://devkitpro.org/wiki/Getting_Started) with devkitARM
+> Never share your Discord token or the `accounts` file in `/3ds/3DScord`. Either one gives access to your account.
 
-### Build
+## Your Discord settings
+
+Open **Settings** (menu > gear). When you are logged in you get **Discord Profile**, **Discord Status**,
+**Discord Chat** and **Discord Privacy** sections. To change your avatar or banner, copy a `png`, `jpg` or `gif` file
+(up to 1.5 MB) to `sdmc:/3ds/3DScord/upload/` and pick it from the list. Banners need Discord Nitro.
+
+## Controls
+
+| Button | Action |
+| --- | --- |
+| D-Pad / Circle Pad | Move, scroll |
+| A | Select, open the message menu |
+| B | Back, cancel |
+| Y | Search inside Settings |
+| SELECT | Open the side menu |
+| START | Exit |
+| L + R | Debug overlay |
+
+## Building from source
+
+You need [devkitPro](https://devkitpro.org/wiki/Getting_Started) with devkitARM, plus `makerom` and `bannertool` for
+the `.cia`.
 
 ```bash
-git clone https://github.com/2b-zipper/TriCord.git
-cd TriCord
+git clone https://github.com/IkerPlays/3DScord.git
+cd 3DScord
 make -j$(nproc)
 ```
 
-Output: `TriCord.3dsx`, `TriCord.cia`, `TriCord.elf`
+Output: `3DScord.3dsx`, `3DScord.cia` and `3DScord.elf`.
+
+GitHub Actions builds every push (`.github/workflows/build.yml`). Run that workflow by hand to publish a devbuild, or
+**Stable release** to publish a stable one.
 
 ## Libraries
 
-### devkitPro Libraries (via devkitPro pacman)
-- [libctru](https://github.com/devkitPro/libctru) (zlib License)
-- [citro3d](https://github.com/devkitPro/citro3d) (zlib License)
-- [citro2d](https://github.com/devkitPro/citro2d) (zlib License)
-- [libcurl](https://curl.se/libcurl/) (curl License)
-- [mbedtls](https://github.com/Mbed-TLS/mbedtls) (Apache-2.0 OR GPL-2.0-or-later)
-- [zlib](https://zlib.net/) (zlib License)
+devkitPro: libctru, citro3d, citro2d, libcurl, mbedTLS, zlib. Bundled in `library/`: rapidjson, stb_image, qrcodegen,
+ThorVG, Opus, WebRTC AECM, MLSPP and libdave. The license texts are in [romfs/licenses](romfs/licenses) and are
+embedded in the `.3dsx` and `.cia`.
 
-### Bundled Libraries (included in `library/`)
-- [RapidJSON](https://github.com/Tencent/rapidjson) (MIT License)
-- [stb_image](https://github.com/nothings/stb) (Public Domain / MIT License)
-- [qrcodegen](https://github.com/nayuki/QR-Code-generator) (MIT License)
-- [mlspp](https://github.com/cisco/mlspp) (BSD 2-Clause License)
-- [libdave](https://github.com/discord/libdave) (MIT License)
-- [WebRTC AECM](https://github.com/webrtc-mirror/webrtc) (BSD 3-Clause License)
-- [libopus](https://opus-codec.org/) (BSD 3-Clause License)
-- [ThorVG](https://github.com/thorvg/thorvg) (MIT License)
+## Resumen en español
 
-### Additional Resources
-- CA bundle: [cacert-2025-12-02.pem](https://curl.se/docs/caextract.html) (Mozilla's CA certificate bundle)
-- [Twemoji](https://github.com/jdecked/twemoji) (CC-BY 4.0 / MIT License)
+3DScord es un cliente de Discord para la Nintendo 3DS, basado en TriCord. Incluye chat, voz, ajustes de tu cuenta de
+Discord (perfil, avatar, banner, estado), actualizaciones dentro de la app con notas de la versión, y un
+[plan de desarrollo](ROADMAP.md) por fases. Instálalo con el `.cia` (FBI) o el `.3dsx` (Homebrew Launcher) desde
+[Releases](https://github.com/IkerPlays/3DScord/releases).
 
-## Usage
+## Credits and license
 
-**DM/Server/Channel List**
-- D-Pad: Navigate | A: Select | B: Back
-
-**Message View**
-- D-Pad: Scroll | B: Back | X: Open Menu | Y: Text input
-
-**General**
-- Start: Exit the app | Select: Open the hamburger menu | L+R: Toggle Debug Log | R+L: Toggle Stats Overlay
-
-Config: `sdmc:/3ds/TriCord/config.json`
-
-## FAQ
-
-### Is there a possibility of an account ban/suspension?
-Because WebSockets are properly implemented, the risk is relatively lower compared to previous Discord clients for the 3DS. However, since it is an unofficial client, I cannot guarantee that the risk is zero. You should assume that there is always a risk of getting banned. As stated in the disclaimer, I take no responsibility for any account bans or suspensions.
-
-### The app crashes while loading guilds
-This is caused by your account being in too many servers. Please use a different account with fewer guilds. I plan to improve this as much as possible in the future.
-
-### The app is laggy / crashes frequently
-This is due to the 3DS hardware limitations, so there is nothing I can do about it. Especially on the Old 3DS, the RAM is half that of the New 3DS and the CPU is much weaker, making it prone to running slowly. I recommend using a New 3DS for the most comfortable experience. While I might add features exclusive to the New 3DS in the future, rest assured that I will never drop support for the Old 3DS.
-
-### I have a question
-Feel free to ask in our [Discord server](https://discord.gg/quYy9fK8tJ).
-
-### I found a bug
-Please report it by opening a [GitHub Issue](https://github.com/2b-zipper/TriCord/issues) or by visiting the bug-reports channel in our Discord server.
-
-### I want to add or improve a translation
-Please help us translate TriCord into your language on our [Crowdin project](https://crowdin.com/project/tricord). If your language is not listed, you can request it directly by clicking the "Request New Language" button on the Crowdin page.
-
-## License
-This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
-
-The license texts of TriCord and everything it ships with are in [romfs/licenses](romfs/licenses), which is embedded in the `.3dsx` and `.cia`.
-
-## Credits
-- [2b-zipper](https://github.com/2b-zipper) for the main development
-- [Str4ky](https://github.com/Str4ky) for the French translation
-- [AverageJohtonian](https://github.com/AverageJohtonian) for the Spanish translation
-- [RossoDev](https://github.com/RossoDev) for the Italian translation
-- [MorrisTheGamer](https://github.com/MorrisTheGamer) for the German translation
-- [ReisuErx](https://github.com/ReisuErx) for the Polish translation
-- [wiretoscreen](https://github.com/wiretoscreen) for the Brazilian Portuguese translation
-- [murloc-tinyfin](https://github.com/murloc-tinyfin) for the Simplified Chinese translation
-- [Discord Userdoccers](https://github.com/discord-userdoccers/discord-userdoccers) for the documentation of the Discord API
-- And all other contributors!
+Based on [TriCord](https://github.com/2b-zipper/TriCord) by 2b-zipper. Licensed under the GNU GPLv3, see [LICENSE](LICENSE).

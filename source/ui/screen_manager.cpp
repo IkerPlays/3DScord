@@ -208,6 +208,17 @@ void ScreenManager::init() {
 		    if (hook == APTHOOK_ONRESTORE || hook == APTHOOK_ONWAKEUP) {
 			    Utils::requestRedraw();
 		    }
+		    // Closing the lid puts the console to sleep: show as idle meanwhile, and back online on wake-up.
+		    static bool wentIdle = false;
+		    auto &client = Discord::DiscordClient::getInstance();
+		    if (hook == APTHOOK_ONSLEEP && client.getState() == Discord::ConnectionState::READY &&
+		        client.getCurrentUser().status == Discord::UserStatus::ONLINE) {
+			    wentIdle = true;
+			    client.updatePresence(Discord::UserStatus::IDLE);
+		    } else if (hook == APTHOOK_ONWAKEUP && wentIdle) {
+			    wentIdle = false;
+			    client.updatePresence(Discord::UserStatus::ONLINE);
+		    }
 	    },
 	    nullptr);
 

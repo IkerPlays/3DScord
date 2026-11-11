@@ -358,7 +358,7 @@ void ThemeManagerScreen::renderBottom(C3D_RenderTarget *target) {
 
 	drawText(10.0f, infoY, 0.6f, 0.45f, 0.45f, theme.accent, "Tip:");
 	drawText(10.0f, infoY + 15.0f, 0.6f, 0.45f, 0.45f, theme.text_muted, TR("theme.tip.desc"));
-	drawText(10.0f, infoY + 30.0f, 0.6f, 0.45f, 0.45f, theme.text, "sdmc:/3ds/TriCord/themes/");
+	drawText(10.0f, infoY + 30.0f, 0.6f, 0.45f, 0.45f, theme.text, "sdmc:/3ds/3DScord/themes/");
 
 	float keysY = 240.0f - 25.0f;
 

@@ -843,6 +843,28 @@ void MessageScreen::update() {
 						removeSelectedMessage();
 					}
 				}
+			} else if (action == "Pin" || action == "Unpin") {
+				if (selectedIndex >= 0 && selectedIndex < (int)messages.size()) {
+					const bool pin = (action == "Pin");
+					Discord::Message &target = this->messages[selectedIndex];
+					if (client.pinMessage(channelId, target.id, pin)) {
+						target.pinned = pin;
+						ScreenManager::getInstance().showToast(TR(pin ? "message.pinned" : "message.unpinned"));
+					} else {
+						ScreenManager::getInstance().showToast(TR("message.pin_failed"));
+					}
+				}
+			} else if (action == "JumpToReply") {
+				if (selectedIndex >= 0 && selectedIndex < (int)messages.size()) {
+					const std::string wanted = messages[selectedIndex].referencedMessageId;
+					for (size_t i = 0; i < messages.size(); i++) {
+						if (messages[i].id == wanted) {
+							selectedIndex = (int)i;
+							ensureSelectionVisible();
+							break;
+						}
+					}
+				}
 			} else if (action == "Dismiss") {
 				if (selectedIndex >= 0 && selectedIndex < (int)messages.size()) {
 					Discord::DiscordClient::getInstance().forgetEphemeralMessage(channelId,
@@ -3486,6 +3508,16 @@ void MessageScreen::showMessageOptions() {
 
 		if (isMine && canSend) {
 			addOption("Edit", "message.menu.edit");
+		}
+
+		if (client.canManageMessages(channelId)) {
+			addOption(msg.pinned ? "Unpin" : "Pin", msg.pinned ? "message.menu.unpin" : "message.menu.pin");
+		}
+
+		if (!msg.referencedMessageId.empty() && std::any_of(messages.begin(), messages.end(), [&](const auto &m) {
+			    return m.id == msg.referencedMessageId;
+		    })) {
+			addOption("JumpToReply", "message.menu.jump_to_reply");
 		}
 
 		if (isMine || client.canManageMessages(channelId)) {

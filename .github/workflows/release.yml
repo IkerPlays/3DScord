@@ -86,8 +86,8 @@ jobs:
       - name: Collect files
         run: |
           mkdir dist
-          cp TriCord.cia dist/3DScord.cia
-          cp TriCord.3dsx dist/3DScord.3dsx
+          cp 3DScord.cia dist/3DScord.cia
+          cp 3DScord.3dsx dist/3DScord.3dsx
 
       - uses: actions/upload-artifact@v4
         with:

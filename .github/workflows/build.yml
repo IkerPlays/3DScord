@@ -84,8 +84,8 @@ jobs:
       - name: Collect files
         run: |
           mkdir dist
-          cp TriCord.cia dist/3DScord.cia
-          cp TriCord.3dsx dist/3DScord.3dsx
+          cp 3DScord.cia dist/3DScord.cia
+          cp 3DScord.3dsx dist/3DScord.3dsx
 
       - uses: actions/upload-artifact@v4
         with:
@@ -98,10 +98,38 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - uses: actions/download-artifact@v4
         with:
           name: 3DScord
           path: dist
+
+      # Notes: the "Unreleased" section of CHANGELOG.md (written by hand, shown in the app before updating),
+      # or, when it is empty, the commit subjects since the previous release.
+      - name: Write release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          git fetch --tags --force
+          prev=$(gh release list --repo "$GITHUB_REPOSITORY" --limit 1 --json tagName --jq '.[0].tagName // empty')
+          awk '/^## /{f=($0=="## Unreleased"); next} f' CHANGELOG.md | sed '/./,$!d' > changes.md
+          if [ ! -s changes.md ]; then
+            if [ -n "$prev" ] && git rev-parse -q --verify "refs/tags/$prev" > /dev/null; then range="$prev..HEAD"; else range="-30"; fi
+            git log --no-merges --pretty='- %s' $range | grep -v -i -E '^- (Bump |Import |Merge )' | head -40 > changes.md || true
+          fi
+          {
+            echo "# 3DScord ${VERSION} (devbuild)"
+            echo
+            cat changes.md
+            echo
+            echo "---"
+            echo "Development build from commit \`${GITHUB_SHA::7}\`. Install \`3DScord.cia\` with FBI, or run \`3DScord.3dsx\` from the Homebrew Launcher. May be unstable."
+          } > notes.md
+          cat notes.md
+
       - name: Publish devbuild
         env:
           GH_TOKEN: ${{ github.token }}
@@ -110,4 +138,4 @@ jobs:
           gh release create "v${VERSION}" dist/3DScord.cia dist/3DScord.3dsx \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
             --title "3DScord ${VERSION} (devbuild)" \
-            --notes "Development build ${VERSION} from commit \`${GITHUB_SHA::7}\`. Install \`3DScord.cia\` with FBI, or run \`3DScord.3dsx\` from the Homebrew Launcher. May be unstable."
+            --notes-file notes.md

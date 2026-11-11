@@ -8,7 +8,7 @@ namespace Discord {
 namespace AccountSettings {
 
 // Folder on the SD card scanned for avatar and banner images (png, jpg, gif).
-#define UPLOAD_DIR_PATH "sdmc:/3ds/TriCord/upload"
+#define UPLOAD_DIR_PATH "sdmc:/3ds/3DScord/upload"
 
 struct Result {
 	bool ok = false;

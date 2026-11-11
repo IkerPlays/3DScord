@@ -250,6 +250,17 @@ void SettingsScreen::onEnter() {
 	notificationSound.onUpdate = [](int val) { Config::getInstance().setNotificationSoundEnabled(val == 1); };
 	allItems.push_back(notificationSound);
 
+	SettingItem replyPing;
+	replyPing.label = TR("settings.reply_ping");
+	replyPing.description = TR("settings.desc.reply_ping");
+	replyPing.type = SettingItemType::TOGGLE;
+	replyPing.value = Config::getInstance().isReplyPingEnabled() ? 1 : 0;
+	replyPing.min = 0;
+	replyPing.max = 1;
+	replyPing.valueFormatter = [](int val) { return (val == 1) ? TR("common.enabled") : TR("common.disabled"); };
+	replyPing.onUpdate = [](int val) { Config::getInstance().setReplyPingEnabled(val == 1); };
+	allItems.push_back(replyPing);
+
 	addAccountItems();
 	addUpdateItems();
 
@@ -262,7 +273,7 @@ void SettingsScreen::onEnter() {
 
 	SettingItem fileLogging;
 	fileLogging.label = "Save Logs to File";
-	fileLogging.description = "Save debug logs to SD card (sdmc:/3ds/TriCord/tricord.log)";
+	fileLogging.description = "Save debug logs to SD card (sdmc:/3ds/3DScord/3dscord.log)";
 	fileLogging.type = SettingItemType::TOGGLE;
 	fileLogging.value = Config::getInstance().isFileLoggingEnabled() ? 1 : 0;
 	fileLogging.min = 0;

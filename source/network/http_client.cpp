@@ -83,7 +83,7 @@ std::string buildClientProperties(const std::string &lang) {
 	writer.Key("os");
 	writer.String(Utils::System::getDeviceModelName().c_str());
 	writer.Key("browser");
-	writer.String("TriCord");
+	writer.String("3DScord");
 	writer.Key("device");
 	writer.String(Utils::System::getDeviceModelName().c_str());
 	writer.Key("system_locale");

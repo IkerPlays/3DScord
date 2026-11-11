@@ -4,8 +4,10 @@
 #include "log.h"
 #include "ui/image_manager.h"
 #include "ui/screen_manager.h"
+#include "utils/message_utils.h"
 #include "utils/updater.h"
 #include <3ds.h>
+#include <algorithm>
 #include <cmath>
 
 namespace UI {
@@ -14,7 +16,58 @@ using Utils::Updater;
 
 bool UpdaterScreen::manualCheck = false;
 
-UpdaterScreen::UpdaterScreen() : angle(0.0f), installStarted(false), finished(false), graceFrames(0) {}
+namespace {
+
+constexpr float NOTE_ROWS = 11.0f;
+
+// Release notes are Markdown; the screen shows them as plain wrapped lines.
+std::vector<std::string> buildNoteLines(const std::string &notes) {
+	std::vector<std::string> lines;
+	size_t pos = 0;
+	while (pos <= notes.size()) {
+		size_t end = notes.find('\n', pos);
+		if (end == std::string::npos) {
+			end = notes.size();
+		}
+		std::string line = notes.substr(pos, end - pos);
+		pos = end + 1;
+		while (!line.empty() && (line.back() == '\r' || line.back() == ' ')) {
+			line.pop_back();
+		}
+		if (line == "---") {
+			break; // the footer added by the release workflow
+		}
+		while (!line.empty() && line[0] == '#') {
+			line.erase(0, 1);
+		}
+		if (!line.empty() && line[0] == ' ') {
+			line.erase(0, 1);
+		}
+		if (line.rfind("* ", 0) == 0) {
+			line.replace(0, 1, "-");
+		}
+		if (line.empty()) {
+			if (!lines.empty() && !lines.back().empty()) {
+				lines.push_back("");
+			}
+			continue;
+		}
+		for (const auto &wrapped : MessageUtils::wrapText(line, BOTTOM_SCREEN_WIDTH - 30.0f, 0.4f)) {
+			lines.push_back(wrapped);
+		}
+		if (lines.size() > 200) {
+			break;
+		}
+	}
+	while (!lines.empty() && lines.back().empty()) {
+		lines.pop_back();
+	}
+	return lines;
+}
+
+} // namespace
+
+UpdaterScreen::UpdaterScreen() : angle(0.0f), noteScroll(0.0f), notesBuilt(false), installStarted(false), finished(false), graceFrames(0) {}
 
 UpdaterScreen::~UpdaterScreen() {
 	// A finished or abandoned worker must not outlive the screen that reads its state.
@@ -35,6 +88,7 @@ void UpdaterScreen::update() {
 
 	Updater &updater = Updater::getInstance();
 	const u32 kDown = hidKeysDown();
+	const u32 kHeld = hidKeysHeld();
 
 	switch (updater.getState()) {
 	case Updater::State::CHECKING:
@@ -50,12 +104,27 @@ void UpdaterScreen::update() {
 		}
 		ScreenManager::getInstance().enterMainScreen();
 		break;
-	case Updater::State::AVAILABLE:
-		if (!installStarted) {
+	case Updater::State::AVAILABLE: {
+		if (!notesBuilt) {
+			notesBuilt = true;
+			noteLines = buildNoteLines(updater.getRelease().notes);
+		}
+		const float maxScroll = std::max(0.0f, (float)noteLines.size() - NOTE_ROWS);
+		if (kHeld & KEY_DOWN) {
+			noteScroll = std::min(maxScroll, noteScroll + 0.25f);
+		}
+		if (kHeld & KEY_UP) {
+			noteScroll = std::max(0.0f, noteScroll - 0.25f);
+		}
+		if (kDown & KEY_A) {
 			installStarted = true;
 			updater.startInstall();
+		} else if (kDown & KEY_B) {
+			// "Later": the next start asks again.
+			ScreenManager::getInstance().enterMainScreen();
 		}
 		break;
+	}
 	case Updater::State::DOWNLOADING:
 		if (kDown & KEY_B) {
 			updater.cancel();
@@ -128,6 +197,8 @@ void UpdaterScreen::renderTop(C3D_RenderTarget *target) {
 		line = TR("updater.checking");
 		break;
 	case Updater::State::AVAILABLE:
+		line = Core::I18n::format(TR("updater.available"), updater.getRelease().tag);
+		break;
 	case Updater::State::DOWNLOADING:
 		line = Core::I18n::format(TR("updater.downloading"), updater.getRelease().tag);
 		break;
@@ -169,6 +240,20 @@ void UpdaterScreen::renderBottom(C3D_RenderTarget *target) {
 	                 std::string("3DScord ") + Updater::currentVersionString(), BOTTOM_SCREEN_WIDTH);
 
 	const auto state = updater.getState();
+	if (state == Updater::State::AVAILABLE) {
+		drawText(12.0f, 8.0f, 0.5f, 0.5f, 0.5f, ScreenManager::colorText(), TR("updater.whats_new"));
+		C2D_DrawRectSolid(12.0f, 28.0f, 0.5f, BOTTOM_SCREEN_WIDTH - 24.0f, 1.0f, ScreenManager::colorSeparator());
+		if (noteLines.empty()) {
+			drawText(12.0f, 36.0f, 0.5f, 0.4f, 0.4f, ScreenManager::colorTextMuted(), TR("updater.no_notes"));
+		}
+		const int first = (int)noteScroll;
+		for (int i = 0; i < (int)NOTE_ROWS + 1 && first + i < (int)noteLines.size(); i++) {
+			drawText(12.0f, 36.0f + i * 15.0f, 0.5f, 0.4f, 0.4f, ScreenManager::colorText(), noteLines[first + i]);
+		}
+		drawCenteredText(212.0f, 0.5f, 0.5f, 0.5f, ScreenManager::colorSuccess(), TR("updater.prompt_hint"),
+		                 BOTTOM_SCREEN_WIDTH);
+		return;
+	}
 	if (state == Updater::State::CHECKING) {
 		drawCenteredText(200.0f, 0.5f, 0.45f, 0.45f, ScreenManager::colorTextMuted(), TR("updater.skip_hint"),
 		                 BOTTOM_SCREEN_WIDTH);

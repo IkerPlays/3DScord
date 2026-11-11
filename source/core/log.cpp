@@ -10,8 +10,8 @@
 #include <string>
 #include <vector>
 
-static const char *LOG_DIR = "sdmc:/3ds/TriCord";
-static const char *LOG_FILE = "sdmc:/3ds/TriCord/tricord.log";
+static const char *LOG_DIR = "sdmc:/3ds/3DScord";
+static const char *LOG_FILE = "sdmc:/3ds/3DScord/3dscord.log";
 static std::deque<std::string> logBuffer;
 static const size_t MAX_LOG_LINES = 200;
 static std::mutex logMutex;
@@ -64,7 +64,7 @@ void setFileLoggingEnabled(bool enabled) {
 	if (enabled) {
 		FILE *f = fopen(LOG_FILE, "w");
 		if (f) {
-			fprintf(f, "=== TriCord Log Started ===\n");
+			fprintf(f, "=== 3DScord Log Started ===\n");
 			fclose(f);
 		}
 	}

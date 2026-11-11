@@ -14,7 +14,9 @@
 #include <citro2d.h>
 #include <citro3d.h>
 
+#include <cstdio>
 #include <malloc.h>
+#include <sys/stat.h>
 
 static const size_t SOC_SHAREDMEM_SIZE = 0x200000;
 static u32 *soc_sharedmem_ptr = NULL;
@@ -90,8 +92,16 @@ int main(int argc, char **argv) {
 		Logger::log("Audio unavailable (is dspfirm.cdc dumped?)");
 	}
 
+	// The app used to be called TriCord and kept its files in sdmc:/3ds/TriCord: carry them over once.
+	{
+		struct stat st;
+		if (stat(CONFIG_DIR_PATH, &st) != 0 && stat(LEGACY_CONFIG_DIR_PATH, &st) == 0) {
+			rename(LEGACY_CONFIG_DIR_PATH, CONFIG_DIR_PATH);
+		}
+	}
+
 	Logger::init();
-	Logger::log("TriCord - Discord for 3DS starting...");
+	Logger::log("3DScord - Discord for 3DS starting...");
 	Logger::log("[Mem] app region %luKB (free %luKB), heap %luKB, linear %luKB (free %luKB)",
 	            (unsigned long)(osGetMemRegionSize(MEMREGION_APPLICATION) / 1024),
 	            (unsigned long)(osGetMemRegionFree(MEMREGION_APPLICATION) / 1024),

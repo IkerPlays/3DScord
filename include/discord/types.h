@@ -363,6 +363,7 @@ struct Message {
 	std::string edited_timestamp;
 
 	int flags = 0;
+	bool pinned = false;
 	std::string applicationId;
 	std::string interactionName;
 	std::string interactionUser;

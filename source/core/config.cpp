@@ -24,7 +24,7 @@
 Config::Config()
     : currentAccountIndex(-1), timezoneOffset(0), language("en_US"), themeType(0), typingIndicatorEnabled(true),
       notificationSound(true), fileLoggingEnabled(false), disclaimerAccepted(false), showAvatars(true),
-      showServerIcons(true), showHiddenChannels(false), autoUpdate(true), devBuildUpdates(false), micVolume(100), customThemeEnabled(false),
+      showServerIcons(true), showHiddenChannels(false), autoUpdate(true), replyPing(true), devBuildUpdates(false), micVolume(100), customThemeEnabled(false),
       selectedThemeName("") {
 	customTheme = getDarkPreset();
 	customTheme.name = "Custom Theme";
@@ -33,7 +33,7 @@ Config::Config()
 Theme Config::getDarkPreset() {
 	Theme t;
 	t.name = "Dark Mode";
-	t.author = "TriCord Team";
+	t.author = "3DScord Team";
 	t.bg = 0xFF383331;
 	t.bg_dark = 0xFF312D2B;
 	t.bg_light = 0xFF494240;
@@ -62,7 +62,7 @@ Theme Config::getDarkPreset() {
 Theme Config::getLightPreset() {
 	Theme t;
 	t.name = "Light Mode";
-	t.author = "TriCord Team";
+	t.author = "3DScord Team";
 	t.bg = 0xFFFFFFFF;
 	t.bg_dark = 0xFFF5F3F2;
 	t.bg_light = 0xFFE5E2E0;
@@ -242,6 +242,9 @@ void Config::loadSettings() {
 			if (doc.HasMember("show_hidden_channels") && doc["show_hidden_channels"].IsBool()) {
 				showHiddenChannels = doc["show_hidden_channels"].GetBool();
 			}
+			if (doc.HasMember("reply_ping") && doc["reply_ping"].IsBool()) {
+				replyPing = doc["reply_ping"].GetBool();
+			}
 			if (doc.HasMember("auto_update") && doc["auto_update"].IsBool()) {
 				autoUpdate = doc["auto_update"].GetBool();
 			}
@@ -301,6 +304,8 @@ void Config::saveSettings() {
 	writer.Bool(showServerIcons);
 	writer.Key("show_hidden_channels");
 	writer.Bool(showHiddenChannels);
+	writer.Key("reply_ping");
+	writer.Bool(replyPing);
 	writer.Key("auto_update");
 	writer.Bool(autoUpdate);
 	writer.Key("dev_build_updates");
@@ -384,6 +389,11 @@ void Config::setShowServerIconsEnabled(bool enabled) {
 
 void Config::setShowHiddenChannelsEnabled(bool enabled) {
 	showHiddenChannels = enabled;
+	saveSettings();
+}
+
+void Config::setReplyPingEnabled(bool enabled) {
+	replyPing = enabled;
 	saveSettings();
 }
 
