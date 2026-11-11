@@ -1,4 +1,5 @@
 #include "config.h"
+#include "utils/system_utils.h"
 
 #include <algorithm>
 #include <3ds.h>
