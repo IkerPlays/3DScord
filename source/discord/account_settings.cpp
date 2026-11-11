@@ -6,11 +6,9 @@
 #include "utils/base64_utils.h"
 #include "utils/file_utils.h"
 #include <algorithm>
-#include <dirent.h>
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
-#include <strings.h>
 
 namespace Discord {
 namespace AccountSettings {
@@ -294,26 +292,6 @@ Result setThemeSetting(bool light) {
 		            w.Key("theme");
 		            w.String(light ? "light" : "dark");
 	            }));
-}
-
-std::vector<std::string> listUploadFiles() {
-	std::vector<std::string> files;
-	DIR *dir = opendir(UPLOAD_DIR_PATH);
-	if (!dir) {
-		return files;
-	}
-	while (dirent *entry = readdir(dir)) {
-		std::string name = entry->d_name;
-		if (name.empty() || name[0] == '.' || mimeFor(name).empty()) {
-			continue;
-		}
-		files.push_back(name);
-	}
-	closedir(dir);
-	std::sort(files.begin(), files.end(), [](const std::string &a, const std::string &b) {
-		return strcasecmp(a.c_str(), b.c_str()) < 0;
-	});
-	return files;
 }
 
 } // namespace AccountSettings

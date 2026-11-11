@@ -7,9 +7,6 @@
 namespace Discord {
 namespace AccountSettings {
 
-// Folder on the SD card scanned for avatar and banner images (png, jpg, gif).
-#define UPLOAD_DIR_PATH "sdmc:/3ds/3DScord/upload"
-
 struct Result {
 	bool ok = false;
 	long status = 0;
@@ -54,8 +51,6 @@ Result removeBanner();
 Result setBoolSetting(const char *key, bool value);
 Result setIntSetting(const char *key, int value);
 Result setThemeSetting(bool light);
-
-std::vector<std::string> listUploadFiles();
 
 } // namespace AccountSettings
 } // namespace Discord

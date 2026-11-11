@@ -1,7 +1,8 @@
 # Changelog
 
 ## Unreleased
-- **Upload files** from the SD card: Channel Tools > Upload File lists `sdmc:/3ds/3DScord/upload` (up to 4 MB).
+- **File browser:** Channel Tools > Upload File opens a browser of the SD card; pick any file (up to 4 MB) and send it.
+  Avatar and banner in Settings use the same browser, so no special folder is needed.
 - **GIFs:** Channel Tools > GIFs searches Tenor (or shows what is trending) and sends the one you pick.
 - **Stickers:** Channel Tools > Stickers sends one of the stickers of the server.
 - **Save to SD Card:** the message menu can save any attachment to `sdmc:/3ds/3DScord/downloads`.

@@ -59,8 +59,8 @@ from the Homebrew Launcher.
 ## Your Discord settings
 
 Open **Settings** (menu > gear). When you are logged in you get **Discord Profile**, **Discord Status**,
-**Discord Chat** and **Discord Privacy** sections. To change your avatar or banner, copy a `png`, `jpg` or `gif` file
-(up to 1.5 MB) to `sdmc:/3ds/3DScord/upload/` and pick it from the list. Banners need Discord Nitro.
+**Discord Chat** and **Discord Privacy** sections. To change your avatar or banner, choose the picture in the file browser that opens (a `png`, `jpg` or `gif`
+up to 1.5 MB). Banners need Discord Nitro.
 
 ## Controls
 

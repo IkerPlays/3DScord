@@ -9,6 +9,7 @@
 #include "ui/disclaimer_screen.h"
 #include "ui/emoji_manager.h"
 #include "ui/forum_screen.h"
+#include "ui/file_browser_screen.h"
 #include "ui/image_manager.h"
 #include "ui/image_viewer_screen.h"
 #include "ui/list_screen.h"
@@ -374,6 +375,9 @@ void ScreenManager::setScreen(ScreenType type) {
 		break;
 	case ScreenType::IMAGE_VIEWER:
 		currentScreen = std::make_unique<ImageViewerScreen>();
+		break;
+	case ScreenType::FILE_BROWSER:
+		currentScreen = std::make_unique<FileBrowserScreen>();
 		break;
 	}
 

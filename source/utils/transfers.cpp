@@ -69,7 +69,6 @@ Transfers &Transfers::getInstance() {
 }
 
 std::string Transfers::downloadDir() { return std::string(CONFIG_DIR_PATH) + "/downloads"; }
-std::string Transfers::uploadDir() { return std::string(CONFIG_DIR_PATH) + "/upload"; }
 
 void Transfers::enqueue(std::function<void()> job) {
 	{

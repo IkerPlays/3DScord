@@ -5,15 +5,13 @@
 #include "discord/discord_client.h"
 #include "log.h"
 #include "network/network_manager.h"
+#include "ui/file_browser_screen.h"
 #include "ui/message_screen.h"
 #include "utils/message_utils.h"
 #include "utils/transfers.h"
 #include "utils/utf8_utils.h"
 #include <3ds.h>
-#include <strings.h>
 #include <algorithm>
-#include <dirent.h>
-#include <sys/stat.h>
 #include <rapidjson/document.h>
 
 namespace UI {
@@ -206,32 +204,6 @@ void ListScreen::loadLocal() {
 			list.push_back({"", channelId, "", r});
 		}
 		break;
-	case Mode::FILES: {
-		mkdir("sdmc:/3ds", 0777);
-		mkdir(CONFIG_DIR_PATH, 0777);
-		const std::string dirPath = Utils::Transfers::uploadDir();
-		mkdir(dirPath.c_str(), 0777);
-		if (DIR *dir = opendir(dirPath.c_str())) {
-			while (dirent *e = readdir(dir)) {
-				const std::string name = e->d_name;
-				if (name.empty() || name[0] == '.') {
-					continue;
-				}
-				struct stat st;
-				const std::string full = dirPath + "/" + name;
-				if (stat(full.c_str(), &st) != 0 || S_ISDIR(st.st_mode)) {
-					continue;
-				}
-				const long long kb = (st.st_size + 1023) / 1024;
-				list.push_back({full, channelId, name, std::to_string(kb) + " KB"});
-			}
-			closedir(dir);
-		}
-		std::sort(list.begin(), list.end(), [](const Entry &a, const Entry &b) {
-			return strcasecmp(a.title.c_str(), b.title.c_str()) < 0;
-		});
-		break;
-	}
 	case Mode::TOOLS:
 		list = {{"pins", channelId, TR("list.pins"), TR("list.tools.pins")},
 		        {"search", channelId, TR("list.search"), TR("list.tools.search")},
@@ -425,8 +397,6 @@ std::string ListScreen::headerTitle() const {
 	switch (mode) {
 	case Mode::TOOLS:
 		return TR("list.tools");
-	case Mode::FILES:
-		return TR("list.files");
 	case Mode::GIFS:
 		return query.empty() ? TR("list.gifs") : TR("list.gifs") + ": " + query;
 	case Mode::STICKERS:
@@ -453,8 +423,6 @@ std::string ListScreen::hintLine() const {
 	switch (mode) {
 	case Mode::TOOLS:
 		return TR("list.hint.tools");
-	case Mode::FILES:
-		return TR("list.hint.files");
 	case Mode::GIFS:
 		return TR("list.hint.gifs");
 	case Mode::STICKERS:
@@ -496,7 +464,22 @@ void ListScreen::primaryAction(const Entry &entry) {
 		} else if (entry.id == "search") {
 			openReplacing(Mode::SEARCH);
 		} else if (entry.id == "files") {
-			openReplacing(Mode::FILES);
+			const std::string cid = channelId;
+			FileBrowserScreen::open(
+			    TR("list.files"), FileBrowserScreen::Filter::ANY,
+			    [cid](const std::string &path) {
+				    auto &c = Discord::DiscordClient::getInstance();
+				    if (!c.canSendMessage(cid)) {
+					    ScreenManager::getInstance().showToast(TR("message.no_permission"));
+					    return;
+				    }
+				    std::string caption;
+				    if (!askText(TR("list.caption_hint"), "", caption, 500, false)) {
+					    return;
+				    }
+				    Utils::Transfers::getInstance().uploadFile(cid, path, caption);
+			    },
+			    true);
 		} else if (entry.id == "gifs") {
 			openReplacing(Mode::GIFS);
 		} else if (entry.id == "stickers") {
@@ -522,19 +505,6 @@ void ListScreen::primaryAction(const Entry &entry) {
 			}
 		}
 		break;
-	case Mode::FILES: {
-		if (!client.canSendMessage(channelId)) {
-			sm.showToast(TR("message.no_permission"));
-			break;
-		}
-		std::string caption;
-		if (!askText(TR("list.caption_hint"), "", caption, 500, false)) {
-			break;
-		}
-		Utils::Transfers::getInstance().uploadFile(channelId, entry.id, caption);
-		sm.returnToPreviousScreen();
-		break;
-	}
 	case Mode::GIFS:
 		if (!client.canSendMessage(channelId)) {
 			sm.showToast(TR("message.no_permission"));
@@ -647,7 +617,6 @@ void ListScreen::tertiaryAction() {
 	switch (mode) {
 	case Mode::SEARCH:
 	case Mode::GIFS:
-	case Mode::FILES:
 		load();
 		break;
 	case Mode::QUICK_REPLIES:

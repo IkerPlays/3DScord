@@ -7,6 +7,7 @@
 #include "discord/account_settings.h"
 #include "discord/avatar_cache.h"
 #include "discord/discord_client.h"
+#include "ui/file_browser_screen.h"
 #include "ui/updater_screen.h"
 #include "utils/updater.h"
 #include <cstdlib>
@@ -298,9 +299,7 @@ void SettingsScreen::addAccountItems() {
 		snapshotFetched = true;
 		snapshotUserId = me.id;
 	}
-	mkdir("sdmc:/3ds", 0777);
-	mkdir(CONFIG_DIR_PATH, 0777);
-	mkdir(UPLOAD_DIR_PATH, 0777);
+
 
 	auto addAction = [this](const std::string &label, const std::string &desc, std::function<void()> fn) {
 		SettingItem item;
@@ -333,41 +332,19 @@ void SettingsScreen::addAccountItems() {
 		allItems.push_back(item);
 	};
 
-	// Image pickers list the files of the upload folder; 0 = nothing chosen, 1 = remove the current image.
-	auto addImagePicker = [this](const std::string &label, const std::string &desc, bool banner) {
-		auto files = std::make_shared<std::vector<std::string>>(AccountSettings::listUploadFiles());
-		SettingItem item;
-		item.label = label;
-		item.description = desc;
-		item.type = SettingItemType::INTEGER;
-		item.value = 0;
-		item.min = 0;
-		item.max = 1 + (int)files->size();
-		item.valueFormatter = [files](int val) -> std::string {
-			if (val == 0) {
-				return TR("account.choose_image");
-			}
-			if (val == 1) {
-				return TR("account.remove_image");
-			}
-			return (*files)[val - 2];
-		};
-		item.onUpdate = [this, files, banner](int val) {
-			if (val == 0) {
-				return;
-			}
-			ScreenManager::getInstance().showToast(TR("account.uploading"));
-			Result r;
-			if (val == 1) {
-				r = banner ? AccountSettings::removeBanner() : AccountSettings::removeAvatar();
-			} else {
-				const std::string path = std::string(UPLOAD_DIR_PATH) + "/" + (*files)[val - 2];
-				r = banner ? AccountSettings::setBannerFromFile(path) : AccountSettings::setAvatarFromFile(path);
-			}
-			report(r);
-			scheduleRefresh = true;
-		};
-		allItems.push_back(item);
+	// Avatar and banner: pick the picture on the SD card, or remove the current one.
+	auto addImageActions = [&addAction](const std::string &label, const std::string &removeLabel,
+	                                    const std::string &desc, bool banner) {
+		addAction(label, desc, [label, banner]() {
+			FileBrowserScreen::open(label, FileBrowserScreen::Filter::IMAGES, [banner](const std::string &path) {
+				ScreenManager::getInstance().showToast(TR("account.uploading"));
+				report(banner ? Discord::AccountSettings::setBannerFromFile(path)
+				              : Discord::AccountSettings::setAvatarFromFile(path));
+			});
+		});
+		addAction(removeLabel, "", [banner]() {
+			report(banner ? Discord::AccountSettings::removeBanner() : Discord::AccountSettings::removeAvatar());
+		});
 	};
 
 	// PROFILE
@@ -427,8 +404,8 @@ void SettingsScreen::addAccountItems() {
 		}
 		report(r);
 	});
-	addImagePicker(TR("account.avatar"), TR("account.desc.images"), false);
-	addImagePicker(TR("account.banner"), TR("account.desc.images"), true);
+	addImageActions(TR("account.avatar"), TR("account.remove_avatar"), TR("account.desc.images"), false);
+	addImageActions(TR("account.banner"), TR("account.remove_banner"), TR("account.desc.images"), true);
 
 	// STATUS
 	allItems.push_back({TR("settings.section.status"), "", SettingItemType::SECTION_HEADER});

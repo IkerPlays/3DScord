@@ -36,7 +36,7 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
 - [x] Recent mentions list
 
 ## Phase 3 — Sending media
-- [x] Upload files from the SD card (`sdmc:/3ds/3DScord/upload`, up to 4 MB)
+- [x] File browser to upload any file from the SD card (up to 4 MB); also used for avatar and banner
 - [x] Send stickers (from the current server)
 - [x] GIF picker (Tenor, through Discord)
 - [x] Save received images and files to the SD card

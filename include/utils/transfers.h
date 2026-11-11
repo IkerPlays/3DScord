@@ -17,9 +17,8 @@ class Transfers {
   public:
 	static Transfers &getInstance();
 
-	// Folders on the SD card.
+	// Where saved attachments go.
 	static std::string downloadDir();
-	static std::string uploadDir();
 
 	void saveAttachment(const std::string &url, const std::string &filename, long long size);
 	void uploadFile(const std::string &channelId, const std::string &path, const std::string &caption);
