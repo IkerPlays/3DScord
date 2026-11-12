@@ -24,7 +24,9 @@ See [ROADMAP.md](ROADMAP.md) for what is planned and [CHANGELOG.md](CHANGELOG.md
 - **Right in the chat:** buttons for files (with a file browser and a preview before sending), GIFs, stickers, pinned
   messages, search and voice. **Channel Tools** has the rest: gallery, threads, members, quick replies, drafts,
   formatting, sounds and mark as read. Saved messages, mentions, friends and voice are in the side menu (Quick Access).
-- **Voice:** voice channels and calls with end-to-end encryption (DAVE), mic and per-user volume.
+- **Voice:** voice channels and calls with end-to-end encryption (DAVE), mic and per-user volume. With the experimental Video setting
+  on, the camera or shared screen of someone in the call is decoded in software and shown on the top screen.
+- **Videos:** MP4 attachments (H.264, up to 1280x720 and 16 MB) play without sound from the message menu (experimental).
 - **Your Discord account (Settings):** display name, About Me, pronouns, profile color, avatar and banner (from files on
   the SD card), status and custom status, message display options and privacy options.
 - **Auto-updater:** at startup, while the Discord logo spins, 3DScord looks for a new version. It shows the release
