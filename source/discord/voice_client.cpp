@@ -1,4 +1,5 @@
 #include "discord/voice_client.h"
+#include "utils/video_receiver.h"
 #include "core/config.h"
 #include <ctime>
 #include <sys/stat.h>
@@ -650,6 +651,7 @@ void VoiceClient::closeVideoCapture() {
 		fclose((FILE *)videoFile);
 		videoFile = nullptr;
 	}
+	Utils::VideoReceiver::getInstance().stop();
 	free(videoAssembly);
 	free(videoDecrypted);
 	videoAssembly = nullptr;
@@ -661,7 +663,7 @@ void VoiceClient::closeVideoCapture() {
 }
 
 // Joins the RTP packets of an H.264 frame (single NAL units, STAP-A and FU-A) into one Annex B frame, decrypts it with DAVE
-// and writes it to recordings/video_in_*.264. The picture is not decoded or shown yet.
+// hands it to the video receiver (decoded and shown in the call view) and saves the first part to recordings/video_in_*.264.
 void VoiceClient::handleVideoPayload(uint32_t ssrc, uint16_t seq, bool lastOfFrame, const uint8_t *payload, size_t len) {
 	std::string userId;
 	{
@@ -762,6 +764,8 @@ void VoiceClient::handleVideoPayload(uint32_t ssrc, uint16_t seq, bool lastOfFra
 		            videoFramesOk, frameLen, written, written > 4 ? (videoDecrypted[4] & 0x1F) : -1, videoFramesDropped,
 		            videoFramesBad);
 	}
+
+	Utils::VideoReceiver::getInstance().submit(userId, videoDecrypted, written);
 
 	// The decrypted frames go to the SD card so the stream can be checked on a computer (VLC, ffprobe).
 	if (videoFileBytes < VIDEO_FILE_MAX) {

@@ -8,11 +8,12 @@ namespace UI {
 // What the top screen shows while a voice call is on.
 //   COMPACT: the person speaking, small, in the top right corner, over the chat.
 //   FULL:    everyone in the call as big tiles, with the call time and statistics.
+//   VIDEO:   the camera or shared screen that is coming in, on the whole screen (only when there is one).
 //   HIDDEN:  nothing, so the chat has the whole screen.
-// L+R changes the mode. The 3DS cannot play video, so a camera or a shared screen shows as a badge on the tile.
+// L+R changes the mode. A camera or shared screen is decoded in software (EXPERIMENTAL, Settings > Voice > Video).
 namespace CallView {
 
-enum class Mode { COMPACT, FULL, HIDDEN };
+enum class Mode { COMPACT, FULL, VIDEO, HIDDEN };
 
 Mode mode();
 void cycle();

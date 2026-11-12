@@ -5,7 +5,11 @@
   file as a spoiler. **Clear Picture Cache** (Settings > Chat) frees the memory of pictures already seen.
 - **Software Decoder Test (experimental)** (Settings > Updates): decodes the video saved from a call with openh264 (Cisco, BSD licence), a decoder
   that reads the High profile, and shows the pictures at half size with the time each takes (`softtest.txt` on the SD card has the
-  results). It is a test of whether a call's video could be seen as a slow picture.
+  results). On a New 2DS XL it decodes the call's video at about 20 ms per picture (90 ms for a key frame).
+- **Cameras and shared screens in calls (experimental):** with Settings > Voice > Video on, the video of the first person who sends
+  one is decoded in software (openh264) on the extra core of a New 3DS and shown at half size: small under the speaker panel in the
+  compact call view, in the person's tile in the full view, and on the whole top screen in a new **Video** view (L+R cycles
+  compact > full > video > hidden). If the decoder falls behind it skips to the next key frame. Sending your own camera is not done.
 
 ## 0.13.0
 Experiments with video in calls: what Discord sends was measured and saved, and the result is that the video cannot be shown on the 3DS.

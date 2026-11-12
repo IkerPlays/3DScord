@@ -159,7 +159,8 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
 - [x] Receive voice messages: length, play, 1.5x, queue; record one from Channel Tools; soundboard
 - [x] Move someone to another voice channel; record the call; Voice Tone (simple equalizer)
 - [ ] Not done: stronger noise cancelling, mute or pause when the lid closes (the app cannot tell when the lid closes)
-- [ ] Not possible: cameras and shared screens (no video on the 3DS; they show as badges)
+- [x] Cameras and shared screens of others in calls (experimental): software H.264 decoding (openh264) on the extra core, shown
+      small, in the tile, or on the whole top screen. Sending your own camera is still not possible.
 
 ## Phase 17 — Images, files and camera (ideas 116-145)
 - [x] Turn a picture in the viewer; file size shown on attachments

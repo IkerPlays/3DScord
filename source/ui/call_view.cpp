@@ -7,6 +7,7 @@
 #include "ui/screen_manager.h"
 #include "ui/voice_controls.h"
 #include "utils/redraw.h"
+#include "utils/video_receiver.h"
 #include <algorithm>
 #include <cstdio>
 
@@ -105,9 +106,16 @@ void drawCompact(const std::vector<Discord::VoiceParticipant> &people, Discord::
 	drawText(x + 48.0f, y + 32.0f, 0.55f, 0.36f, 0.36f, ScreenManager::colorTextMuted(),
 	         clock(voice.connectedSeconds()) + "  " + std::to_string(people.size()));
 
-	// Anyone with the camera on or sharing the screen gets a line under the panel, speaking or not. The video itself
-	// cannot be shown on the 3DS.
+	// The camera or the shared screen that is coming in (see Utils::VideoReceiver), small, under the panel.
 	float lineY = y + h + 3.0f;
+	Utils::VideoReceiver &rx = Utils::VideoReceiver::getInstance();
+	if (rx.isLive()) {
+		const float vh = w * 9.0f / 16.0f;
+		C2D_DrawRectSolid(x, lineY, 0.5f, w, vh, C2D_Color32(0, 0, 0, 255));
+		rx.draw(x, lineY, 0.51f, w, vh);
+		lineY += vh + 3.0f;
+	}
+	// Anyone with the camera on or sharing the screen gets a line under the panel, speaking or not.
 	int lines = 0;
 	for (const auto &p : people) {
 		if (lines >= 3) {
@@ -139,6 +147,7 @@ void drawFull(const std::vector<Discord::VoiceParticipant> &people, Discord::Voi
 	const float startY = 28.0f;
 
 	bool anyVideo = false;
+	bool shownVideo = false;
 	int shown = 0;
 	for (const auto &p : people) {
 		if (shown >= cols * rows) {
@@ -150,7 +159,13 @@ void drawFull(const std::vector<Discord::VoiceParticipant> &people, Discord::Voi
 		drawRoundedRect(tx + 3.0f, ty + 2.0f, 0.5f, tileW - 6.0f, tileH - 4.0f, 8.0f,
 		                speaking ? GREEN : ScreenManager::colorBackgroundLight());
 		drawRoundedRect(tx + 5.0f, ty + 4.0f, 0.51f, tileW - 10.0f, tileH - 8.0f, 7.0f, ScreenManager::colorBackground());
-		drawAvatar(p, tx + (tileW - 44.0f) / 2.0f, ty + 10.0f, 44.0f, false);
+		Utils::VideoReceiver &rx = Utils::VideoReceiver::getInstance();
+		if (rx.isLive() && rx.userId() == p.userId) {
+			rx.draw(tx + 7.0f, ty + 6.0f, 0.52f, tileW - 14.0f, 48.0f);
+			shownVideo = true;
+		} else {
+			drawAvatar(p, tx + (tileW - 44.0f) / 2.0f, ty + 10.0f, 44.0f, false);
+		}
 		drawRichText(tx + 8.0f, ty + 58.0f, 0.55f, 0.4f, 0.4f, ScreenManager::colorText(),
 		             getTruncatedRichText(p.name, tileW - 16.0f, 0.4f, 0.4f));
 		drawBadges(p, tx + 8.0f, ty + 8.0f);
@@ -181,9 +196,15 @@ void drawFull(const std::vector<Discord::VoiceParticipant> &people, Discord::Voi
 	         (unsigned)voice.statPacketsDecoded(), TR("call.stat_sent").c_str(), (unsigned)voice.statPacketsSent(),
 	         TR("call.stat_failed").c_str(), (unsigned)voice.statDecryptFailures());
 	drawText(10.0f, 212.0f, 0.55f, 0.36f, 0.36f, ScreenManager::colorTextMuted(), stats);
-	if (anyVideo) {
+	if (anyVideo && !shownVideo) {
 		drawText(10.0f, 224.0f, 0.55f, 0.36f, 0.36f, ScreenManager::colorTextMuted(), TR("call.no_video"));
 	}
+}
+
+void drawVideo(Discord::VoiceClient &voice) {
+	C2D_DrawRectSolid(0, 0, 0.45f, 400, 240, C2D_Color32(0, 0, 0, 255));
+	Utils::VideoReceiver::getInstance().draw(0, 0, 0.5f, 400, 240);
+	drawText(6.0f, 4.0f, 0.56f, 0.4f, 0.4f, ScreenManager::colorText(), clock(voice.connectedSeconds()));
 }
 
 } // namespace
@@ -191,21 +212,44 @@ void drawFull(const std::vector<Discord::VoiceParticipant> &people, Discord::Voi
 Mode mode() { return currentMode; }
 
 void cycle() {
-	currentMode = currentMode == Mode::COMPACT ? Mode::FULL : currentMode == Mode::FULL ? Mode::HIDDEN : Mode::COMPACT;
+	const bool video = Utils::VideoReceiver::getInstance().isLive();
+	switch (currentMode) {
+	case Mode::COMPACT:
+		currentMode = Mode::FULL;
+		break;
+	case Mode::FULL:
+		currentMode = video ? Mode::VIDEO : Mode::HIDDEN;
+		break;
+	case Mode::VIDEO:
+		currentMode = Mode::HIDDEN;
+		break;
+	default:
+		currentMode = Mode::COMPACT;
+		break;
+	}
 	ScreenManager::getInstance().showToast(TR(currentMode == Mode::COMPACT  ? "call.view_compact"
-	                                          : currentMode == Mode::FULL ? "call.view_full"
-	                                                                      : "call.view_hidden"));
+	                                          : currentMode == Mode::FULL  ? "call.view_full"
+	                                          : currentMode == Mode::VIDEO ? "call.view_video"
+	                                                                       : "call.view_hidden"));
 	Utils::requestRedraw();
 }
 
 bool coversScreen() {
-	return currentMode == Mode::FULL && Discord::VoiceClient::getInstance().getState() == Discord::VoiceState::ESTABLISHED;
+	return (currentMode == Mode::FULL || currentMode == Mode::VIDEO) && Discord::VoiceClient::getInstance().getState() == Discord::VoiceState::ESTABLISHED;
 }
 
 void render() {
 	Discord::VoiceClient &voice = Discord::VoiceClient::getInstance();
 	if (voice.getState() != Discord::VoiceState::ESTABLISHED || currentMode == Mode::HIDDEN) {
 		return;
+	}
+	Utils::VideoReceiver::getInstance().update();
+	if (currentMode == Mode::VIDEO) {
+		if (Utils::VideoReceiver::getInstance().isLive()) {
+			drawVideo(voice);
+			return;
+		}
+		currentMode = Mode::FULL; // the stream stopped
 	}
 	const auto people = VoiceControls::getActiveParticipants();
 	if (currentMode == Mode::COMPACT) {
