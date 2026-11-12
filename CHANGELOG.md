@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- **Save pictures and GIFs:** Y in the picture viewer saves them to the downloads folder. **Spoilers:** a caption that starts with ! sends the
+  file as a spoiler. **Clear Picture Cache** (Settings > Chat) frees the memory of pictures already seen.
 - **Software Decoder Test (experimental)** (Settings > Updates): decodes the video saved from a call with openh264 (Cisco, BSD licence), a decoder
   that reads the High profile, and shows the pictures at half size with the time each takes (`softtest.txt` on the SD card has the
   results). It is a test of whether a call's video could be seen as a slow picture.

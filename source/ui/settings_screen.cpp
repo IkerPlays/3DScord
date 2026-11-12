@@ -1,4 +1,5 @@
 #include "ui/settings_screen.h"
+#include "ui/image_manager.h"
 #include "ui/mvd_test_screen.h"
 #include "ui/soft_test_screen.h"
 #include "ui/video_test_screen.h"
@@ -248,6 +249,16 @@ void SettingsScreen::onEnter() {
 	};
 	imageCache.onUpdate = [](int val) { Config::getInstance().setImageCacheLevel(val); };
 	allItems.push_back(imageCache);
+
+	SettingItem clearImages;
+	clearImages.label = TR("settings.clear_images");
+	clearImages.description = TR("settings.desc.clear_images");
+	clearImages.type = SettingItemType::ACTION;
+	clearImages.action = []() {
+		ImageManager::getInstance().clear();
+		ScreenManager::getInstance().showToast(TR("settings.images_cleared"));
+	};
+	allItems.push_back(clearImages);
 
 	SettingItem uploadQuality;
 	uploadQuality.label = TR("settings.upload_quality");

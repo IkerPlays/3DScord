@@ -227,11 +227,23 @@ void Transfers::uploadFile(const std::string &channelId, const std::string &path
 			}
 		}
 
+		// A caption that starts with "!" sends the file as a spoiler: Discord hides it until it is tapped.
+		std::string text = caption;
+		if (!text.empty() && text[0] == '!') {
+			text.erase(0, 1);
+			while (!text.empty() && text[0] == ' ') {
+				text.erase(0, 1);
+			}
+			if (name.rfind("SPOILER_", 0) != 0) {
+				name = "SPOILER_" + name;
+			}
+		}
+
 		rapidjson::StringBuffer s;
 		rapidjson::Writer<rapidjson::StringBuffer> w(s);
 		w.StartObject();
 		w.Key("content");
-		w.String(caption.c_str());
+		w.String(text.c_str());
 		w.Key("flags");
 		w.Int(0);
 		w.Key("attachments");

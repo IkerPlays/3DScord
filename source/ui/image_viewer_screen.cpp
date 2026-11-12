@@ -1,4 +1,5 @@
 #include "ui/image_viewer_screen.h"
+#include "utils/transfers.h"
 #include "core/config.h"
 #include "core/i18n.h"
 #include "ui/image_manager.h"
@@ -36,6 +37,11 @@ void ImageViewerScreen::update() {
 	if (kDown & KEY_B) {
 		ScreenManager::getInstance().returnToPreviousScreen();
 		return;
+	}
+	if (kDown & KEY_Y) {
+		// Saves the picture (a GIF too) to the downloads folder on the SD card.
+		Utils::Transfers::getInstance().saveAttachment(url, filename.empty() ? "image" : filename, 0);
+		ScreenManager::getInstance().showToast(TR("viewer.saving"));
 	}
 	if (kDown & KEY_X) {
 		turns = (turns + 1) % 4;
