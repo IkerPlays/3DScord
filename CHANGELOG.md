@@ -1,23 +1,17 @@
 # Changelog
 
-## Unreleased
-- **Decoder Test result so far:** on a New 2DS XL the decoder start (`mvdstdInit`) does not answer, so the video of a call cannot be shown yet. A tries the usual work
-  buffer, X a quarter of it and Y a tenth, to see whether the size is the cause (one try per visit).
-- **Decoder Test:** the decoder is started away from the screen with a 6 second limit (the start call did not answer on a New 2DS XL), and
-  every picture is now rendered with its configuration (before it was refused every time).
-- **Decoder Test writes `mvdtest.txt`** on the SD card with every step and result (easy to send), and the diagnostics report keeps
-  300 log lines instead of 120.
-- **Decoder Test fix:** the app was missing the permission to use the New 3DS video decoder (`mvd:STD`), so the test could not start. The
-  error code of the step that fails is now shown on the screen too.
-- **Decoder Test and Video Test are easier to find:** they are also in Settings > Updates, next to Diagnostics.
-- **Decoder Test (experimental, New 3DS only)** (Channel Tools): plays the newest video saved from a call
-  (`recordings/video_in_*.264`) with the hardware video decoder of the New 3DS, shown on the top screen at half size, and
-  shows how many frames it decoded and how long each takes. It is the test to know whether the video of a call can be seen on
-  the console. Every step is written to the log (send me the diagnostics report).
-- **Video (experimental), second step:** with the setting on, the video that someone sends in a call is joined, decrypted and
-  saved on the SD card (`recordings/video_in_*.264`, up to 3 MB) so it can be checked on a computer (VLC / ffprobe tells the size
-  and the format). It is still NOT shown on the console.
-- **Diagnostics report:** it now also holds the last log lines kept in memory, so it is useful even with the log file turned off.
+## 0.13.0
+Experiments with video in calls: what Discord sends was measured and saved, and the result is that the video cannot be shown on the 3DS.
+
+- **Video (experimental)** (Settings > Voice, off by default): tells Discord this console can receive video; the video that someone sends
+  in a call is joined, decrypted and saved on the SD card (`recordings/video_in_*.264`, up to 3 MB), and it plays on a computer
+  (H.264 High, 928x522, 30 fps). It is NOT shown on the console, and with it on the audio of the call can stutter. Leave it off.
+- **Decoder Test** (Settings > Updates, experimental, New 3DS only): tried the hardware video decoder on that saved video. Result on a
+  New 2DS XL: the decoder does not start (it blocks) with any work buffer size, so the video of a call cannot be seen. It writes
+  `mvdtest.txt` with every step. The app now declares the permission for the decoder service.
+- **Video Test** (Settings > Updates): records 10 seconds of camera video as H.264 and shows how fast the console encodes it.
+- **Diagnostics report** holds the last 300 log lines kept in memory (useful with the log file off), and the Decoder and Video tests are
+  in Settings > Updates next to it.
 
 ## 0.12.0
 Call view on the top screen, camera mode, uploads up to your Discord limit, voice tools, an experimental video encoder and chat previews.
