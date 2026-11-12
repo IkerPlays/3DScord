@@ -535,6 +535,8 @@
     "videotest.failed": "The camera or the encoder could not be started",
     "message.menu.read_file": "Read File",
     "message.audio_file": "Audio:",
+    "settings.video_experimental": "Video (experimental)",
+    "settings.desc.video_experimental": "Tells Discord this console can receive video in calls and writes what arrives to the log. Video is NOT shown yet. Take effect on the next call.",
     "message.menu.react": "Add Reaction",
     "message.menu.reply": "Reply",
     "message.menu.retry": "Retry Loading",

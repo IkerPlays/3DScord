@@ -521,6 +521,17 @@ void SettingsScreen::onEnter() {
 	tone.onUpdate = [](int val) { Config::getInstance().setVoiceTone(val - 2); };
 	allItems.push_back(tone);
 
+	SettingItem videoExp;
+	videoExp.label = TR("settings.video_experimental");
+	videoExp.description = TR("settings.desc.video_experimental");
+	videoExp.type = SettingItemType::TOGGLE;
+	videoExp.value = Config::getInstance().isVideoExperimental() ? 1 : 0;
+	videoExp.min = 0;
+	videoExp.max = 1;
+	videoExp.valueFormatter = [](int val) { return (val == 1) ? TR("common.enabled") : TR("common.disabled"); };
+	videoExp.onUpdate = [](int val) { Config::getInstance().setVideoExperimental(val == 1); };
+	allItems.push_back(videoExp);
+
 	SettingItem busy;
 	busy.label = TR("settings.busy_mode");
 	busy.description = TR("settings.desc.busy_mode");

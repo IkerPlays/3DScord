@@ -162,6 +162,7 @@ class VoiceClient {
 	bool speakingSent = false;
 	uint64_t transmitUntil = 0;
 	std::atomic<uint64_t> establishedAt{0};
+	std::map<int, std::pair<uint32_t, size_t>> videoSeen; // video experiment: packets and bytes per payload type
 	std::string ringChannelId;
 	std::atomic<bool> outgoingRing{false};
 	std::atomic<bool> ringPlaying{false};

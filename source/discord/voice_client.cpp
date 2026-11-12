@@ -28,6 +28,7 @@ constexpr int VOICE_GATEWAY_VERSION = 8;
 constexpr int CLOSE_NORMAL = 1000;
 constexpr int CLOSE_DAVE_REQUIRED = 4017;
 constexpr int OPUS_PAYLOAD_TYPE = 120;
+constexpr int VIDEO_PAYLOAD_TYPE = 101; // H.264, only offered with the video experiment on
 // Opus RTP always uses a 48kHz clock regardless of the encoder rate.
 constexpr uint32_t OPUS_FRAME_TICKS = 960;
 constexpr uint8_t OPUS_SILENCE_FRAME[] = {0xF8, 0xFF, 0xFE};
@@ -432,7 +433,8 @@ void VoiceClient::sendIdentify() {
 	writer.Key("token");
 	writer.String(token.c_str());
 	writer.Key("video");
-	writer.Bool(false);
+	// Settings > Voice > Video (experimental): tells Discord this client can receive video.
+	writer.Bool(Config::getInstance().isVideoExperimental());
 	writer.Key("max_dave_protocol_version");
 	writer.Int(DAVE_PROTOCOL_VERSION);
 	writer.EndObject();
@@ -606,6 +608,25 @@ void VoiceClient::sendSelectProtocol() {
 	writer.Key("decode");
 	writer.Bool(true);
 	writer.EndObject();
+	if (Config::getInstance().isVideoExperimental()) {
+		// EXPERIMENTAL: offers H.264 so that Discord sends cameras and screens. They are only counted in the log for now.
+		writer.StartObject();
+		writer.Key("name");
+		writer.String("H264");
+		writer.Key("type");
+		writer.String("video");
+		writer.Key("priority");
+		writer.Int(1000);
+		writer.Key("payload_type");
+		writer.Int(VIDEO_PAYLOAD_TYPE);
+		writer.Key("rtx_payload_type");
+		writer.Int(VIDEO_PAYLOAD_TYPE + 1);
+		writer.Key("encode");
+		writer.Bool(false);
+		writer.Key("decode");
+		writer.Bool(true);
+		writer.EndObject();
+	}
 	writer.EndArray();
 	writer.EndObject();
 	writer.EndObject();
@@ -628,6 +649,16 @@ void VoiceClient::handleRtpPacket(uint8_t *packet, size_t len) {
 		return;
 	}
 	if (payloadType != OPUS_PAYLOAD_TYPE) {
+		// Video is not played yet: with the experiment on, what arrives is counted and written to the log.
+		if (Config::getInstance().isVideoExperimental()) {
+			auto &seen = videoSeen[payloadType];
+			seen.first++;
+			seen.second += len;
+			if (seen.first == 1 || seen.first % 300 == 0) {
+				Logger::log("[Voice] Video experiment: payload type %d, %u packets, %zu bytes", payloadType, seen.first,
+				            seen.second);
+			}
+		}
 		return;
 	}
 

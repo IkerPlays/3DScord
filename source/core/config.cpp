@@ -361,6 +361,9 @@ void Config::loadSettings() {
 			if (doc.HasMember("call_volume") && doc["call_volume"].IsInt()) {
 				callVolume = std::clamp(doc["call_volume"].GetInt(), 20, 200);
 			}
+			if (doc.HasMember("video_experimental") && doc["video_experimental"].IsBool()) {
+				videoExperimental = doc["video_experimental"].GetBool();
+			}
 			if (doc.HasMember("upload_quality") && doc["upload_quality"].IsInt()) {
 				uploadQuality = std::clamp(doc["upload_quality"].GetInt(), 0, 2);
 			}
@@ -469,6 +472,8 @@ void Config::saveSettings() {
 	writer.Int(pushToTalk);
 	writer.Key("call_volume");
 	writer.Int(callVolume);
+	writer.Key("video_experimental");
+	writer.Bool(videoExperimental);
 	writer.Key("upload_quality");
 	writer.Int(uploadQuality);
 	writer.Key("voice_tone");
@@ -675,6 +680,11 @@ void Config::setPushToTalk(int mode) {
 
 void Config::setCallVolume(int percent) {
 	callVolume = std::clamp(percent, 20, 200);
+	saveSettings();
+}
+
+void Config::setVideoExperimental(bool enabled) {
+	videoExperimental = enabled;
 	saveSettings();
 }
 
