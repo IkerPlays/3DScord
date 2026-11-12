@@ -31,8 +31,10 @@
  */
 
 #ifdef __3DS__
+extern "C" {
 #include <3ds/types.h>
 #include <3ds/allocator/linear.h>
+}
 #endif
 #include <stdlib.h>
 #include <string.h>
