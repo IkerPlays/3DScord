@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.10.0
+Typing indicator in DMs, follow announcement channels, pinned servers, forum tags and several bug fixes.
+
 - **Forum tags:** each forum post shows its tags before the title.
 - **Pinned servers:** Y on a server in the list pins it to the top (Y again unpins).
 - **Fixes:** cancelling a bot command's keyboard no longer sends the command; importing a theme can no longer delete one
