@@ -1049,6 +1049,33 @@ void MessageScreen::update() {
 						ScreenManager::getInstance().showToast(TR("message.unsaved"));
 					}
 				}
+			} else if (action == "CopyDraft") {
+				if (selectedIndex >= 0 && selectedIndex < (int)messages.size()) {
+					channelDrafts[channelId] = messages[selectedIndex].content;
+					ScreenManager::getInstance().showToast(TR("message.copied_draft"));
+				}
+			} else if (action == "Repeat") {
+				if (selectedIndex >= 0 && selectedIndex < (int)messages.size()) {
+					const std::string text = messages[selectedIndex].content;
+					auto &client = Discord::DiscordClient::getInstance();
+					Discord::Message optimisticMsg = createOptimisticMessage(text);
+					{
+						std::lock_guard<std::recursive_mutex> lock(messageMutex);
+						this->messages.push_back(optimisticMsg);
+						rebuildLayoutCache();
+						scrollToBottom();
+					}
+					client.sendMessage(
+					    channelId, text,
+					    [this, token = aliveToken, pendingId = optimisticMsg.id](const Discord::Message &sentMsg,
+					                                                             bool success, int errorCode) {
+						    if (!*token) {
+							    return;
+						    }
+						    this->handleMessageSendResult(pendingId, sentMsg, success, errorCode);
+					    },
+					    optimisticMsg.nonce);
+				}
 			} else if (action == "Details") {
 				if (selectedIndex >= 0 && selectedIndex < (int)messages.size()) {
 					const Discord::Message &target = messages[selectedIndex];
@@ -3778,6 +3805,12 @@ void MessageScreen::showMessageOptions() {
 
 		if (isMine && canSend) {
 			addOption("Edit", "message.menu.edit");
+		}
+		if (canSend && !msg.content.empty()) {
+			addOption("CopyDraft", "message.menu.copy_draft");
+			if (isMine) {
+				addOption("Repeat", "message.menu.repeat");
+			}
 		}
 
 		const Discord::Attachment *firstImage = nullptr;

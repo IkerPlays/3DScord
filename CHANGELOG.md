@@ -13,6 +13,7 @@
   a damaged picture, and it asks Discord for a new key frame (RTCP picture loss indication, at most every 1.5 s). Sending your own camera
   is not done.
 - **Exact Time** (message menu): shows the exact date and time a message was sent, and when it was edited.
+- **Copy to Draft** and **Send Again** (message menu): put a message's text in the draft, or send one of your own messages again.
 - **@everyone / @here confirmation:** a message with a mass mention is only sent when you send the same text a second time.
 - **Fix:** leaving a call no longer risks a crash while the video picture is being drawn.
 
