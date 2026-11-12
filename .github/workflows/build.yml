@@ -103,6 +103,12 @@ jobs:
           name: 3DScord
           path: dist/
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: 3DScord-elf
+          path: 3DScord.elf
+          retention-days: 7
+
   release:
     needs: [version, build]
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
