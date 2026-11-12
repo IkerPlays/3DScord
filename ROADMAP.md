@@ -161,6 +161,14 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
 - [ ] Not done: stronger noise cancelling, mute or pause when the lid closes (the app cannot tell when the lid closes)
 - [ ] Not possible: cameras and shared screens (no video on the 3DS; they show as badges)
 
+## Phase 17 — Images, files and camera (ideas 116-145)
+- [x] Turn a picture in the viewer; file size shown on attachments
+- [x] Camera mode with a live view, outer and inner camera, preview before sending
+- [x] Choose how much big pictures are shrunk when sent
+- [x] Upload up to the account's limit (Nitro, boosted servers), streamed from the SD card
+- [ ] Not possible: video calls, seeing other people's cameras or shared screens (the 3DS has no video encoder, and its
+      hardware decoder only exists on the New 3DS and cannot be used for Discord's streams)
+
 ## Not possible on the 3DS
 
 - **HOME menu widget.** The HOME menu cannot show anything from a running or closed app; only the icon and banner

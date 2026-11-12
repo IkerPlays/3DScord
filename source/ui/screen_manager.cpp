@@ -26,6 +26,7 @@
 #include "ui/voice_recorder_screen.h"
 #include "utils/redraw.h"
 #include "ui/call_view.h"
+#include "ui/camera_screen.h"
 #include "utils/voice_player.h"
 #include "utils/call_recorder.h"
 #include "utils/screenshot.h"
@@ -437,6 +438,9 @@ void ScreenManager::setScreen(ScreenType type) {
 		break;
 	case ScreenType::PIN_LOCK:
 		currentScreen = std::make_unique<PinLockScreen>();
+		break;
+	case ScreenType::CAMERA:
+		currentScreen = std::make_unique<CameraScreen>();
 		break;
 	}
 

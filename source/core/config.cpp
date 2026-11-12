@@ -361,6 +361,9 @@ void Config::loadSettings() {
 			if (doc.HasMember("call_volume") && doc["call_volume"].IsInt()) {
 				callVolume = std::clamp(doc["call_volume"].GetInt(), 20, 200);
 			}
+			if (doc.HasMember("upload_quality") && doc["upload_quality"].IsInt()) {
+				uploadQuality = std::clamp(doc["upload_quality"].GetInt(), 0, 2);
+			}
 			if (doc.HasMember("voice_tone") && doc["voice_tone"].IsInt()) {
 				voiceTone = std::clamp(doc["voice_tone"].GetInt(), -2, 2);
 			}
@@ -466,6 +469,8 @@ void Config::saveSettings() {
 	writer.Int(pushToTalk);
 	writer.Key("call_volume");
 	writer.Int(callVolume);
+	writer.Key("upload_quality");
+	writer.Int(uploadQuality);
 	writer.Key("voice_tone");
 	writer.Int(voiceTone);
 	writer.Key("busy_mode");
@@ -670,6 +675,11 @@ void Config::setPushToTalk(int mode) {
 
 void Config::setCallVolume(int percent) {
 	callVolume = std::clamp(percent, 20, 200);
+	saveSettings();
+}
+
+void Config::setUploadQuality(int level) {
+	uploadQuality = std::clamp(level, 0, 2);
 	saveSettings();
 }
 

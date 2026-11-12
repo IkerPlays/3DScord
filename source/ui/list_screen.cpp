@@ -10,6 +10,7 @@
 #include "ui/file_browser_screen.h"
 #include "ui/voice_recorder_screen.h"
 #include "discord/commands.h"
+#include "ui/camera_screen.h"
 #include "utils/call_recorder.h"
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
@@ -45,6 +46,7 @@ namespace UI {
 ListScreen::Mode ListScreen::pendingMode = ListScreen::Mode::PINS;
 std::string ListScreen::pendingSoundTarget;
 std::string ListScreen::pendingSoundName;
+size_t ListScreen::preferredGifVariant = 0;
 std::string ListScreen::pendingMoveUser;
 std::string ListScreen::pendingModUser;
 std::string ListScreen::pendingModGuild;
@@ -1012,15 +1014,23 @@ void ListScreen::startGifSearch() {
 	// Discord has changed these requests over time, so each is tried in a few forms until one gives GIFs.
 	gifPaths.clear();
 	gifTry = 0;
+	std::vector<std::string> forms;
 	if (query.empty()) {
-		gifPaths = {"/gifs/trending?provider=tenor&locale=en-US&media_format=gif",
-		            "/gifs/trending?provider=tenor&locale=en-US&media_format=mp4",
-		            "/gifs/trending-gifs?provider=tenor&locale=en-US&media_format=mp4", "/gifs/trending?provider=tenor"};
+		forms = {"/gifs/trending?provider=tenor&locale=en-US&media_format=gif",
+		         "/gifs/trending?provider=tenor&locale=en-US&media_format=mp4",
+		         "/gifs/trending-gifs?provider=tenor&locale=en-US&media_format=mp4", "/gifs/trending?provider=tenor"};
 	} else {
 		const std::string q = "q=" + urlEncode(query);
-		gifPaths = {"/gifs/search?" + q + "&media_format=gif&provider=tenor&locale=en-US",
-		            "/gifs/search?" + q + "&media_format=mp4&provider=tenor&locale=en-US",
-		            "/gifs/search?" + q + "&provider=tenor&locale=en-US", "/gifs/search?" + q};
+		forms = {"/gifs/search?" + q + "&media_format=gif&provider=tenor&locale=en-US",
+		         "/gifs/search?" + q + "&media_format=mp4&provider=tenor&locale=en-US",
+		         "/gifs/search?" + q + "&provider=tenor&locale=en-US", "/gifs/search?" + q};
+	}
+	// The form that worked last time goes first, so the wait of the failed ones is only paid once.
+	gifVariants.clear();
+	for (size_t i = 0; i < forms.size(); i++) {
+		const size_t variant = (i + preferredGifVariant) % forms.size();
+		gifPaths.push_back(forms[variant]);
+		gifVariants.push_back(variant);
 	}
 	fetch(gifPaths[0]);
 }
@@ -1560,13 +1570,9 @@ void ListScreen::primaryAction(const Entry &entry) {
 		} else if (entry.id == "voicemsg") {
 			VoiceRecorderScreen::open(channelId);
 		} else if (entry.id == "photo") {
-			const std::string photo = Utils::Screenshot::takePhoto();
-			if (photo.empty()) {
-				sm.showToast(TR("photo.failed"));
-			} else {
-				Utils::Transfers::getInstance().uploadFile(channelId, photo, "");
-				sm.returnToPreviousScreen();
-			}
+			// Camera mode: the live view, A takes the photo, and it is shown before it is sent.
+			sm.returnToPreviousScreen();
+			CameraScreen::open(channelId);
 		} else if (entry.id == "commands") {
 			openReplacing(Mode::COMMANDS);
 		} else if (entry.id == "themeshare") {
@@ -2026,6 +2032,10 @@ void ListScreen::update() {
 		}
 	}
 	clampSelection();
+
+	if (mode == Mode::GIFS && !loading && !entries.empty() && gifTry < gifVariants.size()) {
+		preferredGifVariant = gifVariants[gifTry];
+	}
 
 	// The request gave nothing: the next form of it is tried.
 	if (mode == Mode::GIFS && !loading && entries.empty() && gifTry + 1 < gifPaths.size()) {

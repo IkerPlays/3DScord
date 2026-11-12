@@ -1,4 +1,5 @@
 #include "utils/image_compress.h"
+#include "core/config.h"
 #include "log.h"
 #include "utils/system_utils.h"
 #include <algorithm>
@@ -34,7 +35,12 @@ struct Attempt {
 	int side;
 	int quality;
 };
-constexpr Attempt ATTEMPTS[] = {{1600, 80}, {1280, 70}, {960, 60}, {640, 50}};
+constexpr Attempt ATTEMPTS[] = {{2048, 90}, {1600, 80}, {1280, 70}, {960, 60}, {640, 50}};
+// Settings > Chat > Picture Quality picks where the list is started: high, normal or small.
+size_t firstAttempt() {
+	const int q = Config::getInstance().getUploadQuality();
+	return q == 2 ? 0 : q == 0 ? 3 : 1;
+}
 } // namespace
 
 bool isCompressible(const std::string &path) {
@@ -51,7 +57,8 @@ CompressResult compressToJpeg(const std::string &path, long long maxBytes, std::
 	const int channels = (comp == 4 || comp == 2) ? 4 : 3;
 	const size_t decoded = (size_t)w * h * channels;
 	// The decoded picture, the biggest shrunk copy and the JPEG being built have to fit together.
-	const int firstSide = std::min(std::max(w, h), ATTEMPTS[0].side);
+	const size_t first = firstAttempt();
+	const int firstSide = std::min(std::max(w, h), ATTEMPTS[first].side);
 	const size_t shrunk = (size_t)firstSide * firstSide * 3;
 	if (decoded + shrunk + (size_t)maxBytes + 1024 * 1024 > System::heapFreeBytes()) {
 		Logger::log("[Compress] %dx%d does not fit in memory", w, h);
@@ -63,7 +70,8 @@ CompressResult compressToJpeg(const std::string &path, long long maxBytes, std::
 	}
 
 	CompressResult result = CompressResult::STILL_TOO_BIG;
-	for (const Attempt &attempt : ATTEMPTS) {
+	for (size_t ai = first; ai < sizeof(ATTEMPTS) / sizeof(ATTEMPTS[0]); ai++) {
+		const Attempt &attempt = ATTEMPTS[ai];
 		const int longest = std::max(w, h);
 		int outW = w;
 		int outH = h;

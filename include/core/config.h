@@ -138,6 +138,8 @@ class Config {
 	// How loud the microphone has to be to count as speaking: 0 (very sensitive) .. 10 (strict).
 	int getVoiceTone() const { return voiceTone; }
 	void setVoiceTone(int level);
+	int getUploadQuality() const { return uploadQuality; }
+	void setUploadQuality(int level);
 	int getCallVolume() const { return callVolume; }
 	void setCallVolume(int percent);
 	bool isBusyMode() const { return busyMode; }
@@ -230,6 +232,7 @@ class Config {
 	int pushToTalk;
 	int noiseGate;
 	int callVolume = 100;
+	int uploadQuality = 1; // 0 small, 1 normal, 2 high
 	int voiceTone = 0; // -2 warmer ... 2 brighter
 	bool busyMode = false;
 	bool autoReconnect = true;

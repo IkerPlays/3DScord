@@ -1836,7 +1836,17 @@ float MessageScreen::drawAttachment(const Discord::Attachment &attach, float x, 
 			         TR("message.voice_message") + " " + length);
 			return y + 12.0f;
 		}
-		const std::string name = hidden ? TR("message.spoiler") : attach.filename;
+		std::string name = hidden ? TR("message.spoiler") : attach.filename;
+		if (!hidden && attach.size > 0) {
+			// The size is shown so you know what you are about to download.
+			char size[32];
+			if (attach.size >= 1024 * 1024) {
+				snprintf(size, sizeof(size), " (%.1f MB)", attach.size / (1024.0 * 1024.0));
+			} else {
+				snprintf(size, sizeof(size), " (%d KB)", (attach.size + 1023) / 1024);
+			}
+			name += size;
+		}
 		drawText(x, y, 0.5f, 0.35f, 0.35f, ScreenManager::colorTextMuted(),
 		         Core::I18n::format(TR("message.file"), name));
 		return y + 12.0f;

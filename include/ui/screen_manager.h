@@ -32,7 +32,8 @@ enum class ScreenType {
 	PROFILE,
 	FILE_PREVIEW,
 	VOICE_RECORDER,
-	PIN_LOCK
+	PIN_LOCK,
+	CAMERA
 };
 
 class Screen {

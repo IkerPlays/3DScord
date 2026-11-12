@@ -166,6 +166,33 @@ std::string encodePng(const std::vector<uint8_t> &rgb, int w, int h) {
 	return out;
 }
 
+std::string savePhotoRgb565(const uint16_t *buf, int W, int H) {
+	std::vector<uint8_t> frame((size_t)W * H * 3);
+	for (int i = 0; i < W * H; i++) {
+		const uint16_t p = buf[i];
+		frame[i * 3] = (uint8_t)(((p >> 11) & 31) * 255 / 31);
+		frame[i * 3 + 1] = (uint8_t)(((p >> 5) & 63) * 255 / 63);
+		frame[i * 3 + 2] = (uint8_t)((p & 31) * 255 / 31);
+	}
+	const std::string png = encodePng(frame, W, H);
+	const std::string dir = std::string(CONFIG_DIR_PATH) + "/screenshots";
+	mkdir("sdmc:/3ds", 0777);
+	mkdir(CONFIG_DIR_PATH, 0777);
+	mkdir(dir.c_str(), 0777);
+	char name[64];
+	const time_t now = time(nullptr);
+	strftime(name, sizeof(name), "/photo_%Y%m%d_%H%M%S.png", gmtime(&now));
+	std::string result;
+	FILE *f = fopen((dir + name).c_str(), "wb");
+	if (f) {
+		if (fwrite(png.data(), 1, png.size(), f) == png.size()) {
+			result = dir + name;
+		}
+		fclose(f);
+	}
+	return result;
+}
+
 std::string takePhoto() {
 	constexpr int W = 400;
 	constexpr int H = 240;
@@ -203,28 +230,7 @@ std::string takePhoto() {
 	CAMU_Activate(SELECT_NONE);
 	camExit();
 	if (ok) {
-		frame.resize((size_t)W * H * 3);
-		for (int i = 0; i < W * H; i++) {
-			const u16 p = buf[i];
-			frame[i * 3] = (uint8_t)(((p >> 11) & 31) * 255 / 31);
-			frame[i * 3 + 1] = (uint8_t)(((p >> 5) & 63) * 255 / 63);
-			frame[i * 3 + 2] = (uint8_t)((p & 31) * 255 / 31);
-		}
-		const std::string png = encodePng(frame, W, H);
-		const std::string dir = std::string(CONFIG_DIR_PATH) + "/screenshots";
-		mkdir("sdmc:/3ds", 0777);
-		mkdir(CONFIG_DIR_PATH, 0777);
-		mkdir(dir.c_str(), 0777);
-		char name[64];
-		const time_t now = time(nullptr);
-		strftime(name, sizeof(name), "/photo_%Y%m%d_%H%M%S.png", gmtime(&now));
-		FILE *f = fopen((dir + name).c_str(), "wb");
-		if (f) {
-			if (fwrite(png.data(), 1, png.size(), f) == png.size()) {
-				result = dir + name;
-			}
-			fclose(f);
-		}
+		result = savePhotoRgb565(buf, W, H);
 	}
 	// After a failed transfer the camera may still write into the buffer: it is kept rather than freed.
 	if (ok) {

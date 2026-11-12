@@ -25,6 +25,7 @@ class ImageViewerScreen : public Screen {
 
 	std::string url;
 	std::string filename;
+	int turns = 0; // quarter turns clockwise, changed with X
 	float zoom;
 	float panX;
 	float panY;

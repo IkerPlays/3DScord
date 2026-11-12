@@ -246,6 +246,19 @@ void SettingsScreen::onEnter() {
 	imageCache.onUpdate = [](int val) { Config::getInstance().setImageCacheLevel(val); };
 	allItems.push_back(imageCache);
 
+	SettingItem uploadQuality;
+	uploadQuality.label = TR("settings.upload_quality");
+	uploadQuality.description = TR("settings.desc.upload_quality");
+	uploadQuality.type = SettingItemType::STEPPER;
+	uploadQuality.value = Config::getInstance().getUploadQuality();
+	uploadQuality.min = 0;
+	uploadQuality.max = 2;
+	uploadQuality.valueFormatter = [](int val) -> std::string {
+		return TR(val == 0 ? "settings.cache.small" : val == 2 ? "settings.cache.large" : "settings.cache.normal");
+	};
+	uploadQuality.onUpdate = [](int val) { Config::getInstance().setUploadQuality(val); };
+	allItems.push_back(uploadQuality);
+
 	// CHAT
 	allItems.push_back({TR("settings.section.chat"), "", SettingItemType::SECTION_HEADER});
 

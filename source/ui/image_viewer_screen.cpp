@@ -37,6 +37,11 @@ void ImageViewerScreen::update() {
 		ScreenManager::getInstance().returnToPreviousScreen();
 		return;
 	}
+	if (kDown & KEY_X) {
+		turns = (turns + 1) % 4;
+		panX = 0.0f;
+		panY = 0.0f;
+	}
 	if (kDown & KEY_A) {
 		zoom = 1.0f;
 		panX = 0.0f;
@@ -111,10 +116,14 @@ void ImageViewerScreen::renderTop(C3D_RenderTarget *target) {
 	Tex3DS_SubTexture subtex = {(u16)info.originalW, (u16)info.originalH, 0.0f, 1.0f, uMax, 1.0f - vMax};
 	const C2D_Image img = {info.tex, &subtex};
 
-	const float fit = std::min((float)TOP_SCREEN_WIDTH / info.originalW, (float)TOP_SCREEN_HEIGHT / info.originalH);
+	// A picture turned a quarter occupies the screen with its sides swapped.
+	const bool sideways = (turns % 2) == 1;
+	const float shownW = sideways ? info.originalH : info.originalW;
+	const float shownH = sideways ? info.originalW : info.originalH;
+	const float fit = std::min((float)TOP_SCREEN_WIDTH / shownW, (float)TOP_SCREEN_HEIGHT / shownH);
 	const float scale = fit * zoom;
-	const float w = info.originalW * scale;
-	const float h = info.originalH * scale;
+	const float w = shownW * scale;
+	const float h = shownH * scale;
 
 	// Keep some of the image on screen whatever the zoom.
 	const float limitX = std::max(0.0f, (w + TOP_SCREEN_WIDTH) / 2.0f - 40.0f);
@@ -122,9 +131,21 @@ void ImageViewerScreen::renderTop(C3D_RenderTarget *target) {
 	panX = std::clamp(panX, -limitX, limitX);
 	panY = std::clamp(panY, -limitY, limitY);
 
-	const float x = (TOP_SCREEN_WIDTH - w) / 2.0f + panX;
-	const float y = (TOP_SCREEN_HEIGHT - h) / 2.0f + panY;
-	C2D_DrawImageAt(img, x, y, 0.5f, nullptr, scale, scale);
+	if (turns == 0) {
+		const float x = (TOP_SCREEN_WIDTH - w) / 2.0f + panX;
+		const float y = (TOP_SCREEN_HEIGHT - h) / 2.0f + panY;
+		C2D_DrawImageAt(img, x, y, 0.5f, nullptr, scale, scale);
+	} else {
+		// Turned about its own centre, which sits where the middle of the picture should be.
+		const float drawW = info.originalW * scale;
+		const float drawH = info.originalH * scale;
+		C2D_DrawParams params;
+		params.pos = {TOP_SCREEN_WIDTH / 2.0f + panX, TOP_SCREEN_HEIGHT / 2.0f + panY, drawW, drawH};
+		params.center = {drawW / 2.0f, drawH / 2.0f};
+		params.depth = 0.5f;
+		params.angle = turns * 1.57079632679f;
+		C2D_DrawImage(img, &params, nullptr);
+	}
 	ImageManager::getInstance().markDrawn(info.animation);
 }
 

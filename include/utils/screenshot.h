@@ -16,6 +16,9 @@ void request(const std::string &channelId);
 // A PNG (stored, uncompressed) of w x h pixels, three bytes per pixel in RGB order.
 std::string encodePng(const std::vector<uint8_t> &rgb, int w, int h);
 
+// Saves a picture from the camera (RGB565, w x h) as a PNG in the screenshots folder and returns its path.
+std::string savePhotoRgb565(const uint16_t *buf, int w, int h);
+
 // Takes a photo with the outer camera and saves it as a PNG in the screenshots folder. Blocks for about a second.
 // Returns the file path, or an empty string when the camera is not available.
 std::string takePhoto();

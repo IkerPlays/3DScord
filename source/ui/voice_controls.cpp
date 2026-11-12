@@ -3,6 +3,7 @@
 #include "discord/avatar_cache.h"
 #include "discord/discord_client.h"
 #include "discord/voice_client.h"
+#include "ui/call_view.h"
 #include "ui/image_manager.h"
 #include "ui/screen_manager.h"
 #include "ui/voice_popup.h"
@@ -62,9 +63,27 @@ void draw(float x, float y) {
 	                       : deafened     ? "romfs:/discord-icons/headphones-muted.png"
 	                                      : "romfs:/discord-icons/headphones.png";
 
-	drawButton(x, y, micIcon, muted || serverMuted);
-	drawButton(x + BUTTON_SIZE + BUTTON_GAP, y, deafIcon, deafened || serverDeafened);
-	drawButton(x + (BUTTON_SIZE + BUTTON_GAP) * 2.0f, y, "romfs:/discord-icons/phone-hangup.png", false);
+	// First button: what the top screen shows of the call (speaker in the corner, everyone, nothing).
+	drawRoundedRect(x, y, 0.54f, BUTTON_SIZE, BUTTON_SIZE, 8.0f, ScreenManager::colorBackgroundLight());
+	{
+		const u32 color = CallView::mode() == CallView::Mode::HIDDEN ? ScreenManager::colorTextMuted()
+		                                                           : ScreenManager::colorText();
+		// A small drawing of the top screen: the frame, and inside it either one tile or four.
+		C2D_DrawRectSolid(x + 6.0f, y + 8.0f, 0.55f, 18.0f, 14.0f, color);
+		C2D_DrawRectSolid(x + 7.5f, y + 9.5f, 0.56f, 15.0f, 11.0f, ScreenManager::colorBackgroundLight());
+		if (CallView::mode() == CallView::Mode::FULL) {
+			C2D_DrawRectSolid(x + 9.0f, y + 11.0f, 0.57f, 5.0f, 3.0f, color);
+			C2D_DrawRectSolid(x + 16.0f, y + 11.0f, 0.57f, 5.0f, 3.0f, color);
+			C2D_DrawRectSolid(x + 9.0f, y + 16.0f, 0.57f, 5.0f, 3.0f, color);
+			C2D_DrawRectSolid(x + 16.0f, y + 16.0f, 0.57f, 5.0f, 3.0f, color);
+		} else if (CallView::mode() == CallView::Mode::COMPACT) {
+			C2D_DrawRectSolid(x + 17.0f, y + 10.5f, 0.57f, 5.0f, 4.0f, color);
+		}
+	}
+	const float step = BUTTON_SIZE + BUTTON_GAP;
+	drawButton(x + step, y, micIcon, muted || serverMuted);
+	drawButton(x + step * 2.0f, y, deafIcon, deafened || serverDeafened);
+	drawButton(x + step * 3.0f, y, "romfs:/discord-icons/phone-hangup.png", false);
 }
 
 bool handleTouch(const touchPosition &touch, float x, float y) {
@@ -73,9 +92,15 @@ bool handleTouch(const touchPosition &touch, float x, float y) {
 	}
 
 	Discord::VoiceClient &voice = Discord::VoiceClient::getInstance();
-	const float deafX = x + BUTTON_SIZE + BUTTON_GAP;
+	const float step = BUTTON_SIZE + BUTTON_GAP;
+	const float deafX = x + step * 2.0f;
 
 	if (inButton(touch, x, y)) {
+		CallView::cycle();
+		return true;
+	}
+
+	if (inButton(touch, x + step, y)) {
 		if (!voice.isServerMuted()) {
 			voice.setMuted(!voice.isMuted());
 		}
@@ -89,7 +114,7 @@ bool handleTouch(const touchPosition &touch, float x, float y) {
 		return true;
 	}
 
-	if (inButton(touch, x + (BUTTON_SIZE + BUTTON_GAP) * 2.0f, y)) {
+	if (inButton(touch, x + step * 3.0f, y)) {
 		voice.disconnect();
 		return true;
 	}

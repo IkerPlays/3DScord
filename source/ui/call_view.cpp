@@ -104,6 +104,26 @@ void drawCompact(const std::vector<Discord::VoiceParticipant> &people, Discord::
 	}
 	drawText(x + 48.0f, y + 32.0f, 0.55f, 0.36f, 0.36f, ScreenManager::colorTextMuted(),
 	         clock(voice.connectedSeconds()) + "  " + std::to_string(people.size()));
+
+	// Anyone with the camera on or sharing the screen gets a line under the panel, speaking or not. The video itself
+	// cannot be shown on the 3DS.
+	float lineY = y + h + 3.0f;
+	int lines = 0;
+	for (const auto &p : people) {
+		if (lines >= 3) {
+			break;
+		}
+		if (!p.selfVideo && !p.selfStream) {
+			continue;
+		}
+		drawRoundedRect(x, lineY, 0.5f, w, 16.0f, 6.0f, C2D_Color32(0, 0, 0, 170));
+		drawBadges(p, x + 4.0f, lineY + 2.0f);
+		const float badgeW = (p.selfStream ? 31.0f : 0.0f) + (p.selfVideo ? 31.0f : 0.0f);
+		drawRichText(x + 6.0f + badgeW, lineY + 2.0f, 0.55f, 0.38f, 0.38f, ScreenManager::colorText(),
+		             getTruncatedRichText(p.name, w - 10.0f - badgeW, 0.38f, 0.38f));
+		lineY += 19.0f;
+		lines++;
+	}
 }
 
 void drawFull(const std::vector<Discord::VoiceParticipant> &people, Discord::VoiceClient &voice) {
