@@ -2003,6 +2003,15 @@ void ListScreen::writeDiagnosticsReport() {
 	};
 	report += "\n--- updater.log ---\n" + tail(std::string(CONFIG_DIR_PATH) + "/updater.log", 3000);
 	report += "\n--- 3dscord.log ---\n" + tail(std::string(CONFIG_DIR_PATH) + "/3dscord.log", 3000);
+	// The last lines kept in memory are added too, so the report is useful even with the log file turned off.
+	{
+		report += "\n--- last log lines (memory) ---\n";
+		const auto recent = Logger::getRecentLogs();
+		const size_t from = recent.size() > 120 ? recent.size() - 120 : 0;
+		for (size_t i = from; i < recent.size(); i++) {
+			report += recent[i].substr(0, 300) + "\n";
+		}
+	}
 	const std::string path = std::string(CONFIG_DIR_PATH) + "/diagnostics.txt";
 	ScreenManager::getInstance().showToast(Utils::File::writeFile(path, report) ? TR("diag.saved") : TR("diag.save_failed"));
 }

@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- **Diagnostics report:** it now also holds the last log lines kept in memory, so it is useful even with the log file turned off.
+
 ## 0.12.0
 Call view on the top screen, camera mode, uploads up to your Discord limit, voice tools, an experimental video encoder and chat previews.
 
