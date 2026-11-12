@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+- **Big pictures are shrunk:** a PNG/JPEG/BMP over 4 MB is reduced to 1600 px and sent as a JPEG instead of being refused.
+- **Forum filter:** Y in a forum cycles through its tags and shows only the posts with that tag.
+
 ## 0.10.0
 Typing indicator in DMs, follow announcement channels, pinned servers, forum tags and several bug fixes.
 
