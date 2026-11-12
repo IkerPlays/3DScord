@@ -9,7 +9,11 @@
 - **Cameras and shared screens in calls (experimental):** with Settings > Voice > Video on, the video of the first person who sends
   one is decoded in software (openh264) on the extra core of a New 3DS and shown at half size: small under the speaker panel in the
   compact call view, in the person's tile in the full view, and on the whole top screen in a new **Video** view (L+R cycles
-  compact > full > video > hidden). If the decoder falls behind it skips to the next key frame. Sending your own camera is not done.
+  compact > full > video > hidden). If the decoder falls behind, or a packet is lost, it waits for the next key frame instead of drawing
+  a damaged picture. Sending your own camera is not done.
+- **Exact Time** (message menu): shows the exact date and time a message was sent, and when it was edited.
+- **@everyone / @here confirmation:** a message with a mass mention is only sent when you send the same text a second time.
+- **Fix:** leaving a call no longer risks a crash while the video picture is being drawn.
 
 ## 0.13.0
 Experiments with video in calls: what Discord sends was measured and saved, and the result is that the video cannot be shown on the 3DS.

@@ -125,6 +125,7 @@ float bottomButtonY() {
 bool pollEnded(const Discord::Poll &poll);
 
 static std::unordered_map<std::string, std::string> channelDrafts;
+static std::string everyoneConfirmed; // text with @everyone/@here that was already warned about
 
 constexpr float BLOCK_GAP = 4.0f;
 constexpr float BLOCK_WIDTH = 400.0f - 42.0f - 10.0f;
@@ -1047,6 +1048,25 @@ void MessageScreen::update() {
 						store.removeSaved(target.id);
 						ScreenManager::getInstance().showToast(TR("message.unsaved"));
 					}
+				}
+			} else if (action == "Details") {
+				if (selectedIndex >= 0 && selectedIndex < (int)messages.size()) {
+					const Discord::Message &target = messages[selectedIndex];
+					auto exact = [](const std::string &iso) {
+						struct tm t;
+						if (!MessageUtils::getLocalTm(iso, t)) {
+							return std::string("?");
+						}
+						char buf[40];
+						snprintf(buf, sizeof(buf), "%04d-%02d-%02d %02d:%02d:%02d", t.tm_year + 1900, t.tm_mon + 1, t.tm_mday,
+						         t.tm_hour, t.tm_min, t.tm_sec);
+						return std::string(buf);
+					};
+					std::string text = TR("message.details.sent") + " " + exact(target.timestamp);
+					if (!target.edited_timestamp.empty()) {
+						text += "  " + TR("message.details.edited") + " " + exact(target.edited_timestamp);
+					}
+					ScreenManager::getInstance().showToast(text);
 				}
 			} else if (action == "JumpToReply") {
 				if (selectedIndex >= 0 && selectedIndex < (int)messages.size()) {
@@ -3625,7 +3645,17 @@ void MessageScreen::openKeyboard() {
 
 	auto res = runKeyboard(TR("common.message_hint"), channelDrafts[channelId]);
 
+	if (res.button == SWKBD_BUTTON_RIGHT && !res.text.empty() &&
+	    (res.text.find("@everyone") != std::string::npos || res.text.find("@here") != std::string::npos) &&
+	    everyoneConfirmed != res.text) {
+		// Mass mentions need a second send of the same text, so a slip does not ping the whole server.
+		everyoneConfirmed = res.text;
+		channelDrafts[channelId] = res.text;
+		ScreenManager::getInstance().showToast(TR("message.confirm_everyone"));
+		return;
+	}
 	if (res.button == SWKBD_BUTTON_RIGHT && !res.text.empty()) {
+		everyoneConfirmed.clear();
 		channelDrafts.erase(channelId);
 		Discord::Message optimisticMsg = createOptimisticMessage(res.text);
 		{
@@ -3842,6 +3872,10 @@ void MessageScreen::showMessageOptions() {
 
 	if (hasFailed) {
 		addOption("Retry", "message.menu.retry");
+	}
+
+	if (!msg.isEphemeral() && msg.id.substr(0, 8) != "pending_") {
+		addOption("Details", "message.menu.details");
 	}
 
 	addOption("Cancel", "message.menu.cancel");

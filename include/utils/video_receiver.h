@@ -36,9 +36,10 @@ class VideoReceiver {
   private:
 	VideoReceiver() = default;
 	void run();
+	struct Impl;
+	Impl &ensure();
 	void convert(const uint8_t *y, const uint8_t *u, const uint8_t *v, int width, int height, int strideY, int strideUV);
 
-	struct Impl;
 	Impl *impl = nullptr;
 	C3D_Tex texture;
 	bool textureReady = false;

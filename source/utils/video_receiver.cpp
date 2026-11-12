@@ -23,6 +23,7 @@ struct VideoReceiver::Impl {
 	LightEvent wake;
 	WorkerThread thread;
 	bool running = false;
+	bool resetPending = false;
 	bool quit = false;
 	std::string owner;
 	uint8_t *slots[SLOTS] = {nullptr, nullptr, nullptr};
@@ -53,13 +54,7 @@ void VideoReceiver::submit(const std::string &userId, const uint8_t *data, size_
 	if (size == 0 || size > FRAME_MAX) {
 		return;
 	}
-	if (!impl) {
-		impl = new Impl();
-		LightLock_Init(&impl->lock);
-		LightEvent_Init(&impl->wake, RESET_ONESHOT);
-		memset(&texture, 0, sizeof(texture));
-	}
-	Impl &s = *impl;
+	Impl &s = ensure();
 	LightLock_Lock(&s.lock);
 	if (s.owner.empty()) {
 		s.owner = userId;
@@ -94,6 +89,17 @@ void VideoReceiver::submit(const std::string &userId, const uint8_t *data, size_
 		s.thread.start([this] { run(); }, 3, 96 * 1024, true);
 	}
 	LightEvent_Signal(&s.wake);
+}
+
+// The state lives for the whole run of the app, so the screen thread never reads something the media thread is freeing.
+VideoReceiver::Impl &VideoReceiver::ensure() {
+	if (!impl) {
+		impl = new Impl();
+		LightLock_Init(&impl->lock);
+		LightEvent_Init(&impl->wake, RESET_ONESHOT);
+		memset(&texture, 0, sizeof(texture));
+	}
+	return *impl;
 }
 
 void VideoReceiver::lost() {
@@ -236,6 +242,16 @@ void VideoReceiver::update() {
 	}
 	Impl &s = *impl;
 	LightLock_Lock(&s.lock);
+	if (s.resetPending) {
+		// The call ended: the texture is released here, on the screen thread that uses it.
+		s.resetPending = false;
+		if (textureReady) {
+			C3D_TexDelete(&texture);
+		}
+		textureReady = false;
+		gotPicture = false;
+		shownVersion = 0;
+	}
 	if (s.version == shownVersion || !s.ready) {
 		LightLock_Unlock(&s.lock);
 		return;
@@ -294,11 +310,10 @@ void VideoReceiver::stop() {
 	LightLock_Unlock(&s.lock);
 	LightEvent_Signal(&s.wake);
 	s.thread.join();
-	if (textureReady) {
-		C3D_TexDelete(&texture);
-	}
-	for (auto *slot : s.slots) {
+	LightLock_Lock(&s.lock);
+	for (auto &slot : s.slots) {
 		free(slot);
+		slot = nullptr;
 	}
 	if (s.front) {
 		linearFree(s.front);
@@ -306,11 +321,16 @@ void VideoReceiver::stop() {
 	if (s.ready) {
 		linearFree(s.ready);
 	}
-	delete impl;
-	impl = nullptr;
-	textureReady = false;
-	gotPicture = false;
-	shownVersion = 0;
+	s.front = s.ready = nullptr;
+	s.readyW = s.readyH = 0;
+	s.head = s.count = 0;
+	s.needKey = true;
+	s.owner.clear();
+	s.version = 0;
+	s.running = false;
+	s.quit = false;
+	s.resetPending = true;
+	LightLock_Unlock(&s.lock);
 }
 
 } // namespace Utils
