@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- **Decoder Test:** the decoder is started away from the screen with a 6 second limit (the start call did not answer on a New 2DS XL), and
+  every picture is now rendered with its configuration (before it was refused every time).
 - **Decoder Test writes `mvdtest.txt`** on the SD card with every step and result (easy to send), and the diagnostics report keeps
   300 log lines instead of 120.
 - **Decoder Test fix:** the app was missing the permission to use the New 3DS video decoder (`mvd:STD`), so the test could not start. The

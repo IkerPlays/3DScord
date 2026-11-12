@@ -4,6 +4,9 @@
 #include "screen_manager.h"
 #include <3ds.h>
 #include <citro3d.h>
+#include <3ds/services/mvd.h>
+#include "utils/worker_thread.h"
+#include <atomic>
 #include <string>
 #include <vector>
 
@@ -58,6 +61,11 @@ class MvdTestScreen : public Screen {
 	double msMax = 0.0;
 	u32 lastStatus = 0;
 	u32 initError = 0;
+	MVDSTD_Config config;               // given to the decoder with every picture it renders
+	Utils::WorkerThread starter;        // starts the decoder away from the screen: the call may never answer
+	std::atomic<int> startState{0};     // 0 not started, 1 starting, 2 started, 3 failed
+	u64 startRequestedAt = 0;
+	bool startTimedOut = false;
 };
 
 } // namespace UI

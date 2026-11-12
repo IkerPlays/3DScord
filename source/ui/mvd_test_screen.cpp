@@ -74,6 +74,13 @@ void MvdTestScreen::open() { ScreenManager::getInstance().pushScreen(ScreenType:
 MvdTestScreen::MvdTestScreen() { memset(&texture, 0, sizeof(texture)); }
 
 MvdTestScreen::~MvdTestScreen() {
+	// If the decoder never answered, its thread is still stuck inside the call: it is left alone rather than waited for.
+	if (starter.joinable() && !startTimedOut) {
+		starter.join();
+	}
+	if (startTimedOut) {
+		return;
+	}
 	stopDecoder();
 	if (textureReady) {
 		C3D_TexDelete(&texture);
@@ -222,11 +229,9 @@ bool MvdTestScreen::startDecoder() {
 		return false;
 	}
 	memset(output, 0, (size_t)width * height * 2);
-	MVDSTD_Config config;
 	mvdstdGenerateDefaultConfig(&config, (u32)width, (u32)height, (u32)width, (u32)height, nullptr, (u32 *)output, nullptr);
-	rc = MVDSTD_SetConfig(&config);
-	note("[MvdTest] SetConfig = 0x%08lX", (unsigned long)rc);
-	initError = (u32)rc;
+	note("[MvdTest] Config ready: %dx%d, output %p", width, height, (void *)output);
+	rc = 0;
 	textureReady = C3D_TexInit(&texture, TEX_W, TEX_H, GPU_RGB565);
 	if (textureReady) {
 		C3D_TexSetFilter(&texture, GPU_LINEAR, GPU_LINEAR);
@@ -269,7 +274,7 @@ void MvdTestScreen::step() {
 		paramsDone = true;
 	}
 	if ((u32)rc == MVD_STATUS_FRAMEREADY || ((n.type == 5 || n.type == 1) && MVD_CHECKNALUPROC_SUCCESS((u32)rc) && paramsDone)) {
-		const Result rr = mvdstdRenderVideoFrame(nullptr, true);
+		const Result rr = mvdstdRenderVideoFrame(&config, true);
 		if (R_FAILED(rr) && framesShown < 3) {
 			note("[MvdTest] RenderVideoFrame = 0x%08lX", (unsigned long)rr);
 		}
@@ -309,17 +314,41 @@ void MvdTestScreen::update() {
 		note("[MvdTest] A pressed (running %d, decoder %d, NALs %zu, width %d)", running ? 1 : 0, decoderOn ? 1 : 0,
 		            nals.size(), width);
 	}
-	if (!running && !decoderOn && (kDown & KEY_A) && !nals.empty() && width > 0) {
-		if (startDecoder()) {
-			running = true;
-			status = TR("mvdtest.running");
-		} else {
-			// The error code of the step that failed is shown, to tell what the decoder refused.
-			char code[96];
-			snprintf(code, sizeof(code), "%s (0x%08lX)", TR("mvdtest.failed").c_str(), (unsigned long)initError);
-			status = code;
-			stopDecoder();
+	if (!running && !decoderOn && startState == 0 && (kDown & KEY_A) && !nals.empty() && width > 0) {
+		// The decoder is started on another thread: if the call never answers, the screen still works.
+		startState = 1;
+		startRequestedAt = osGetTime();
+		status = TR("mvdtest.starting");
+		note("[MvdTest] Starting the decoder on its own thread");
+		starter.start(
+		    [this] {
+			    const bool ok = startDecoder();
+			    startState = ok ? 2 : 3;
+		    },
+		    1, 64 * 1024);
+		Utils::requestRedraw();
+	}
+	if (startState == 1) {
+		if (osGetTime() - startRequestedAt > 6000 && !startTimedOut) {
+			startTimedOut = true;
+			note("[MvdTest] The decoder start did not answer in 6 seconds (mvdstdInit is blocked)");
+			status = TR("mvdtest.timeout");
 		}
+		Utils::requestRedraw();
+	}
+	if (startState == 2 && !running && !startTimedOut) {
+		starter.join();
+		running = true;
+		status = TR("mvdtest.running");
+		startState = 4; // started and running
+		Utils::requestRedraw();
+	} else if (startState == 3 && !startTimedOut) {
+		starter.join();
+		char code[96];
+		snprintf(code, sizeof(code), "%s (0x%08lX)", TR("mvdtest.failed").c_str(), (unsigned long)initError);
+		status = code;
+		stopDecoder();
+		startState = 0;
 		Utils::requestRedraw();
 	}
 	if (running) {
