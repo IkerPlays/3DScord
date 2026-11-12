@@ -1,5 +1,43 @@
 # Changelog
 
+## 0.12.0
+Call view on the top screen, camera mode, uploads up to your Discord limit, voice tools, an experimental video encoder and chat previews.
+
+**Calls**
+- **Call view on the top screen:** the person speaking in the top right corner with a green ring, or everyone in the call as
+  tiles (with mute/deafen icons, the call time and statistics), or nothing so the chat has the whole screen. The first call
+  button on the bottom screen (or L+R) changes it. Cameras and shared screens cannot be shown on the 3DS: they appear as
+  CAM / LIVE badges.
+- **"Typing..." shows the real name** (not the ID) in direct messages and servers.
+- **Settings > Voice:** Call Volume, Busy (declines calls), Reconnect Calls (joins again if the call drops), Voice Tone
+  (warmer or brighter voices), Video (experimental, off).
+- **Call someone** from their profile (Left on the D-pad).
+- **Voice moderation:** in someone's volume window press X to mute them for everyone, Y to remove them from the call, L to move
+  them to another voice channel (needs the permissions).
+- **Voice messages you receive** show their length and can be played, at 1.5x, queued, or stopped (message menu). Ogg sound
+  files can be played too. **Record a Voice Message** from Channel Tools.
+- **Record the Call** (Channel Tools): saves the call as a WAV file in `recordings/` on the SD card. Tell everyone first.
+- **Soundboard** (Channel Tools): Discord's sounds and the sounds of the server of your call (Y switches).
+
+**Camera and files**
+- **Camera mode** (Channel Tools > Camera): live view on the top screen. The photo is only taken when you press A, R or tap, with a
+  self-timer on X (3 or 10 s). Y switches to the inner camera. It is shown before it is sent. The File button's browser opens
+  the same camera with X.
+- **Bigger files, up to your account's limit:** 10 MB, 50 MB with Nitro Basic/Classic or a level 2 server, 100 MB at level 3,
+  500 MB with Nitro. Files over 4 MB are sent straight from the SD card. A picture over the limit is shrunk to a JPEG
+  (Settings > Chat > Picture Quality when Sending sets how much).
+- **Images:** X turns the picture in the viewer; files in a message show their size.
+- **Read File** (message menu): small text files open in the app.
+- **Video Test (experimental)** (Channel Tools): records 10 seconds of camera video as H.264 (176x144) with a small built-in
+  encoder and shows how fast the 3DS encodes it. The file plays on a computer with VLC. Video calls themselves are not done.
+- **Video (experimental)** setting: tells Discord the console can receive video and logs what arrives. Nothing is shown yet.
+
+**Other**
+- **Updates** now has its own entry in the side menu (it checks right away); Settings keeps Previous Version, automatic updates
+  and devbuilds.
+- **GIF picker:** tries other forms of the request when Discord answers with nothing, remembers the one that worked.
+- **Pinned servers** (Y on a server), **forum tag filter** (Y in a forum), **DM "typing..." marker**, **Follow This Channel**.
+
 ## 0.11.0
 Big pictures are shrunk to fit, a tag filter for forums and fixes found in code review.
 
