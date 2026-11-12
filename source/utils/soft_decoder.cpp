@@ -7,6 +7,7 @@ namespace Utils {
 
 bool SoftDecoder::init() {
 	shutdown();
+	Logger::log("[SoftDecoder] creating");
 	if (WelsCreateDecoder(&decoder) != 0 || !decoder) {
 		decoder = nullptr;
 		return false;
@@ -18,12 +19,14 @@ bool SoftDecoder::init() {
 	param.uiTargetDqLayer = (uint8_t)-1;
 	param.eEcActiveIdc = ERROR_CON_SLICE_COPY;
 	param.bParseOnly = false;
+	Logger::log("[SoftDecoder] initialising");
 	if (decoder->Initialize(&param) != 0) {
 		WelsDestroyDecoder(decoder);
 		decoder = nullptr;
 		return false;
 	}
 	// One thread: the 3DS has no spare processor for more.
+	Logger::log("[SoftDecoder] initialised, setting threads");
 	int threads = 1;
 	decoder->SetOption(DECODER_OPTION_NUM_OF_THREADS, &threads);
 	Logger::log("[SoftDecoder] openh264 ready");

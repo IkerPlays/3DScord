@@ -1,3 +1,4 @@
+#include <malloc.h>
 #include "ui/soft_test_screen.h"
 #include "core/config.h"
 #include "core/i18n.h"
@@ -12,6 +13,11 @@
 #include <cstring>
 #include <dirent.h>
 #include <sys/stat.h>
+
+extern "C" {
+extern char *fake_heap_start;
+extern char *fake_heap_end;
+}
 
 namespace UI {
 
@@ -209,12 +215,18 @@ void SoftTestScreen::update() {
 		return;
 	}
 	if (!running && (kDown & KEY_A) && !nals.empty() && next == 0) {
-		note("[SoftTest] A pressed: starting openh264");
+		{
+			const struct mallinfo mi = mallinfo();
+			note("[SoftTest] A pressed: heap %ld KB, in use %d KB, free %d KB; starting openh264",
+			     (long)((fake_heap_end - fake_heap_start) / 1024), mi.uordblks / 1024, mi.fordblks / 1024);
+		}
+		note("[SoftTest] calling init");
 		if (!decoder.init()) {
 			status = TR("softtest.failed");
 			note("[SoftTest] The decoder could not start");
 			return;
 		}
+		note("[SoftTest] init ok");
 		running = true;
 		status = TR("mvdtest.running");
 	}
