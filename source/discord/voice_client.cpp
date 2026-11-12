@@ -641,7 +641,7 @@ void VoiceClient::sendSelectProtocol() {
 }
 
 namespace {
-constexpr size_t VIDEO_FRAME_MAX = 160 * 1024;      // the biggest frame that is kept
+constexpr size_t VIDEO_FRAME_MAX = 256 * 1024;      // the biggest frame that is kept
 constexpr size_t VIDEO_FILE_MAX = 3 * 1024 * 1024; // the file of the experiment stops growing here
 const uint8_t START_CODE[4] = {0, 0, 0, 1};
 } // namespace

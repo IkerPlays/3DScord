@@ -10,10 +10,28 @@
 namespace Utils {
 
 namespace {
-constexpr size_t FRAME_MAX = 160 * 1024;
+constexpr size_t FRAME_MAX = 256 * 1024;
 constexpr int SLOTS = 3;
 constexpr int TEX_W = 512;
 constexpr int TEX_H = 512;
+
+// A key frame has the parameter sets (NAL 7) or an IDR slice (NAL 5) before its first ordinary slice. An access unit can
+// start with other NAL units (delimiter, SEI), so the start codes are searched until the first slice.
+bool isKeyFrame(const uint8_t *d, size_t len) {
+	for (size_t i = 0; i + 3 < len; i++) {
+		if (d[i] == 0 && d[i + 1] == 0 && d[i + 2] == 1) {
+			const int type = d[i + 3] & 0x1F;
+			if (type == 7 || type == 5) {
+				return true;
+			}
+			if (type == 1) {
+				return false;
+			}
+			i += 2;
+		}
+	}
+	return false;
+}
 
 inline int clamp255(int v) { return v < 0 ? 0 : v > 255 ? 255 : v; }
 } // namespace
@@ -157,8 +175,7 @@ void VideoReceiver::run() {
 			LightLock_Unlock(&s.lock);
 
 			// A key frame carries the parameter sets (NAL 7) or is an IDR (NAL 5).
-			const int type = len > 4 ? (frame[4] & 0x1F) : 0;
-			const bool key = type == 7 || type == 5;
+			const bool key = needKey ? isKeyFrame(frame, len) : false;
 			if (needKey) {
 				if (!key) {
 					continue;

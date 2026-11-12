@@ -15,7 +15,8 @@
 - **Exact Time** (message menu): shows the exact date and time a message was sent, and when it was edited.
 - **Copy to Draft** and **Send Again** (message menu): put a message's text in the draft, or send one of your own messages again.
 - **@everyone / @here confirmation:** a message with a mass mention is only sent when you send the same text a second time.
-- **Fix:** leaving a call no longer risks a crash while the video picture is being drawn.
+- **Fix:** leaving a call no longer risks a crash while the video picture is being drawn; key frames of up to 256 KB are kept (they were dropped
+  above 160 KB) and a key frame that starts with a delimiter or SEI is recognised.
 
 ## 0.13.0
 Experiments with video in calls: what Discord sends was measured and saved, and the result is that the video cannot be shown on the 3DS.
