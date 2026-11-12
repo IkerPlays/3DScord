@@ -31,6 +31,7 @@
  */
 
 #ifdef __3DS__
+#include <3ds/types.h>
 #include <3ds/allocator/linear.h>
 #endif
 #include <stdlib.h>
