@@ -1,5 +1,6 @@
 #include "discord/voice_client.h"
 #include "core/config.h"
+#include "utils/call_recorder.h"
 #include "discord/discord_client.h"
 #include "log.h"
 #include "utils/json_utils.h"
@@ -934,6 +935,10 @@ void VoiceClient::pumpMicrophone(const std::string &selfId) {
 	uint8_t frame[512];
 
 	for (int handled = 0; handled < MAX_MIC_FRAMES_PER_PASS && capture.readFrame(pcm); handled++) {
+		if (Utils::CallRecorder::getInstance().isRecording()) {
+			int16_t silence[VoiceCapture::FRAME_SAMPLES] = {};
+			Utils::CallRecorder::getInstance().addNear(capture.isMuted() ? silence : pcm, VoiceCapture::FRAME_SAMPLES);
+		}
 		if (!daveReady && !daveWaitLogged) {
 			Logger::log("[Voice] Holding audio until the DAVE group is established");
 			daveWaitLogged = true;

@@ -1,4 +1,7 @@
 #include "discord/voice_audio.h"
+#include <algorithm>
+#include "core/config.h"
+#include "utils/call_recorder.h"
 #include "log.h"
 #include "utils/system_utils.h"
 
@@ -279,6 +282,20 @@ void VoiceAudio::renderFrame(int16_t *out) {
 		any = true;
 	}
 
+	// Voice Tone: a gentle tilt of the sound. The low part is followed with a slow filter and the rest is made
+	// louder (brighter) or quieter (warmer).
+	const int tone = Config::getInstance().getVoiceTone();
+	if (any && tone != 0) {
+		static float lowPart = 0.0f;
+		const float amount = tone * 0.35f;
+		for (int i = 0; i < FRAME_SAMPLES; i++) {
+			const float x = (float)out[i];
+			lowPart += 0.2f * (x - lowPart);
+			const float y = x + amount * (x - lowPart);
+			out[i] = (int16_t)std::clamp((int)y, -32768, 32767);
+		}
+	}
+
 	int peak = 0;
 	if (any) {
 		for (int i = 0; i < FRAME_SAMPLES; i++) {
@@ -298,6 +315,7 @@ void VoiceAudio::renderFrame(int16_t *out) {
 void VoiceAudio::submitFrame(ndspWaveBuf &buf) {
 	int16_t *pcm = (int16_t *)buf.data_vaddr;
 	renderFrame(pcm);
+	Utils::CallRecorder::getInstance().addFar(pcm, FRAME_SAMPLES);
 	DSP_FlushDataCache(pcm, FRAME_SAMPLES * sizeof(int16_t));
 	ndspChnWaveBufAdd(NDSP_CHANNEL, &buf);
 

@@ -64,6 +64,13 @@ Result setVoiceMute(const std::string &guildId, const std::string &userId, bool 
 	                     "Guild");
 }
 
+Result moveToVoiceChannel(const std::string &guildId, const std::string &userId, const std::string &channelId) {
+	auto http = Api::authorized();
+	return Api::toResult(http.patch(base() + "/guilds/" + guildId + "/members/" + userId,
+	                                "{\"channel_id\":\"" + channelId + "\"}"),
+	                     "Guild");
+}
+
 Result disconnectFromVoice(const std::string &guildId, const std::string &userId) {
 	auto http = Api::authorized();
 	return Api::toResult(http.patch(base() + "/guilds/" + guildId + "/members/" + userId, "{\"channel_id\":null}"),

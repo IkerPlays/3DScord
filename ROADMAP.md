@@ -157,8 +157,8 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
 - [x] Sounds when someone joins or leaves; Call Volume; Busy mode; reconnect when the call drops
 - [x] Call a friend from their profile; mute or remove someone from the call (with permission)
 - [x] Receive voice messages: length, play, 1.5x, queue; record one from Channel Tools; soundboard
-- [ ] Not done yet: move someone to another voice channel, equalizer, stronger noise cancelling, record the call,
-      mute when the lid closes
+- [x] Move someone to another voice channel; record the call; Voice Tone (simple equalizer)
+- [ ] Not done: stronger noise cancelling, mute or pause when the lid closes (the app cannot tell when the lid closes)
 - [ ] Not possible: cameras and shared screens (no video on the 3DS; they show as badges)
 
 ## Not possible on the 3DS

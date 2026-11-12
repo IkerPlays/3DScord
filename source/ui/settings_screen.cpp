@@ -494,6 +494,20 @@ void SettingsScreen::onEnter() {
 	callVol.onUpdate = [](int val) { Config::getInstance().setCallVolume(val * 10); };
 	allItems.push_back(callVol);
 
+	SettingItem tone;
+	tone.label = TR("settings.voice_tone");
+	tone.description = TR("settings.desc.voice_tone");
+	tone.type = SettingItemType::STEPPER;
+	tone.value = Config::getInstance().getVoiceTone() + 2;
+	tone.min = 0;
+	tone.max = 4;
+	tone.valueFormatter = [](int val) -> std::string {
+		return TR(val == 0 ? "tone.warmest" : val == 1 ? "tone.warm" : val == 2 ? "tone.normal" : val == 3 ? "tone.bright"
+		                                                                                                 : "tone.brightest");
+	};
+	tone.onUpdate = [](int val) { Config::getInstance().setVoiceTone(val - 2); };
+	allItems.push_back(tone);
+
 	SettingItem busy;
 	busy.label = TR("settings.busy_mode");
 	busy.description = TR("settings.desc.busy_mode");

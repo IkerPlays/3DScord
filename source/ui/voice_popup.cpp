@@ -4,6 +4,7 @@
 #include "discord/discord_client.h"
 #include "discord/guild_tools.h"
 #include "discord/voice_client.h"
+#include "ui/list_screen.h"
 #include "ui/image_manager.h"
 #include "ui/screen_manager.h"
 #include "utils/message_utils.h"
@@ -130,7 +131,7 @@ void VoicePopup::render() {
 			line += "X: " + TR(serverMuted ? "voice.mod_unmute" : "voice.mod_mute");
 		}
 		if (have & (1ULL << 24)) {
-			line += (line.empty() ? "" : "   ") + std::string("Y: ") + TR("voice.mod_kick");
+			line += (line.empty() ? "" : "   ") + std::string("Y: ") + TR("voice.mod_kick") + "   L: " + TR("voice.mod_move");
 		}
 		if (!line.empty()) {
 			drawCenteredText(POPUP_Y + 107.0f, 0.93f, 0.32f, 0.32f, ScreenManager::colorTextMuted(), line, 320.0f);
@@ -198,6 +199,12 @@ bool VoicePopup::handleKeys(u32 kDown) {
 	if (kDown & KEY_B) {
 		close();
 		Utils::requestRedraw();
+		return true;
+	}
+	if (!isSelf && !guildId.empty() && guildId != "DM" && (kDown & KEY_L) &&
+	    (Discord::DiscordClient::getInstance().getGuildPermissions(guildId) & (1ULL << 24))) {
+		close();
+		ListScreen::openMoveVoice(userId);
 		return true;
 	}
 	if (!isSelf && !guildId.empty() && guildId != "DM" && (kDown & (KEY_X | KEY_Y))) {

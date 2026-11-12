@@ -36,6 +36,7 @@ Result followAnnouncements(const std::string &announcementChannelId, const std::
 
 // Voice moderation (needs Mute Members / Move Members). Muting is for everyone in the server.
 Result setVoiceMute(const std::string &guildId, const std::string &userId, bool muted);
+Result moveToVoiceChannel(const std::string &guildId, const std::string &userId, const std::string &channelId);
 Result disconnectFromVoice(const std::string &guildId, const std::string &userId);
 
 // Plays a soundboard sound for everyone in the voice channel you are in. guildId is empty for Discord's own sounds.

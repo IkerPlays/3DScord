@@ -361,6 +361,9 @@ void Config::loadSettings() {
 			if (doc.HasMember("call_volume") && doc["call_volume"].IsInt()) {
 				callVolume = std::clamp(doc["call_volume"].GetInt(), 20, 200);
 			}
+			if (doc.HasMember("voice_tone") && doc["voice_tone"].IsInt()) {
+				voiceTone = std::clamp(doc["voice_tone"].GetInt(), -2, 2);
+			}
 			if (doc.HasMember("busy_mode") && doc["busy_mode"].IsBool()) {
 				busyMode = doc["busy_mode"].GetBool();
 			}
@@ -463,6 +466,8 @@ void Config::saveSettings() {
 	writer.Int(pushToTalk);
 	writer.Key("call_volume");
 	writer.Int(callVolume);
+	writer.Key("voice_tone");
+	writer.Int(voiceTone);
 	writer.Key("busy_mode");
 	writer.Bool(busyMode);
 	writer.Key("auto_reconnect");
@@ -665,6 +670,11 @@ void Config::setPushToTalk(int mode) {
 
 void Config::setCallVolume(int percent) {
 	callVolume = std::clamp(percent, 20, 200);
+	saveSettings();
+}
+
+void Config::setVoiceTone(int level) {
+	voiceTone = std::clamp(level, -2, 2);
 	saveSettings();
 }
 

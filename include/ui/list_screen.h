@@ -23,6 +23,8 @@ class ListScreen : public Screen {
 	// Notification sound of a server or channel (the id of the server or channel and a name to show).
 	static void openSounds(const std::string &targetId, const std::string &targetName);
 	// Kick, ban or time out one member of a server.
+	// Opens the voice channel list so that picking a channel moves someone there instead of joining it.
+	static void openMoveVoice(const std::string &userId);
 	static void openModeration(const std::string &userId, const std::string &guildId, const std::string &name);
 
 	ListScreen();
@@ -80,6 +82,7 @@ class ListScreen : public Screen {
 	static Mode pendingMode;
 	static std::string pendingSoundTarget;
 	static std::string pendingSoundName;
+	static std::string pendingMoveUser;
 	static std::string pendingModUser;
 	static std::string pendingModGuild;
 
@@ -96,6 +99,7 @@ class ListScreen : public Screen {
 	Theme editTheme; // the theme being made in the theme editor
 	std::string soundTarget;
 	std::string soundTargetName;
+	std::string moveUser; // set when the voice channel list is picking where to move someone
 	std::string modUser;
 	std::string modGuild;
 	long diagLatencyMs = -1;

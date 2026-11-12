@@ -27,6 +27,7 @@
 #include "utils/redraw.h"
 #include "ui/call_view.h"
 #include "utils/voice_player.h"
+#include "utils/call_recorder.h"
 #include "utils/screenshot.h"
 #include "utils/transfers.h"
 #include "utils/utf8_utils.h"
@@ -505,6 +506,7 @@ void ScreenManager::update() {
 		return;
 	}
 
+	Utils::CallRecorder::getInstance().flush();
 	{
 		const std::string playerError = Utils::VoicePlayer::getInstance().takeError();
 		if (!playerError.empty()) {

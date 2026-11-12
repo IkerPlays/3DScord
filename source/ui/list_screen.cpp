@@ -10,6 +10,7 @@
 #include "ui/file_browser_screen.h"
 #include "ui/voice_recorder_screen.h"
 #include "discord/commands.h"
+#include "utils/call_recorder.h"
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #include "ui/image_manager.h"
@@ -44,6 +45,7 @@ namespace UI {
 ListScreen::Mode ListScreen::pendingMode = ListScreen::Mode::PINS;
 std::string ListScreen::pendingSoundTarget;
 std::string ListScreen::pendingSoundName;
+std::string ListScreen::pendingMoveUser;
 std::string ListScreen::pendingModUser;
 std::string ListScreen::pendingModGuild;
 
@@ -185,6 +187,12 @@ void ListScreen::openModeration(const std::string &userId, const std::string &gu
 	ScreenManager::getInstance().pushScreen(ScreenType::LIST);
 }
 
+void ListScreen::openMoveVoice(const std::string &userId) {
+	pendingMoveUser = userId;
+	pendingMode = Mode::VOICE_CHANNELS;
+	ScreenManager::getInstance().pushScreen(ScreenType::LIST);
+}
+
 void ListScreen::openSounds(const std::string &targetId, const std::string &targetName) {
 	pendingSoundTarget = targetId;
 	pendingSoundName = targetName;
@@ -207,6 +215,8 @@ ListScreen::ListScreen()
 	channelId = Discord::DiscordClient::getInstance().getSelectedChannelId();
 	soundTarget = pendingSoundTarget;
 	soundTargetName = pendingSoundName;
+	moveUser = pendingMoveUser;
+	pendingMoveUser.clear();
 	modUser = pendingModUser;
 	modGuild = pendingModGuild;
 	if (mode == Mode::THEME_EDIT) {
@@ -534,6 +544,7 @@ void ListScreen::loadLocal() {
 		        {"readserver", channelId, TR("list.mark_server_read"), TR("list.tools.read_server")},
 		        {"archive", channelId, TR("list.archive_thread"), TR("list.tools.archive")},
 		        {"follow", channelId, TR("follow.title"), TR("list.tools.follow")},
+		        {"recordcall", channelId, TR("record.title"), TR("list.tools.record")},
 		        {"soundboard", channelId, TR("soundboard.title"), TR("list.tools.soundboard")},
 		        {"voicemsg", channelId, TR("voice_msg.title"), TR("list.tools.voicemsg")},
 		        {"photo", channelId, TR("photo.title"), TR("list.tools.photo")},
@@ -1185,6 +1196,14 @@ void ListScreen::primaryAction(const Entry &entry) {
 			voice.disconnect();
 			sm.showToast(TR("voice.left"));
 			load();
+		} else if (entry.id.rfind("join:", 0) == 0 && !moveUser.empty()) {
+			const size_t split = entry.id.rfind(':');
+			const auto r = Discord::GuildTools::moveToVoiceChannel(entry.id.substr(5, split - 5), moveUser,
+			                                                      entry.id.substr(split + 1));
+			sm.showToast(r.ok ? TR("mod.done") : r.message);
+			if (r.ok) {
+				sm.returnToPreviousScreen();
+			}
 		} else if (entry.id.rfind("join:", 0) == 0) {
 			const size_t split = entry.id.rfind(':');
 			const std::string guildId = entry.id.substr(5, split - 5);
@@ -1493,6 +1512,19 @@ void ListScreen::primaryAction(const Entry &entry) {
 				openReplacing(Mode::FOLLOW);
 			} else {
 				sm.showToast(TR("follow.not_announcement"));
+			}
+		} else if (entry.id == "recordcall") {
+			auto &recorder = Utils::CallRecorder::getInstance();
+			if (recorder.isRecording()) {
+				recorder.stop();
+				sm.showToast(TR("record.saved"));
+			} else if (Discord::VoiceClient::getInstance().getState() != Discord::VoiceState::ESTABLISHED) {
+				sm.showToast(TR("soundboard.need_call"));
+			} else if (recorder.start()) {
+				sm.showToast(TR("record.started"));
+				sm.returnToPreviousScreen();
+			} else {
+				sm.showToast(TR("record.failed"));
 			}
 		} else if (entry.id == "soundboard") {
 			if (Discord::VoiceClient::getInstance().getState() != Discord::VoiceState::ESTABLISHED) {
