@@ -19,6 +19,8 @@ class VideoReceiver {
 
 	// Media thread: one whole frame in Annex B. Only the first person who sends video is followed.
 	void submit(const std::string &userId, const uint8_t *data, size_t size);
+	// Media thread: a frame was lost or could not be decrypted, so the next ones cannot be decoded until a key frame comes.
+	void lost();
 	// Leaves the call: stops the worker and frees everything.
 	void stop();
 

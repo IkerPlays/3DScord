@@ -39,6 +39,8 @@ struct VideoReceiver::Impl {
 	u64 lastPicture = 0;
 	uint32_t decoded = 0;
 	uint32_t dropped = 0;
+	uint32_t lostFrames = 0;
+	uint32_t errors = 0;
 	double msTotal = 0;
 };
 
@@ -94,6 +96,19 @@ void VideoReceiver::submit(const std::string &userId, const uint8_t *data, size_
 	LightEvent_Signal(&s.wake);
 }
 
+void VideoReceiver::lost() {
+	if (!impl) {
+		return;
+	}
+	LightLock_Lock(&impl->lock);
+	if (!impl->needKey) {
+		impl->count = 0;
+		impl->needKey = true;
+		impl->lostFrames++;
+	}
+	LightLock_Unlock(&impl->lock);
+}
+
 void VideoReceiver::run() {
 	Impl &s = *impl;
 	SoftDecoder decoder;
@@ -142,17 +157,22 @@ void VideoReceiver::run() {
 			bool got = false;
 			const int state = decoder.decode(frame, len, pic, got);
 			s.msTotal += (double)(svcGetSystemTick() - t0) / (double)SYSCLOCK_ARM11 * 1000.0;
-			if (state != 0 && !got) {
+			if (state != 0) {
+				// The decoder reports an error or a missing reference: what it drew is wrong, wait for a fresh key frame.
+				s.errors++;
+				if (s.errors <= 5 || s.errors % 50 == 0) {
+					Logger::log("[VideoRx] Decoder state %d (count %u, frames lost %u)", state, s.errors, s.lostFrames);
+				}
 				LightLock_Lock(&s.lock);
-				s.needKey = true; // the decoder lost track: wait for a fresh key frame
+				s.needKey = true;
 				LightLock_Unlock(&s.lock);
 				continue;
 			}
 			if (got) {
 				s.decoded++;
 				if (s.decoded <= 3 || s.decoded % 150 == 0) {
-					Logger::log("[VideoRx] %u pictures (%dx%d), %.1f ms each, %u queues dropped", s.decoded, pic.width,
-					            pic.height, s.msTotal / s.decoded, s.dropped);
+					Logger::log("[VideoRx] %u pictures (%dx%d), %.1f ms each, %u queues dropped, %u frames lost, %u errors",
+					            s.decoded, pic.width, pic.height, s.msTotal / s.decoded, s.dropped, s.lostFrames, s.errors);
 				}
 				convert(pic.y, pic.u, pic.v, pic.width, pic.height, pic.strideY, pic.strideUV);
 			}

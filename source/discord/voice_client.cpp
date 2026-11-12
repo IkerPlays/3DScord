@@ -739,6 +739,7 @@ void VoiceClient::handleVideoPayload(uint32_t ssrc, uint16_t seq, bool lastOfFra
 	videoAssemblyLen = 0;
 	if (broken || frameLen == 0) {
 		videoFramesDropped++;
+		Utils::VideoReceiver::getInstance().lost();
 		return;
 	}
 
@@ -747,6 +748,7 @@ void VoiceClient::handleVideoPayload(uint32_t ssrc, uint16_t seq, bool lastOfFra
 		if (!dave.decryptVideo(userId, videoAssembly, frameLen, videoDecrypted, VIDEO_FRAME_MAX, &written) ||
 		    written == 0) {
 			videoFramesBad++;
+			Utils::VideoReceiver::getInstance().lost();
 			if (videoFramesBad <= 3 || videoFramesBad % 100 == 0) {
 				Logger::log("[Video] DAVE could not decrypt a frame of %zu bytes (count %u, %s)", frameLen, videoFramesBad,
 				            dave.lastError().c_str());
