@@ -167,6 +167,9 @@ class VoiceClient {
 	std::unordered_map<uint32_t, std::string> videoSsrcToUser;
 	void handleVideoPayload(uint32_t ssrc, uint16_t seq, bool lastOfFrame, const uint8_t *payload, size_t len);
 	void closeVideoCapture();
+	void maybeRequestKeyFrame(uint32_t mediaSsrc);
+	uint64_t videoKeyRequestAt = 0;
+	uint32_t videoKeyRequests = 0;
 	uint8_t *videoAssembly = nullptr;  // the frame being joined (Annex B)
 	uint8_t *videoDecrypted = nullptr; // the same frame after DAVE
 	size_t videoAssemblyLen = 0;

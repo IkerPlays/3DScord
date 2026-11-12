@@ -21,6 +21,8 @@ class VideoReceiver {
 	void submit(const std::string &userId, const uint8_t *data, size_t size);
 	// Media thread: a frame was lost or could not be decrypted, so the next ones cannot be decoded until a key frame comes.
 	void lost();
+	// Media thread: true while decoding waits for a key frame (so one should be asked for).
+	bool wantsKeyFrame();
 	// Leaves the call: stops the worker and frees everything.
 	void stop();
 

@@ -115,6 +115,16 @@ void VideoReceiver::lost() {
 	LightLock_Unlock(&impl->lock);
 }
 
+bool VideoReceiver::wantsKeyFrame() {
+	if (!impl) {
+		return false;
+	}
+	LightLock_Lock(&impl->lock);
+	const bool want = impl->needKey && !impl->owner.empty();
+	LightLock_Unlock(&impl->lock);
+	return want;
+}
+
 void VideoReceiver::run() {
 	Impl &s = *impl;
 	SoftDecoder decoder;

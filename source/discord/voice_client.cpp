@@ -658,8 +658,54 @@ void VoiceClient::closeVideoCapture() {
 	videoDecrypted = nullptr;
 	videoAssemblyLen = 0;
 	videoFramesOk = videoFramesBad = videoFramesDropped = 0;
+	videoKeyRequestAt = 0;
+	videoKeyRequests = 0;
 	videoHaveSeq = false;
 	videoFileBytes = 0;
+}
+
+// RTCP picture loss indication (RFC 4585): asks the sender for a new key frame. The first 8 bytes stay in the clear and are
+// authenticated; the rest is encrypted like the media (the "rtpsize" modes).
+void VoiceClient::maybeRequestKeyFrame(uint32_t mediaSsrc) {
+	if (!gcm || udpSocket < 0 || !Utils::VideoReceiver::getInstance().wantsKeyFrame()) {
+		return;
+	}
+	const uint64_t now = osGetTime();
+	if (now < videoKeyRequestAt) {
+		return;
+	}
+	videoKeyRequestAt = now + 1500;
+
+	uint8_t packet[8 + 4 + GCM_TAG_SIZE + NONCE_SUFFIX_SIZE];
+	packet[0] = 0x81; // version 2, feedback type 1 (PLI)
+	packet[1] = 206;  // payload specific feedback
+	packet[2] = 0;
+	packet[3] = 2; // length in 32-bit words minus one
+	packet[4] = (uint8_t)(ssrc >> 24);
+	packet[5] = (uint8_t)(ssrc >> 16);
+	packet[6] = (uint8_t)(ssrc >> 8);
+	packet[7] = (uint8_t)ssrc;
+	const uint8_t media[4] = {(uint8_t)(mediaSsrc >> 24), (uint8_t)(mediaSsrc >> 16), (uint8_t)(mediaSsrc >> 8),
+	                          (uint8_t)mediaSsrc};
+
+	uint8_t iv[12];
+	memset(iv, 0, sizeof(iv));
+	iv[0] = (uint8_t)(sendNonce >> 24);
+	iv[1] = (uint8_t)(sendNonce >> 16);
+	iv[2] = (uint8_t)(sendNonce >> 8);
+	iv[3] = (uint8_t)sendNonce;
+	uint8_t *tag = packet + 8 + 4;
+	if (mbedtls_gcm_crypt_and_tag(gcm, MBEDTLS_GCM_ENCRYPT, 4, iv, sizeof(iv), packet, 8, media, packet + 8,
+	                              GCM_TAG_SIZE, tag) != 0) {
+		return;
+	}
+	memcpy(tag + GCM_TAG_SIZE, iv, NONCE_SUFFIX_SIZE);
+	send(udpSocket, packet, sizeof(packet), 0);
+	sendNonce++;
+	videoKeyRequests++;
+	if (videoKeyRequests <= 3 || videoKeyRequests % 20 == 0) {
+		Logger::log("[Video] Asked for a key frame (request %u)", videoKeyRequests);
+	}
 }
 
 // Joins the RTP packets of an H.264 frame (single NAL units, STAP-A and FU-A) into one Annex B frame, decrypts it with DAVE
@@ -740,6 +786,7 @@ void VoiceClient::handleVideoPayload(uint32_t ssrc, uint16_t seq, bool lastOfFra
 	if (broken || frameLen == 0) {
 		videoFramesDropped++;
 		Utils::VideoReceiver::getInstance().lost();
+		maybeRequestKeyFrame(ssrc);
 		return;
 	}
 
@@ -749,6 +796,7 @@ void VoiceClient::handleVideoPayload(uint32_t ssrc, uint16_t seq, bool lastOfFra
 		    written == 0) {
 			videoFramesBad++;
 			Utils::VideoReceiver::getInstance().lost();
+			maybeRequestKeyFrame(ssrc);
 			if (videoFramesBad <= 3 || videoFramesBad % 100 == 0) {
 				Logger::log("[Video] DAVE could not decrypt a frame of %zu bytes (count %u, %s)", frameLen, videoFramesBad,
 				            dave.lastError().c_str());
@@ -768,6 +816,7 @@ void VoiceClient::handleVideoPayload(uint32_t ssrc, uint16_t seq, bool lastOfFra
 	}
 
 	Utils::VideoReceiver::getInstance().submit(userId, videoDecrypted, written);
+	maybeRequestKeyFrame(ssrc);
 
 	// The decrypted frames go to the SD card so the stream can be checked on a computer (VLC, ffprobe).
 	if (videoFileBytes < VIDEO_FILE_MAX) {
