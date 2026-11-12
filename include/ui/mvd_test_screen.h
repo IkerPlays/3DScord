@@ -57,6 +57,7 @@ class MvdTestScreen : public Screen {
 	double msTotal = 0.0;
 	double msMax = 0.0;
 	u32 lastStatus = 0;
+	u32 initError = 0;
 };
 
 } // namespace UI

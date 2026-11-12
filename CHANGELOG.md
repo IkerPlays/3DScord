@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- **Decoder Test fix:** the app was missing the permission to use the New 3DS video decoder (`mvd:STD`), so the test could not start. The
+  error code of the step that fails is now shown on the screen too.
 - **Decoder Test and Video Test are easier to find:** they are also in Settings > Updates, next to Diagnostics.
 - **Decoder Test (experimental, New 3DS only)** (Channel Tools): plays the newest video saved from a call
   (`recordings/video_in_*.264`) with the hardware video decoder of the New 3DS, shown on the top screen at half size, and

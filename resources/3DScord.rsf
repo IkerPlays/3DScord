@@ -165,6 +165,7 @@ AccessControlInfo:
    - ir:u
    - ir:USER
    - mic:u
+   - mvd:STD
    - ndm:u
    - news:u
    - nwm::UDS

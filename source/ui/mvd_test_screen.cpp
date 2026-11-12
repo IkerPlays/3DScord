@@ -194,6 +194,7 @@ bool MvdTestScreen::parseSps(const unsigned char *nal, size_t len) {
 bool MvdTestScreen::startDecoder() {
 	Result rc = mvdstdInit(MVDMODE_VIDEOPROCESSING, MVD_INPUT_H264, MVD_OUTPUT_RGB565, MVD_DEFAULT_WORKBUF_SIZE, nullptr);
 	Logger::log("[MvdTest] mvdstdInit = 0x%08lX", (unsigned long)rc);
+	initError = (u32)rc;
 	if (R_FAILED(rc)) {
 		return false;
 	}
@@ -207,6 +208,7 @@ bool MvdTestScreen::startDecoder() {
 	mvdstdGenerateDefaultConfig(&config, (u32)width, (u32)height, (u32)width, (u32)height, nullptr, (u32 *)output, nullptr);
 	rc = MVDSTD_SetConfig(&config);
 	Logger::log("[MvdTest] SetConfig = 0x%08lX", (unsigned long)rc);
+	initError = (u32)rc;
 	textureReady = C3D_TexInit(&texture, TEX_W, TEX_H, GPU_RGB565);
 	if (textureReady) {
 		C3D_TexSetFilter(&texture, GPU_LINEAR, GPU_LINEAR);
@@ -285,14 +287,22 @@ void MvdTestScreen::update() {
 		ScreenManager::getInstance().returnToPreviousScreen();
 		return;
 	}
+	if (kDown & KEY_A) {
+		Logger::log("[MvdTest] A pressed (running %d, decoder %d, NALs %zu, width %d)", running ? 1 : 0, decoderOn ? 1 : 0,
+		            nals.size(), width);
+	}
 	if (!running && !decoderOn && (kDown & KEY_A) && !nals.empty() && width > 0) {
 		if (startDecoder()) {
 			running = true;
 			status = TR("mvdtest.running");
 		} else {
-			status = TR("mvdtest.failed");
+			// The error code of the step that failed is shown, to tell what the decoder refused.
+			char code[96];
+			snprintf(code, sizeof(code), "%s (0x%08lX)", TR("mvdtest.failed").c_str(), (unsigned long)initError);
+			status = code;
 			stopDecoder();
 		}
+		Utils::requestRedraw();
 	}
 	if (running) {
 		step();
