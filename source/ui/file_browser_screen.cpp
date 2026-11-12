@@ -1,5 +1,5 @@
 #include "ui/file_browser_screen.h"
-#include "utils/screenshot.h"
+#include "ui/camera_screen.h"
 #include "core/config.h"
 #include "ui/file_preview_screen.h"
 #include "core/i18n.h"
@@ -225,13 +225,8 @@ void FileBrowserScreen::update() {
 		return;
 	}
 	if (kDown & KEY_X) {
-		// A photo taken right now with the outer camera goes through the same preview as any other file.
-		const std::string photo = Utils::Screenshot::takePhoto();
-		if (photo.empty()) {
-			ScreenManager::getInstance().showToast(TR("photo.failed"));
-		} else {
-			previewFile(photo);
-		}
+		// The camera opens; the photo is only taken when you press the shutter and goes where a picked file would.
+		CameraScreen::openForPick(onPick, maxBytes);
 		return;
 	}
 	if (kDown & KEY_Y) {

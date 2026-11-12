@@ -23,6 +23,10 @@ constexpr int TEX_H = 256;
 
 std::string CameraScreen::pendingChannel;
 bool CameraScreen::pendingInner = false;
+std::function<void(const std::string &)> CameraScreen::pendingPick;
+long long CameraScreen::pendingMax = 0;
+bool CameraScreen::leaveOnReturn = false;
+int CameraScreen::timerSeconds = 0;
 
 void CameraScreen::open(const std::string &channelId) {
 	auto &sm = ScreenManager::getInstance();
@@ -31,15 +35,34 @@ void CameraScreen::open(const std::string &channelId) {
 		return;
 	}
 	pendingChannel = channelId;
+	pendingPick = nullptr;
 	pendingInner = false;
+	leaveOnReturn = false;
 	sm.pushScreen(ScreenType::CAMERA);
 }
 
-CameraScreen::CameraScreen() : channelId(pendingChannel), inner(pendingInner) { memset(&texture, 0, sizeof(texture)); }
+void CameraScreen::openForPick(std::function<void(const std::string &)> onPhoto, long long maxBytes) {
+	pendingChannel.clear();
+	pendingPick = std::move(onPhoto);
+	pendingMax = maxBytes;
+	pendingInner = false;
+	leaveOnReturn = false;
+	ScreenManager::getInstance().pushScreen(ScreenType::CAMERA);
+}
+
+CameraScreen::CameraScreen() : channelId(pendingChannel), onPhoto(pendingPick), maxBytes_(pendingMax), inner(pendingInner) {
+	memset(&texture, 0, sizeof(texture));
+	// Back from the preview of a photo that was sent: nothing left to do here.
+	leaving = leaveOnReturn;
+	leaveOnReturn = false;
+}
 
 CameraScreen::~CameraScreen() { stopCamera(); }
 
 void CameraScreen::onEnter() {
+	if (leaving) {
+		return;
+	}
 	if (!startCamera()) {
 		ScreenManager::getInstance().showToast(TR("photo.failed"));
 	}
@@ -142,7 +165,39 @@ void CameraScreen::pumpFrame() {
 	Utils::requestRedraw();
 }
 
+void CameraScreen::takePhoto() {
+	if (!haveFrame || frameCount <= 3 || !buffer) {
+		return;
+	}
+	const std::string photo = Utils::Screenshot::savePhotoRgb565(buffer, CAM_W, CAM_H);
+	if (photo.empty()) {
+		ScreenManager::getInstance().showToast(TR("photo.failed"));
+		return;
+	}
+	const std::string target = channelId;
+	const auto pick = onPhoto;
+	const long long limit = pick ? maxBytes_ : Discord::DiscordClient::getInstance().getUploadLimit(target);
+	stopCamera();
+	// The photo is shown first. It only goes anywhere when you confirm; B comes back to the camera to try again.
+	FilePreviewScreen::open(
+	    photo, limit,
+	    [target, photo, pick]() {
+		    // Coming back to the camera screen closes it: the photo is done.
+		    CameraScreen::leaveOnReturn = true;
+		    if (pick) {
+			    pick(photo);
+		    } else {
+			    Utils::Transfers::getInstance().uploadFile(target, photo, "");
+		    }
+	    },
+	    []() { ScreenManager::getInstance().returnToPreviousScreen(); });
+}
+
 void CameraScreen::update() {
+	if (leaving) {
+		ScreenManager::getInstance().returnToPreviousScreen();
+		return;
+	}
 	const u32 kDown = hidKeysDown();
 	if (kDown & KEY_B) {
 		ScreenManager::getInstance().returnToPreviousScreen();
@@ -152,27 +207,35 @@ void CameraScreen::update() {
 		stopCamera();
 		inner = !inner;
 		pendingInner = inner;
+		countdownEnd = 0;
 		if (!startCamera()) {
 			ScreenManager::getInstance().showToast(TR("photo.failed"));
 		}
 		return;
 	}
+	if (kDown & KEY_X) {
+		// Self-timer: off, 3 seconds, 10 seconds.
+		timerSeconds = timerSeconds == 0 ? 3 : timerSeconds == 3 ? 10 : 0;
+		countdownEnd = 0;
+		Utils::requestRedraw();
+	}
 	pumpFrame();
 
-	// A frame or two are dark while the exposure settles.
-	if ((kDown & KEY_A) && haveFrame && frameCount > 3 && buffer) {
-		const std::string photo = Utils::Screenshot::savePhotoRgb565(buffer, CAM_W, CAM_H);
-		if (photo.empty()) {
-			ScreenManager::getInstance().showToast(TR("photo.failed"));
-			return;
+	// The photo is only taken when you press: A, R or a tap on the touch screen (with the timer, that starts the count).
+	const bool shutter = (kDown & (KEY_A | KEY_R | KEY_TOUCH)) != 0;
+	if (countdownEnd != 0) {
+		if (osGetTime() >= countdownEnd) {
+			countdownEnd = 0;
+			takePhoto();
+		} else {
+			Utils::requestRedraw();
 		}
-		const std::string target = channelId;
-		const long long limit = Discord::DiscordClient::getInstance().getUploadLimit(target);
-		stopCamera();
-		// The photo is shown before it goes anywhere; after sending, B or the end of the preview comes back here.
-		FilePreviewScreen::open(
-		    photo, limit, [target, photo]() { Utils::Transfers::getInstance().uploadFile(target, photo, ""); },
-		    []() { ScreenManager::getInstance().returnToPreviousScreen(); });
+	} else if (shutter && haveFrame && frameCount > 3) {
+		if (timerSeconds > 0) {
+			countdownEnd = osGetTime() + (u64)timerSeconds * 1000ULL;
+		} else {
+			takePhoto();
+		}
 	}
 }
 
@@ -187,15 +250,25 @@ void CameraScreen::renderTop(C3D_RenderTarget *target) {
 		drawCenteredText(110.0f, 0.5f, 0.5f, 0.5f, ScreenManager::colorTextMuted(),
 		                 TR(cameraOn ? "common.loading" : "photo.failed"), 400.0f);
 	}
+	// The count of the self-timer, big in the middle, so you can get ready.
+	if (countdownEnd != 0) {
+		const u64 now = osGetTime();
+		const int left = countdownEnd > now ? (int)((countdownEnd - now + 999) / 1000) : 0;
+		drawCenteredText(80.0f, 0.55f, 2.2f, 2.2f, C2D_Color32(255, 255, 255, 255), std::to_string(left), 400.0f);
+	}
 }
 
 void CameraScreen::renderBottom(C3D_RenderTarget *target) {
 	C2D_TargetClear(target, ScreenManager::colorBackgroundDark());
 	C2D_SceneBegin(target);
-	drawCenteredText(80.0f, 0.5f, 0.6f, 0.6f, ScreenManager::colorSuccess(), TR("camera.take"), 320.0f);
-	drawCenteredText(115.0f, 0.5f, 0.5f, 0.5f, ScreenManager::colorTextMuted(),
+	drawCenteredText(60.0f, 0.5f, 0.6f, 0.6f, ScreenManager::colorSuccess(), TR("camera.take"), 320.0f);
+	drawCenteredText(95.0f, 0.5f, 0.5f, 0.5f, ScreenManager::colorTextMuted(),
 	                 TR(inner ? "camera.switch_to_outer" : "camera.switch_to_inner"), 320.0f);
-	drawCenteredText(145.0f, 0.5f, 0.5f, 0.5f, ScreenManager::colorTextMuted(), TR("voice_msg.hint_cancel"), 320.0f);
+	drawCenteredText(120.0f, 0.5f, 0.5f, 0.5f, ScreenManager::colorTextMuted(),
+	                 TR("camera.timer") + ": " + (timerSeconds == 0 ? TR("common.disabled") : std::to_string(timerSeconds) + " s"),
+	                 320.0f);
+	drawCenteredText(145.0f, 0.5f, 0.5f, 0.5f, ScreenManager::colorTextMuted(), TR("camera.nothing_sent"), 320.0f);
+	drawCenteredText(170.0f, 0.5f, 0.5f, 0.5f, ScreenManager::colorTextMuted(), TR("voice_msg.hint_cancel"), 320.0f);
 }
 
 } // namespace UI
