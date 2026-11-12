@@ -1,6 +1,7 @@
 #include "utils/transfers.h"
 #include "core/config.h"
 #include "core/i18n.h"
+#include "discord/discord_client.h"
 #include "log.h"
 #include "network/download.h"
 #include "network/http_client.h"
@@ -173,14 +174,22 @@ void Transfers::uploadFile(const std::string &channelId, const std::string &path
 		}
 		std::string data;
 		std::string name = path.substr(path.rfind('/') + 1);
-		if (st.st_size > MAX_UPLOAD_BYTES) {
-			// A picture that is too big is shrunk and sent as a JPEG instead of being refused.
+		for (char &c : name) {
+			if (c == '"' || c == '\r' || c == '\n') {
+				c = '_';
+			}
+		}
+		// The biggest file this account may send here: 10 MB, more with Nitro or in a boosted server.
+		const long long limit = Discord::DiscordClient::getInstance().getUploadLimit(channelId);
+		bool streamFromCard = false;
+		if (st.st_size > limit) {
+			// A picture over the limit is shrunk and sent as a JPEG instead of being refused.
 			if (!Image::isCompressible(path)) {
-				report(TR("transfer.too_big"));
+				report(Core::I18n::format(TR("transfer.over_limit"), std::to_string(limit / (1024 * 1024))));
 				return;
 			}
 			report(TR("transfer.compressing"));
-			const Image::CompressResult shrunk = Image::compressToJpeg(path, MAX_UPLOAD_BYTES, data);
+			const Image::CompressResult shrunk = Image::compressToJpeg(path, std::min(limit, MAX_UPLOAD_BYTES), data);
 			if (shrunk != Image::CompressResult::OK) {
 				report(TR(shrunk == Image::CompressResult::NO_MEMORY       ? "transfer.no_memory"
 				          : shrunk == Image::CompressResult::NOT_A_PICTURE ? "transfer.read_failed"
@@ -194,6 +203,9 @@ void Transfers::uploadFile(const std::string &channelId, const std::string &path
 			}
 			const size_t dot = name.rfind('.');
 			name = (dot == std::string::npos ? name : name.substr(0, dot)) + ".jpg";
+		} else if (st.st_size > MAX_UPLOAD_BYTES) {
+			// Too big to hold in memory: it is sent straight from the card.
+			streamFromCard = true;
 		} else {
 			// The file, the form around it and the copy the request keeps must all fit.
 			if ((size_t)st.st_size * 3 + 512 * 1024 > System::heapFreeBytes()) {
@@ -215,12 +227,6 @@ void Transfers::uploadFile(const std::string &channelId, const std::string &path
 			}
 		}
 
-		for (char &c : name) {
-			if (c == '"' || c == '\r' || c == '\n') {
-				c = '_';
-			}
-		}
-
 		rapidjson::StringBuffer s;
 		rapidjson::Writer<rapidjson::StringBuffer> w(s);
 		w.StartObject();
@@ -238,6 +244,23 @@ void Transfers::uploadFile(const std::string &channelId, const std::string &path
 		w.EndObject();
 		w.EndArray();
 		w.EndObject();
+
+		if (streamFromCard) {
+			Network::HttpResponse streamed;
+			Network::DownloadControl control;
+			std::atomic<bool> noCancel{false};
+			control.cancel = &noCancel;
+			const bool sent = Network::uploadMultipart("https://discord.com/api/v10/channels/" + channelId + "/messages",
+			                                           Config::getInstance().getToken(), s.GetString(), path, name,
+			                                           control, streamed);
+			if (sent) {
+				report(TR("transfer.uploaded"));
+			} else {
+				Logger::log("[Transfers] Streamed upload failed: %ld %s", streamed.statusCode, streamed.error.c_str());
+				report(streamed.statusCode == 413 ? TR("transfer.too_big") : apiError(streamed));
+			}
+			return;
+		}
 
 		const std::string boundary = randomBoundary();
 		std::string body;

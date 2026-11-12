@@ -105,6 +105,9 @@ class ListScreen : public Screen {
 	long diagLatencyMs = -1;
 	bool includeArchived = false;
 	int refreshTick = 0;
+	std::vector<std::string> gifPaths; // the requests to try, in order, until one gives GIFs
+	size_t gifTry = 0;
+	int soundSource = 0; // soundboard: 0 Discord's sounds, 1 the sounds of the server of the call
 	int stableFrames = 0; // frames the same row has been selected: the GIF is only fetched once you stop on it
 	int lastSelected = -1;
 	int friendFilter = 0; // 0 friends, 1 pending, 2 blocked

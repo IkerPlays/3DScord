@@ -37,6 +37,7 @@ class FileBrowserScreen : public Screen {
 
 	void readDirectory();
 	void activate(const Entry &entry);
+	void previewFile(const std::string &path);
 	void goUp();
 	std::string joined(const std::string &name) const;
 	void clampSelection();

@@ -13,13 +13,18 @@ void startFileUpload(const std::string &channelId) {
 		ScreenManager::getInstance().showToast(TR("message.no_permission"));
 		return;
 	}
-	FileBrowserScreen::open(TR("chat.btn.file"), FileBrowserScreen::Filter::ANY, [channelId](const std::string &path) {
-		std::string caption;
-		if (!promptText(TR("list.caption_hint"), "", caption, 500, false)) {
-			return;
-		}
-		Utils::Transfers::getInstance().uploadFile(channelId, path, caption);
-	});
+	// The preview does not refuse big files: a picture over the account's limit is shrunk when it is sent, and anything else
+	// over it is turned down then, with the limit in the message (10 MB, more with Nitro or a boosted server).
+	FileBrowserScreen::open(
+	    TR("chat.btn.file"), FileBrowserScreen::Filter::ANY,
+	    [channelId](const std::string &path) {
+		    std::string caption;
+		    if (!promptText(TR("list.caption_hint"), "", caption, 500, false)) {
+			    return;
+		    }
+		    Utils::Transfers::getInstance().uploadFile(channelId, path, caption);
+	    },
+	    false, 2048LL * 1024 * 1024);
 }
 
 } // namespace UI

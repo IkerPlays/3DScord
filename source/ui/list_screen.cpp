@@ -250,9 +250,16 @@ void ListScreen::load() {
 	case Mode::SEARCH:
 		startSearch();
 		break;
-	case Mode::SOUNDBOARD:
-		fetch("/soundboard-default-sounds");
+	case Mode::SOUNDBOARD: {
+		const std::string callGuild = Discord::VoiceClient::getInstance().getGuildId();
+		if (soundSource == 1 && !callGuild.empty() && callGuild != "DM") {
+			fetch("/guilds/" + callGuild + "/soundboard-sounds");
+		} else {
+			soundSource = 0;
+			fetch("/soundboard-default-sounds");
+		}
 		break;
+	}
 	case Mode::COMMANDS:
 		fetch("/channels/" + channelId + "/application-commands/search?type=1&limit=25&include_applications=false&query=" +
 		      urlEncode(query));
@@ -657,10 +664,19 @@ void ListScreen::fetch(const std::string &path) {
 				    }
 			    }
 		    } else if (fetchMode == Mode::SOUNDBOARD) {
+			    // Discord's own sounds come as a list; a server's come in an object with "items".
+			    const rapidjson::Value *sounds = nullptr;
 			    if (doc.IsArray()) {
-				    for (const auto &snd : doc.GetArray()) {
+				    sounds = &doc;
+			    } else if (doc.IsObject() && doc.HasMember("items") && doc["items"].IsArray()) {
+				    sounds = &doc["items"];
+			    }
+			    if (sounds) {
+				    for (const auto &snd : sounds->GetArray()) {
 					    if (snd.IsObject() && !str(snd, "sound_id").empty()) {
-						    list.push_back({str(snd, "sound_id"), "", str(snd, "name"), str(snd, "emoji_name")});
+						    // channelId carries the server the sound belongs to (empty for Discord's own).
+						    list.push_back({str(snd, "sound_id"), str(snd, "guild_id"), str(snd, "name"),
+						                    str(snd, "emoji_name")});
 					    }
 				    }
 			    }
@@ -993,11 +1009,20 @@ void ListScreen::startGifSearch() {
 		return;
 	}
 	query = text;
+	// Discord has changed these requests over time, so each is tried in a few forms until one gives GIFs.
+	gifPaths.clear();
+	gifTry = 0;
 	if (query.empty()) {
-		fetch("/gifs/trending?provider=tenor&locale=en-US&media_format=gif");
+		gifPaths = {"/gifs/trending?provider=tenor&locale=en-US&media_format=gif",
+		            "/gifs/trending?provider=tenor&locale=en-US&media_format=mp4",
+		            "/gifs/trending-gifs?provider=tenor&locale=en-US&media_format=mp4", "/gifs/trending?provider=tenor"};
 	} else {
-		fetch("/gifs/search?q=" + urlEncode(query) + "&media_format=gif&provider=tenor&locale=en-US");
+		const std::string q = "q=" + urlEncode(query);
+		gifPaths = {"/gifs/search?" + q + "&media_format=gif&provider=tenor&locale=en-US",
+		            "/gifs/search?" + q + "&media_format=mp4&provider=tenor&locale=en-US",
+		            "/gifs/search?" + q + "&provider=tenor&locale=en-US", "/gifs/search?" + q};
 	}
+	fetch(gifPaths[0]);
 }
 
 void ListScreen::startSearch() {
@@ -1258,7 +1283,7 @@ void ListScreen::primaryAction(const Entry &entry) {
 			sm.showToast(TR("soundboard.need_call"));
 			break;
 		}
-		const auto r = Discord::GuildTools::playSoundboard(voice.getChannelId(), entry.id, "");
+		const auto r = Discord::GuildTools::playSoundboard(voice.getChannelId(), entry.id, entry.channelId);
 		sm.showToast(r.ok ? TR("soundboard.played") : r.message);
 		break;
 	}
@@ -1862,6 +1887,10 @@ void ListScreen::tertiaryAction() {
 		includeArchived = !includeArchived;
 		load();
 		break;
+	case Mode::SOUNDBOARD:
+		soundSource = soundSource == 0 ? 1 : 0;
+		load();
+		break;
 	case Mode::COMMANDS: {
 		std::string text;
 		if (askText(TR("list.search_hint"), query, text, 50, false)) {
@@ -1997,6 +2026,21 @@ void ListScreen::update() {
 		}
 	}
 	clampSelection();
+
+	// The request gave nothing: the next form of it is tried.
+	if (mode == Mode::GIFS && !loading && entries.empty() && gifTry + 1 < gifPaths.size()) {
+		gifTry++;
+		Logger::log("[GIFs] Trying %s", gifPaths[gifTry].c_str());
+		{
+			std::lock_guard<std::mutex> lock(shared->mutex);
+			shared->loading = true;
+			shared->error.clear();
+			shared->version++;
+		}
+		loading = true;
+		error.clear();
+		fetch(gifPaths[gifTry]);
+	}
 
 	if (selected != lastSelected) {
 		lastSelected = selected;

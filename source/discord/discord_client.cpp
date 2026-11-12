@@ -1524,6 +1524,11 @@ bool DiscordClient::parseGuildFields(JsonPull &p, Guild &guild, const std::strin
 			memberCount = (int)p.asInt64();
 			return read;
 		}
+		if (key == "premium_tier") {
+			bool read = p.readValue();
+			guild.premiumTier = (int)p.asInt64();
+			return read;
+		}
 		if (key == "unavailable") {
 			bool read = p.readValue();
 			if (unavailable) {
@@ -1979,6 +1984,30 @@ void DiscordClient::rememberName(const User &user) {
 
 // The name to show for someone, from what the app already knows. When it knows nothing it asks Discord in the
 // background and shows "..." until the answer arrives.
+long long DiscordClient::getUploadLimit(const std::string &channelId) {
+	constexpr long long MB = 1024LL * 1024;
+	std::lock_guard<std::recursive_mutex> lock(clientMutex);
+	long long limit = 10 * MB;
+	// Nitro (500 MB), Nitro Classic and Nitro Basic (50 MB).
+	if (currentUser.premiumType == 2) {
+		limit = std::max(limit, 500 * MB);
+	} else if (currentUser.premiumType == 1 || currentUser.premiumType == 3) {
+		limit = std::max(limit, 50 * MB);
+	}
+	// A boosted server raises it for everyone in it.
+	const std::string guildId = getGuildIdFromChannel(channelId);
+	if (!guildId.empty() && guildId != "DM") {
+		if (const Guild *g = getGuildPtr(guildId)) {
+			if (g->premiumTier >= 3) {
+				limit = std::max(limit, 100 * MB);
+			} else if (g->premiumTier == 2) {
+				limit = std::max(limit, 50 * MB);
+			}
+		}
+	}
+	return limit;
+}
+
 std::string DiscordClient::resolveName(const std::string &userId, const std::string &channelId) {
 	auto known = knownNames.find(userId);
 	if (known != knownNames.end()) {
@@ -2738,6 +2767,7 @@ User DiscordClient::parseUserObject(const rapidjson::Value &uObj) {
 	u.avatar = Utils::Json::getString(uObj, "avatar");
 	u.discriminator = Utils::Json::getString(uObj, "discriminator");
 	u.bot = Utils::Json::getBool(uObj, "bot");
+	u.premiumType = Utils::Json::getInt(uObj, "premium_type");
 	return u;
 }
 

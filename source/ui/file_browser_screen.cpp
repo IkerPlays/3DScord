@@ -1,4 +1,5 @@
 #include "ui/file_browser_screen.h"
+#include "utils/screenshot.h"
 #include "core/config.h"
 #include "ui/file_preview_screen.h"
 #include "core/i18n.h"
@@ -184,8 +185,10 @@ void FileBrowserScreen::activate(const Entry &entry) {
 		return;
 	}
 	lastDirectory = directory;
-	const std::string path = joined(entry.name);
+	previewFile(joined(entry.name));
+}
 
+void FileBrowserScreen::previewFile(const std::string &path) {
 	// The file is shown before it goes anywhere; choosing another one comes back to this same folder.
 	PickCallback callback = onPick;
 	const std::string browserTitle = title;
@@ -219,6 +222,16 @@ void FileBrowserScreen::update() {
 
 	if (kDown & KEY_B) {
 		goUp();
+		return;
+	}
+	if (kDown & KEY_X) {
+		// A photo taken right now with the outer camera goes through the same preview as any other file.
+		const std::string photo = Utils::Screenshot::takePhoto();
+		if (photo.empty()) {
+			ScreenManager::getInstance().showToast(TR("photo.failed"));
+		} else {
+			previewFile(photo);
+		}
 		return;
 	}
 	if (kDown & KEY_Y) {

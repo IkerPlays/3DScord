@@ -18,6 +18,7 @@ struct User {
 	std::string global_name;
 	std::string avatar;
 	bool bot = false;
+	int premiumType = 0; // 0 none, 1 Nitro Classic, 2 Nitro, 3 Nitro Basic
 	UserStatus status = UserStatus::UNKNOWN;
 };
 
@@ -111,6 +112,7 @@ struct Guild {
 	std::string ownerId;
 	std::string rules_channel_id;
 	std::string description;
+	int premiumTier = 0; // server boost level
 	int approximateMemberCount = 0;
 	int approximatePresenceCount = 0;
 	std::vector<Channel> channels;

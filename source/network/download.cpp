@@ -97,4 +97,58 @@ bool downloadToFile(const std::string &url, const std::string &dest, const Downl
 	return true;
 }
 
+bool uploadMultipart(const std::string &url, const std::string &token, const std::string &payloadJson,
+                     const std::string &filePath, const std::string &fileName, const DownloadControl &control,
+                     HttpResponse &response) {
+	CURL *easy = curl_easy_init();
+	if (!easy) {
+		response.error = "Network unavailable";
+		return false;
+	}
+	HttpRequest request{url, "POST", "", {{"Authorization", token}}, 0};
+	curl_slist *headers = prepareTransfer(easy, request, response);
+
+	curl_mime *mime = curl_mime_init(easy);
+	curl_mimepart *json = curl_mime_addpart(mime);
+	curl_mime_name(json, "payload_json");
+	curl_mime_data(json, payloadJson.c_str(), payloadJson.size());
+	curl_mime_type(json, "application/json");
+	curl_mimepart *file = curl_mime_addpart(mime);
+	curl_mime_name(file, "files[0]");
+	curl_mime_filename(file, fileName.c_str());
+	curl_mime_filedata(file, filePath.c_str());
+	curl_easy_setopt(easy, CURLOPT_MIMEPOST, mime);
+
+	Context ctx{nullptr, &control, false};
+	curl_easy_setopt(easy, CURLOPT_TIMEOUT, 0L);
+	curl_easy_setopt(easy, CURLOPT_LOW_SPEED_LIMIT, 1024L);
+	curl_easy_setopt(easy, CURLOPT_LOW_SPEED_TIME, 60L);
+	curl_easy_setopt(easy, CURLOPT_NOPROGRESS, 0L);
+	curl_easy_setopt(easy, CURLOPT_XFERINFOFUNCTION, +[](void *userp, curl_off_t, curl_off_t, curl_off_t ultotal,
+	                                                    curl_off_t ulnow) -> int {
+		                 auto *c = static_cast<Context *>(userp);
+		                 if (c->control->downloaded) {
+			                 c->control->downloaded->store(ulnow);
+		                 }
+		                 if (c->control->total && ultotal > 0) {
+			                 c->control->total->store(ultotal);
+		                 }
+		                 return c->control->cancel && c->control->cancel->load() ? 1 : 0;
+	                 });
+	curl_easy_setopt(easy, CURLOPT_XFERINFODATA, &ctx);
+
+	const CURLcode code = curl_easy_perform(easy);
+	long status = 0;
+	curl_easy_getinfo(easy, CURLINFO_RESPONSE_CODE, &status);
+	response.statusCode = status;
+	response.success = code == CURLE_OK && status >= 200 && status < 300;
+	if (code != CURLE_OK) {
+		response.error = curl_easy_strerror(code);
+	}
+	curl_mime_free(mime);
+	curl_slist_free_all(headers);
+	curl_easy_cleanup(easy);
+	return response.success;
+}
+
 } // namespace Network

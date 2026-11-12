@@ -188,6 +188,8 @@ class DiscordClient {
 	void setSelectedGuildId(const std::string &id) { selectedGuildId = id; }
 	// What the user is playing or listening to (for example a Spotify track), empty when Discord has not said.
 	std::string getUserActivity(const std::string &userId);
+	// The biggest file this account can send in a channel: 10 MB, more with Nitro or a boosted server.
+	long long getUploadLimit(const std::string &channelId);
 	std::string getSelectedGuildId() const { return selectedGuildId; }
 
 	void setSelectedChannelId(const std::string &id) { selectedChannelId = id; }
