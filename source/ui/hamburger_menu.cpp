@@ -1,4 +1,5 @@
 #include "ui/hamburger_menu.h"
+#include "ui/updater_screen.h"
 #include "core/config.h"
 #include "core/i18n.h"
 #include "core/log.h"
@@ -29,6 +30,7 @@ void HamburgerMenu::refreshStrings() {
 		items.push_back({TR("menu.channel_tools"), MenuItemType::CHANNEL_TOOLS});
 	}
 	items.push_back({TR("menu.quick_access"), MenuItemType::QUICK_ACCESS});
+	items.push_back({TR("menu.updates"), MenuItemType::UPDATES});
 	items.push_back({TR("menu.settings"), MenuItemType::SETTINGS});
 	items.push_back({TR("menu.about"), MenuItemType::ABOUT});
 	if (selectedIndex >= (int)items.size()) {
@@ -141,6 +143,13 @@ void HamburgerMenu::update() {
 					return;
 				case MenuItemType::QUICK_ACCESS:
 					ListScreen::open(ListScreen::Mode::HUB);
+					close();
+					return;
+				case MenuItemType::UPDATES:
+					// Looks for a new version right away; the updater screen shows what it finds.
+					UpdaterScreen::downgrade = false;
+					UpdaterScreen::manualCheck = true;
+					sm.setScreen(ScreenType::UPDATER);
 					close();
 					return;
 				case MenuItemType::ABOUT:

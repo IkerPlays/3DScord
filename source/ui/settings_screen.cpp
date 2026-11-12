@@ -850,17 +850,6 @@ void SettingsScreen::addUpdateItems() {
 	version.type = SettingItemType::ACTION;
 	allItems.push_back(version);
 
-	SettingItem check;
-	check.label = TR("updater.check_now");
-	check.description = TR("updater.desc.check_now");
-	check.type = SettingItemType::ACTION;
-	check.action = []() {
-		UpdaterScreen::downgrade = false;
-		UpdaterScreen::manualCheck = true;
-		ScreenManager::getInstance().setScreen(ScreenType::UPDATER);
-	};
-	allItems.push_back(check);
-
 	SettingItem previous;
 	previous.label = TR("updater.previous");
 	previous.description = TR("updater.desc.previous");
