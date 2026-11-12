@@ -6,7 +6,9 @@
 #include "utils/system_utils.h"
 #include <3ds.h>
 #include <citro2d.h>
+#include <cstdarg>
 #include <cstdio>
+#include <sys/stat.h>
 #include <cstdlib>
 #include <cstring>
 #include <dirent.h>
@@ -48,6 +50,22 @@ struct Bits {
 	}
 };
 
+// Every step of the test is written to the log and to mvdtest.txt on the SD card, so the result can be sent as a file.
+void note(const char *fmt, ...) {
+	char line[400];
+	va_list args;
+	va_start(args, fmt);
+	vsnprintf(line, sizeof(line), fmt, args);
+	va_end(args);
+	Logger::log("%s", line);
+	mkdir("sdmc:/3ds", 0777);
+	mkdir(CONFIG_DIR_PATH, 0777);
+	if (FILE *f = fopen(CONFIG_DIR_PATH "/mvdtest.txt", "a")) {
+		fprintf(f, "%s\n", line);
+		fclose(f);
+	}
+}
+
 double ticksToMs(u64 t) { return (double)t * 1000.0 / (double)SYSCLOCK_ARM11; }
 } // namespace
 
@@ -66,17 +84,17 @@ MvdTestScreen::~MvdTestScreen() {
 }
 
 void MvdTestScreen::onEnter() {
-	Logger::log("[MvdTest] Opened (New 3DS: %d)", Utils::System::isNew3DS() ? 1 : 0);
+	note("[MvdTest] Opened (New 3DS: %d)", Utils::System::isNew3DS() ? 1 : 0);
 	if (!Utils::System::isNew3DS()) {
 		status = TR("mvdtest.need_new");
 		return;
 	}
 	if (!loadFile()) {
-		Logger::log("[MvdTest] No usable video file (%s)", path.c_str());
+		note("[MvdTest] No usable video file (%s)", path.c_str());
 		status = TR("mvdtest.no_file");
 		return;
 	}
-	Logger::log("[MvdTest] %s: %zu bytes, %zu NAL units from the first parameter set, %dx%d", path.c_str(), dataLen, nals.size(),
+	note("[MvdTest] %s: %zu bytes, %zu NAL units from the first parameter set, %dx%d", path.c_str(), dataLen, nals.size(),
 	            width, height);
 	status = TR("mvdtest.ready");
 }
@@ -187,13 +205,13 @@ bool MvdTestScreen::parseSps(const unsigned char *nal, size_t len) {
 	}
 	width = (int)wMbs * 16;
 	height = (int)hMapUnits * 16 * (frameMbsOnly ? 1 : 2);
-	Logger::log("[MvdTest] SPS: profile %u level %u, coded size %dx%d", profile, level, width, height);
+	note("[MvdTest] SPS: profile %u level %u, coded size %dx%d", profile, level, width, height);
 	return width > 0 && height > 0 && width <= 1920 && height <= 1088;
 }
 
 bool MvdTestScreen::startDecoder() {
 	Result rc = mvdstdInit(MVDMODE_VIDEOPROCESSING, MVD_INPUT_H264, MVD_OUTPUT_RGB565, MVD_DEFAULT_WORKBUF_SIZE, nullptr);
-	Logger::log("[MvdTest] mvdstdInit = 0x%08lX", (unsigned long)rc);
+	note("[MvdTest] mvdstdInit = 0x%08lX", (unsigned long)rc);
 	initError = (u32)rc;
 	if (R_FAILED(rc)) {
 		return false;
@@ -207,7 +225,7 @@ bool MvdTestScreen::startDecoder() {
 	MVDSTD_Config config;
 	mvdstdGenerateDefaultConfig(&config, (u32)width, (u32)height, (u32)width, (u32)height, nullptr, (u32 *)output, nullptr);
 	rc = MVDSTD_SetConfig(&config);
-	Logger::log("[MvdTest] SetConfig = 0x%08lX", (unsigned long)rc);
+	note("[MvdTest] SetConfig = 0x%08lX", (unsigned long)rc);
 	initError = (u32)rc;
 	textureReady = C3D_TexInit(&texture, TEX_W, TEX_H, GPU_RGB565);
 	if (textureReady) {
@@ -245,7 +263,7 @@ void MvdTestScreen::step() {
 	Result rc = mvdstdProcessVideoFrame(nal, size, 0, &out);
 	lastStatus = (u32)rc;
 	if (next <= 12 || (rc != MVD_STATUS_OK && rc != MVD_STATUS_FRAMEREADY)) {
-		Logger::log("[MvdTest] NAL %zu type %d (%zu bytes): 0x%08lX", next - 1, n.type, n.size, (unsigned long)rc);
+		note("[MvdTest] NAL %zu type %d (%zu bytes): 0x%08lX", next - 1, n.type, n.size, (unsigned long)rc);
 	}
 	if (rc == MVD_STATUS_PARAMSET) {
 		paramsDone = true;
@@ -253,7 +271,7 @@ void MvdTestScreen::step() {
 	if ((u32)rc == MVD_STATUS_FRAMEREADY || ((n.type == 5 || n.type == 1) && MVD_CHECKNALUPROC_SUCCESS((u32)rc) && paramsDone)) {
 		const Result rr = mvdstdRenderVideoFrame(nullptr, true);
 		if (R_FAILED(rr) && framesShown < 3) {
-			Logger::log("[MvdTest] RenderVideoFrame = 0x%08lX", (unsigned long)rr);
+			note("[MvdTest] RenderVideoFrame = 0x%08lX", (unsigned long)rr);
 		}
 		if (R_SUCCEEDED(rr) || (u32)rr == MVD_STATUS_OK) {
 			const double ms = ticksToMs(svcGetSystemTick() - t0);
@@ -274,7 +292,7 @@ void MvdTestScreen::step() {
 				                         GX_TRANSFER_SCALING(GX_TRANSFER_SCALE_XY)));
 			}
 			if (framesShown <= 2) {
-				Logger::log("[MvdTest] First frames decoded (%.1f ms)", ms);
+				note("[MvdTest] First frames decoded (%.1f ms)", ms);
 			}
 		}
 	}
@@ -288,7 +306,7 @@ void MvdTestScreen::update() {
 		return;
 	}
 	if (kDown & KEY_A) {
-		Logger::log("[MvdTest] A pressed (running %d, decoder %d, NALs %zu, width %d)", running ? 1 : 0, decoderOn ? 1 : 0,
+		note("[MvdTest] A pressed (running %d, decoder %d, NALs %zu, width %d)", running ? 1 : 0, decoderOn ? 1 : 0,
 		            nals.size(), width);
 	}
 	if (!running && !decoderOn && (kDown & KEY_A) && !nals.empty() && width > 0) {

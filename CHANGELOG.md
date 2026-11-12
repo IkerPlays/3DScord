@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- **Decoder Test writes `mvdtest.txt`** on the SD card with every step and result (easy to send), and the diagnostics report keeps
+  300 log lines instead of 120.
 - **Decoder Test fix:** the app was missing the permission to use the New 3DS video decoder (`mvd:STD`), so the test could not start. The
   error code of the step that fails is now shown on the screen too.
 - **Decoder Test and Video Test are easier to find:** they are also in Settings > Updates, next to Diagnostics.

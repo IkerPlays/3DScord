@@ -2012,7 +2012,7 @@ void ListScreen::writeDiagnosticsReport() {
 	{
 		report += "\n--- last log lines (memory) ---\n";
 		const auto recent = Logger::getRecentLogs();
-		const size_t from = recent.size() > 120 ? recent.size() - 120 : 0;
+		const size_t from = recent.size() > 300 ? recent.size() - 300 : 0;
 		for (size_t i = from; i < recent.size(); i++) {
 			report += recent[i].substr(0, 300) + "\n";
 		}
