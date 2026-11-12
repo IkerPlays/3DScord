@@ -25,10 +25,7 @@ bool SoftDecoder::init() {
 		decoder = nullptr;
 		return false;
 	}
-	// One thread: the 3DS has no spare processor for more.
-	Logger::log("[SoftDecoder] initialised, setting threads");
-	int threads = 1;
-	decoder->SetOption(DECODER_OPTION_NUM_OF_THREADS, &threads);
+	// Default is the single-threaded path (setting 1 thread after Initialize breaks the contexts).
 	Logger::log("[SoftDecoder] openh264 ready");
 	return true;
 }
