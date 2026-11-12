@@ -103,7 +103,7 @@ Etiquetas: **(F)** fácil, **(M)** medio, **(D)** difícil o incierto en una 3DS
 90. (F) Copiar el ID de un servidor o canal
 
 ## D. Voz y llamadas (91–115)
-91. (F) Indicador visual de quién habla en la pantalla superior
+91. (F) Indicador visual de quién habla en la pantalla superior (quiero q en las videollamadas, las camaras de loa users entrn arriba y muestren eso)
 92. (F) Lista de gente en el canal de voz con su estado (silencio, sordo)
 93. (M) Mover a alguien de canal de voz (con permiso)
 94. (M) Silenciar a alguien para todos (con permiso)
