@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- **Decoder Test (experimental, New 3DS only)** (Channel Tools): plays the newest video saved from a call
+  (`recordings/video_in_*.264`) with the hardware video decoder of the New 3DS, shown on the top screen at half size, and
+  shows how many frames it decoded and how long each takes. It is the test to know whether the video of a call can be seen on
+  the console. Every step is written to the log (send me the diagnostics report).
 - **Video (experimental), second step:** with the setting on, the video that someone sends in a call is joined, decrypted and
   saved on the SD card (`recordings/video_in_*.264`, up to 3 MB) so it can be checked on a computer (VLC / ffprobe tells the size
   and the format). It is still NOT shown on the console.
