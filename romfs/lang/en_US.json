@@ -549,6 +549,7 @@
     "settings.desc.videotest": "Records 10 seconds of camera video as H.264 and shows how fast the console encodes it.",
     "mvdtest.starting": "Starting the decoder...",
     "mvdtest.timeout": "The decoder does not answer (blocked in mvdstdInit). B to leave.",
+    "mvdtest.hint_start": "A: Start   X: smaller buffer   Y: tiny buffer",
     "message.menu.react": "Add Reaction",
     "message.menu.reply": "Reply",
     "message.menu.retry": "Retry Loading",

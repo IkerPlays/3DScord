@@ -549,6 +549,7 @@
     "settings.desc.videotest": "Graba 10 segundos de vídeo de la cámara en H.264 y muestra la velocidad de codificación de la consola.",
     "mvdtest.starting": "Arrancando el decodificador...",
     "mvdtest.timeout": "El decodificador no responde (bloqueado en mvdstdInit). B para salir.",
+    "mvdtest.hint_start": "A: Empezar   X: buffer menor   Y: buffer mínimo",
     "message.menu.react": "Add Reaction",
     "message.menu.reply": "Responder",
     "message.menu.retry": "Intentar de nuevo",

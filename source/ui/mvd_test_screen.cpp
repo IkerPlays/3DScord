@@ -216,8 +216,9 @@ bool MvdTestScreen::parseSps(const unsigned char *nal, size_t len) {
 	return width > 0 && height > 0 && width <= 1920 && height <= 1088;
 }
 
-bool MvdTestScreen::startDecoder() {
-	Result rc = mvdstdInit(MVDMODE_VIDEOPROCESSING, MVD_INPUT_H264, MVD_OUTPUT_RGB565, MVD_DEFAULT_WORKBUF_SIZE, nullptr);
+bool MvdTestScreen::startDecoder(u32 workBytes) {
+	note("[MvdTest] mvdstdInit with a work buffer of %lu bytes", (unsigned long)workBytes);
+	Result rc = mvdstdInit(MVDMODE_VIDEOPROCESSING, MVD_INPUT_H264, MVD_OUTPUT_RGB565, workBytes, nullptr);
 	note("[MvdTest] mvdstdInit = 0x%08lX", (unsigned long)rc);
 	initError = (u32)rc;
 	if (R_FAILED(rc)) {
@@ -314,7 +315,12 @@ void MvdTestScreen::update() {
 		note("[MvdTest] A pressed (running %d, decoder %d, NALs %zu, width %d)", running ? 1 : 0, decoderOn ? 1 : 0,
 		            nals.size(), width);
 	}
-	if (!running && !decoderOn && startState == 0 && (kDown & KEY_A) && !nals.empty() && width > 0) {
+	// A: the usual work buffer (what the New 3DS browser uses). X: a quarter of it. Y: a tenth. Only one try per visit: if the
+	// decoder blocks, the call stays stuck until the app is closed.
+	const u32 attempt = (kDown & KEY_A) ? MVD_DEFAULT_WORKBUF_SIZE : (kDown & KEY_X) ? MVD_DEFAULT_WORKBUF_SIZE / 4
+	                    : (kDown & KEY_Y)     ? MVD_DEFAULT_WORKBUF_SIZE / 10 : 0;
+	if (!running && !decoderOn && startState == 0 && attempt != 0 && !nals.empty() && width > 0) {
+		workBytes_ = attempt;
 		// The decoder is started on another thread: if the call never answers, the screen still works.
 		startState = 1;
 		startRequestedAt = osGetTime();
@@ -322,7 +328,7 @@ void MvdTestScreen::update() {
 		note("[MvdTest] Starting the decoder on its own thread");
 		starter.start(
 		    [this] {
-			    const bool ok = startDecoder();
+			    const bool ok = startDecoder(workBytes_);
 			    startState = ok ? 2 : 3;
 		    },
 		    1, 64 * 1024);
@@ -383,7 +389,7 @@ void MvdTestScreen::renderBottom(C3D_RenderTarget *target) {
 	         framesShown ? msTotal / framesShown : 0.0, msMax);
 	drawCenteredText(104.0f, 0.5f, 0.45f, 0.45f, ScreenManager::colorText(), line, 320.0f);
 	drawCenteredText(150.0f, 0.5f, 0.5f, 0.5f, ScreenManager::colorSuccess(),
-	                 TR(running || decoderOn ? "mvdtest.running" : "videotest.hint_start"), 320.0f);
+	                 TR(running || decoderOn ? "mvdtest.running" : "mvdtest.hint_start"), 320.0f);
 	drawCenteredText(180.0f, 0.5f, 0.45f, 0.45f, ScreenManager::colorTextMuted(), TR("voice_msg.hint_cancel"), 320.0f);
 }
 

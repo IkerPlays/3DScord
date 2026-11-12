@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- **Decoder Test result so far:** on a New 2DS XL the decoder start (`mvdstdInit`) does not answer, so the video of a call cannot be shown yet. A tries the usual work
+  buffer, X a quarter of it and Y a tenth, to see whether the size is the cause (one try per visit).
 - **Decoder Test:** the decoder is started away from the screen with a 6 second limit (the start call did not answer on a New 2DS XL), and
   every picture is now rendered with its configuration (before it was refused every time).
 - **Decoder Test writes `mvdtest.txt`** on the SD card with every step and result (easy to send), and the diagnostics report keeps
