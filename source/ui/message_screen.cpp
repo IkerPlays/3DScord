@@ -342,6 +342,39 @@ void setChannelDraft(const std::string &channelId, const std::string &text) {
 	}
 }
 
+// Shows the posts of a forum, only those with the chosen tag when a filter is on. The tags go before the title.
+void MessageScreen::applyForumFilter() {
+	std::vector<Discord::Message> threadMsgs;
+	const std::string wanted = forumTagFilter >= 0 && forumTagFilter < (int)forumTagList.size()
+	                               ? forumTagList[forumTagFilter].first
+	                               : std::string();
+	for (const auto &t : forumThreads) {
+		if (!wanted.empty() && std::find(t.appliedTags.begin(), t.appliedTags.end(), wanted) == t.appliedTags.end()) {
+			continue;
+		}
+		Discord::Message m;
+		m.id = t.id;
+		std::string title;
+		for (const auto &applied : t.appliedTags) {
+			for (const auto &tag : forumTagList) {
+				if (tag.first == applied) {
+					title += "[" + tag.second + "] ";
+				}
+			}
+		}
+		title += t.name;
+		m.content = title;
+		m.displayContent = title;
+		m.author.username = TR("message.thread");
+		m.type = t.type;
+		m.timestamp = "";
+		threadMsgs.push_back(m);
+	}
+	messages = threadMsgs;
+	rebuildLayoutCache();
+	selectedIndex = 0;
+}
+
 MessageScreen::MessageScreen(const std::string &channelId, const std::string &channelName)
     : channelId(channelId), channelName(channelName), channelType(0), rulesChannelId(""), selectedIndex(0),
       isLoading(true), isFetchingHistory(false), requestHistoryFetch(false), scrollInitialized(false),
@@ -502,43 +535,18 @@ void MessageScreen::onEnter() {
 	if (isHiddenChannel) {
 		isLoading = false;
 	} else if (isForumView) {
-		const auto forumTags = channel.availableTags;
-		client.fetchForumThreads(channelId, [this, forumTags,
-		                                     token = aliveToken](const std::vector<Discord::Channel> &threads) {
+		forumTagList = channel.availableTags;
+		client.fetchForumThreads(channelId, [this, token = aliveToken](const std::vector<Discord::Channel> &threads) {
 			if (!*token) {
 				return;
-			}
-			std::vector<Discord::Message> threadMsgs;
-			for (const auto &t : threads) {
-				Discord::Message m;
-				m.id = t.id;
-				// The post's tags go in front of its title: [Help] [Solved] Title.
-				std::string title;
-				for (const auto &applied : t.appliedTags) {
-					for (const auto &tag : forumTags) {
-						if (tag.first == applied) {
-							title += "[" + tag.second + "] ";
-						}
-					}
-				}
-				title += t.name;
-				m.content = title;
-				m.displayContent = title;
-				m.author.username = TR("message.thread");
-				m.type = t.type;
-				m.timestamp = "";
-				threadMsgs.push_back(m);
 			}
 			{
 				std::lock_guard<std::recursive_mutex> lock(messageMutex);
 				if (!*token) {
 					return;
 				}
-				this->messages = threadMsgs;
-				rebuildLayoutCache();
-				if (!this->messages.empty()) {
-					selectedIndex = 0;
-				}
+				forumThreads = threads;
+				applyForumFilter();
 			}
 			isLoading = false;
 		});
@@ -1217,9 +1225,23 @@ void MessageScreen::update() {
 		}
 
 		if (kDown & KEY_Y) {
-			updateLock.unlock();
-			openKeyboard();
-			updateLock.lock();
+			if (isForumView) {
+				// Cycles through the tags of the forum: all posts, then each tag in turn.
+				if (!forumTagList.empty()) {
+					forumTagFilter++;
+					if (forumTagFilter >= (int)forumTagList.size()) {
+						forumTagFilter = -1;
+					}
+					applyForumFilter();
+					ScreenManager::getInstance().showToast(forumTagFilter < 0
+					                                           ? TR("forum.all_posts")
+					                                           : TR("forum.tag") + ": " + forumTagList[forumTagFilter].second);
+				}
+			} else {
+				updateLock.unlock();
+				openKeyboard();
+				updateLock.lock();
+			}
 		}
 
 		if ((kDown & KEY_X) && !(kHeld & KEY_SELECT) && !this->messages.empty()) {
@@ -3404,7 +3426,7 @@ void MessageScreen::renderBottom(C3D_RenderTarget *target) {
 		} else if (pollMode) {
 			hints += "\uE000: " + TR("poll.vote") + "  \uE001: " + TR("common.close");
 		} else if (isForumView) {
-			hints += "\uE000: " + TR("common.open") + "  \uE001: " + TR("common.back");
+			hints += "\uE000: " + TR("common.open") + "  \uE003: " + TR("forum.tag") + "  \uE001: " + TR("common.back");
 		} else {
 			if (canSend) {
 				hints += "\uE003: " + TR("common.type") + "  ";

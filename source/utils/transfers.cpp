@@ -5,6 +5,7 @@
 #include "network/download.h"
 #include "network/http_client.h"
 #include "network/network_manager.h"
+#include "utils/image_compress.h"
 #include "utils/system_utils.h"
 #include <algorithm>
 #include <cstdio>
@@ -170,30 +171,43 @@ void Transfers::uploadFile(const std::string &channelId, const std::string &path
 			report(TR("transfer.read_failed"));
 			return;
 		}
-		if (st.st_size > MAX_UPLOAD_BYTES) {
-			report(TR("transfer.too_big"));
-			return;
-		}
-		// The file, the form around it and the copy the request keeps must all fit.
-		if ((size_t)st.st_size * 3 + 512 * 1024 > System::heapFreeBytes()) {
-			report(TR("transfer.no_memory"));
-			return;
-		}
-
-		FILE *f = fopen(path.c_str(), "rb");
-		if (!f) {
-			report(TR("transfer.read_failed"));
-			return;
-		}
-		std::string data((size_t)st.st_size, '\0');
-		const size_t got = fread(&data[0], 1, data.size(), f);
-		fclose(f);
-		if (got != data.size()) {
-			report(TR("transfer.read_failed"));
-			return;
-		}
-
+		std::string data;
 		std::string name = path.substr(path.rfind('/') + 1);
+		if (st.st_size > MAX_UPLOAD_BYTES) {
+			// A picture that is too big is shrunk and sent as a JPEG instead of being refused.
+			if (!Image::isCompressible(path)) {
+				report(TR("transfer.too_big"));
+				return;
+			}
+			report(TR("transfer.compressing"));
+			data = Image::compressToJpeg(path, 1600, 80);
+			if (data.empty() || (long long)data.size() > MAX_UPLOAD_BYTES) {
+				report(TR("transfer.too_big"));
+				return;
+			}
+			const size_t dot = name.rfind('.');
+			name = (dot == std::string::npos ? name : name.substr(0, dot)) + ".jpg";
+		} else {
+			// The file, the form around it and the copy the request keeps must all fit.
+			if ((size_t)st.st_size * 3 + 512 * 1024 > System::heapFreeBytes()) {
+				report(TR("transfer.no_memory"));
+				return;
+			}
+
+			FILE *f = fopen(path.c_str(), "rb");
+			if (!f) {
+				report(TR("transfer.read_failed"));
+				return;
+			}
+			data.assign((size_t)st.st_size, '\0');
+			const size_t got = fread(&data[0], 1, data.size(), f);
+			fclose(f);
+			if (got != data.size()) {
+				report(TR("transfer.read_failed"));
+				return;
+			}
+		}
+
 		for (char &c : name) {
 			if (c == '"' || c == '\r' || c == '\n') {
 				c = '_';

@@ -117,6 +117,10 @@ class MessageScreen : public Screen {
 	bool showNewMessageIndicator;
 	int newMessageCount;
 	bool isForumView;
+	std::vector<Discord::Channel> forumThreads;                    // every post of the forum, before the tag filter
+	std::vector<std::pair<std::string, std::string>> forumTagList; // the forum's tags: id and name
+	int forumTagFilter = -1;                                       // index in forumTagList, -1 for all posts
+	void applyForumFilter();
 	bool isHiddenChannel = false;
 	bool hasMoreHistory;
 	uint32_t lastImageGeneration;

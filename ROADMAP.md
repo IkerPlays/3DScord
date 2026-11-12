@@ -62,10 +62,10 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
 - [x] Unread-first DM view (setting in Phase 6)
 - [x] Typing indicator in the DM list
 - [x] Carried over: upload photos from the 3DS camera (Channel Tools > Send a Photo)
-- [ ] Carried over: compress big images before uploading
+- [x] Carried over: compress big images before uploading (pictures over 4 MB are shrunk to 1600 px and sent as JPEG)
 - [x] Carried over: voice messages recorded with the microphone
 - [x] Carried over: follow announcement channels (Channel Tools > Follow This Channel)
-- [~] Carried over: forum tags (shown before each post's title). Filters: not yet
+- [x] Carried over: forum tags (shown before each post's title) and a tag filter (Y in a forum)
 - [~] Carried over: pin favorite servers (Y on a server). Editable folders: not yet
 - [ ] Carried over: full member list with presence (Discord only lets bots list every member)
 
