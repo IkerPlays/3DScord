@@ -66,7 +66,7 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
 - [x] Carried over: voice messages recorded with the microphone
 - [x] Carried over: follow announcement channels (Channel Tools > Follow This Channel)
 - [ ] Carried over: forum tags and filters
-- [ ] Carried over: reorder and pin favorite servers; editable folders
+- [~] Carried over: pin favorite servers (Y on a server). Editable folders: not yet
 - [ ] Carried over: full member list with presence (Discord only lets bots list every member)
 
 ## Phase 6 — Notifications

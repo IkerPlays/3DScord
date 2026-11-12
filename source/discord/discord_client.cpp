@@ -2338,8 +2338,11 @@ void DiscordClient::handlePresenceUpdate(const rapidjson::Value &d) {
 	if (activity.empty()) {
 		userActivities.erase(userId);
 	} else {
-		if (userActivities.size() > 2000) {
-			userActivities.clear();
+		// Keeps the map small by dropping the first half, not everything at once.
+		if (userActivities.size() > 4000) {
+			auto mid = userActivities.begin();
+			std::advance(mid, userActivities.size() / 2);
+			userActivities.erase(userActivities.begin(), mid);
 		}
 		userActivities[userId] = activity;
 	}

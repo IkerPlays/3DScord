@@ -67,7 +67,8 @@ Result invoke(const std::string &channelId, const std::string &guildId, const st
 	w.Key("type");
 	w.Int(2); // application command
 	// Discord wants a unique number-like string per interaction.
-	const std::string nonce = std::to_string((long long)time(nullptr) * 1000LL + rand() % 1000) + "000000";
+	static long long counter = 0;
+	const std::string nonce = std::to_string((long long)time(nullptr) * 1000LL + (counter++ % 1000)) + "000000";
 	w.Key("nonce");
 	w.String(nonce.c_str());
 	if (!guildId.empty()) {

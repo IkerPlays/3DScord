@@ -69,6 +69,13 @@ void LocalStore::ensureLoaded() {
 					}
 				}
 			}
+			if (doc.HasMember("pinned_guilds") && doc["pinned_guilds"].IsArray()) {
+				for (const auto &r : doc["pinned_guilds"].GetArray()) {
+					if (r.IsString()) {
+						pinnedGuilds.push_back(r.GetString());
+					}
+				}
+			}
 			if (doc.HasMember("sound_overrides") && doc["sound_overrides"].IsObject()) {
 				for (auto it = doc["sound_overrides"].MemberBegin(); it != doc["sound_overrides"].MemberEnd(); ++it) {
 					if (it->value.IsInt()) {
@@ -120,6 +127,12 @@ void LocalStore::save() {
 	w.Key("pinned_dms");
 	w.StartArray();
 	for (const auto &id : pinnedDms) {
+		w.String(id.c_str());
+	}
+	w.EndArray();
+	w.Key("pinned_guilds");
+	w.StartArray();
+	for (const auto &id : pinnedGuilds) {
 		w.String(id.c_str());
 	}
 	w.EndArray();
@@ -197,6 +210,24 @@ void LocalStore::removeDraft(size_t index) {
 		draftList.erase(draftList.begin() + index);
 		save();
 	}
+}
+
+bool LocalStore::isGuildPinned(const std::string &guildId) {
+	ensureLoaded();
+	return std::find(pinnedGuilds.begin(), pinnedGuilds.end(), guildId) != pinnedGuilds.end();
+}
+
+bool LocalStore::toggleGuildPinned(const std::string &guildId) {
+	ensureLoaded();
+	auto it = std::find(pinnedGuilds.begin(), pinnedGuilds.end(), guildId);
+	const bool nowPinned = (it == pinnedGuilds.end());
+	if (nowPinned) {
+		pinnedGuilds.push_back(guildId);
+	} else {
+		pinnedGuilds.erase(it);
+	}
+	save();
+	return nowPinned;
 }
 
 bool LocalStore::isDmPinned(const std::string &channelId) {

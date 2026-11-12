@@ -169,6 +169,13 @@ void ServerListScreen::rebuildList() {
 			listItems.insert(listItems.begin(), orphans.begin(), orphans.end());
 		}
 	}
+	// Servers pinned with Y go to the top, keeping their order among themselves.
+	{
+		auto &store = Core::LocalStore::getInstance();
+		std::stable_partition(listItems.begin(), listItems.end(), [&](const ListItem &item) {
+			return !item.isFolder && item.depth == 0 && store.isGuildPinned(item.id);
+		});
+	}
 	ListItem dmItem;
 	dmItem.isDm = true;
 	dmItem.id = "DM";
@@ -1289,6 +1296,24 @@ void ServerListScreen::update() {
 			}
 		}
 
+		if (kDown & KEY_Y) {
+			if (selectedIndex >= 0 && selectedIndex < (int)listItems.size()) {
+				const auto &item = listItems[selectedIndex];
+				if (!item.isFolder && !item.isDm) {
+					const bool pinned = Core::LocalStore::getInstance().toggleGuildPinned(item.id);
+					sm.showToast(TR(pinned ? "server.pinned" : "server.unpinned"));
+					rebuildList();
+					selectedIndex = 0;
+					for (int i = 0; i < (int)listItems.size(); i++) {
+						if (listItems[i].id == item.id) {
+							selectedIndex = i;
+							break;
+						}
+					}
+				}
+			}
+		}
+
 		if (kDown & KEY_A) {
 			if (selectedIndex >= 0 && selectedIndex < (int)listItems.size()) {
 				const auto &item = listItems[selectedIndex];
@@ -2275,7 +2300,7 @@ void ServerListScreen::renderBottom(C3D_RenderTarget *target) {
 		std::string hints = "\ue07d\ue07e: " + TR("common.navigate") + "  \uE000: " + TR("common.enter");
 		if (selectedIndex >= 0 && selectedIndex < (int)listItems.size() && !listItems[selectedIndex].isFolder &&
 		    !listItems[selectedIndex].isDm) {
-			hints += "  \uE002: " + TR("common.menu");
+			hints += "  \uE002: " + TR("common.menu") + "  \uE003: " + TR("server.pin");
 		}
 		hints += "  START: " + TR("common.exit");
 		drawText(10.0f, BOTTOM_SCREEN_HEIGHT - 25.0f, 0.5f, 0.4f, 0.4f, ScreenManager::colorTextMuted(), hints);

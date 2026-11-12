@@ -4,6 +4,7 @@
 #include "log.h"
 #include "ui/screen_manager.h"
 #include "utils/redraw.h"
+#include "utils/system_utils.h"
 #include "utils/transfers.h"
 #include <3ds.h>
 #include <cstdint>
@@ -80,6 +81,11 @@ void copyScreen(std::vector<uint8_t> &rgb, int imageW, int xOffset, int yOffset,
 
 void capture() {
 	auto &sm = UI::ScreenManager::getInstance();
+	// The picture, its PNG and the copies made while encoding need a few megabytes at once.
+	if (System::heapFreeBytes() < 4 * 1024 * 1024) {
+		sm.showToast(TR("transfer.no_memory"));
+		return;
+	}
 	const int w = TOP_W;
 	const int h = SCREEN_H * 2;
 	std::vector<uint8_t> rgb;
@@ -220,7 +226,10 @@ std::string takePhoto() {
 			fclose(f);
 		}
 	}
-	free(buf);
+	// After a failed transfer the camera may still write into the buffer: it is kept rather than freed.
+	if (ok) {
+		free(buf);
+	}
 	return result;
 }
 

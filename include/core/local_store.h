@@ -35,6 +35,8 @@ class LocalStore {
 	void removeDraft(size_t index);
 
 	// Direct-message channels kept at the top of the DM list.
+	bool isGuildPinned(const std::string &guildId);
+	bool toggleGuildPinned(const std::string &guildId); // returns the new state
 	bool isDmPinned(const std::string &channelId);
 	bool toggleDmPinned(const std::string &channelId); // returns the new state
 
@@ -56,6 +58,7 @@ class LocalStore {
 	std::vector<Draft> draftList;
 	std::vector<std::string> replies;
 	std::vector<std::string> pinnedDms;
+	std::vector<std::string> pinnedGuilds;
 	std::map<std::string, int> soundOverrides;
 };
 

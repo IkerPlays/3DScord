@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- **Pinned servers:** Y on a server in the list pins it to the top (Y again unpins).
+- **Fixes:** cancelling a bot command's keyboard no longer sends the command; importing a theme can no longer delete one
+  you already have; the camera no longer frees a buffer a failed transfer may still use; screenshots check free memory.
 - **Follow This Channel** (Channel Tools, in an announcement channel): pick one of your channels where you can create webhooks
   and new posts are copied there.
 - **Typing indicator in the DM list:** a conversation shows "typing..." while the other person writes.

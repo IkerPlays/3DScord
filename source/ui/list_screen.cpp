@@ -1231,17 +1231,17 @@ void ListScreen::primaryAction(const Entry &entry) {
 			break;
 		}
 		std::vector<std::pair<std::string, std::string>> values;
+		bool cancelled = false;
 		for (const auto &opt : options) {
 			std::string value;
 			if (!askText(opt.name + (opt.description.empty() ? "" : ": " + opt.description), "", value, 200, false)) {
-				values.clear();
-				options.clear();
-				sm.showToast(TR("commands.cancelled"));
+				cancelled = true;
 				break;
 			}
 			values.push_back({opt.name, value});
 		}
-		if (values.size() != options.size() || (options.empty() && false)) {
+		if (cancelled) {
+			sm.showToast(TR("commands.cancelled"));
 			break;
 		}
 		const auto r = Discord::Commands::invoke(channelId, currentGuild(), client.getSessionId(), entry.data, values);
@@ -1506,12 +1506,25 @@ void ListScreen::primaryAction(const Entry &entry) {
 				mkdir(CONFIG_DIR_PATH, 0777);
 				mkdir(dir.c_str(), 0777);
 				auto &sm = ScreenManager::getInstance();
-				if (!data.empty() && Utils::File::writeFile(dir + "/" + name + ".json", data) &&
-				    Config::getInstance().loadThemeFromFile(name)) {
+				// Checked under a temporary name first, so a bad file never replaces a theme that works.
+				const std::string tempName = "__import_check";
+				const std::string tempPath = dir + "/" + tempName + ".json";
+				bool good = data.size() > 0 && data.size() < 64 * 1024 && Utils::File::writeFile(tempPath, data) &&
+				            Config::getInstance().loadThemeFromFile(tempName);
+				remove(tempPath.c_str());
+				if (good) {
+					std::string finalName = name;
+					struct stat st;
+					while (stat((dir + "/" + finalName + ".json").c_str(), &st) == 0) {
+						finalName += " (imported)";
+					}
+					good = Utils::File::writeFile(dir + "/" + finalName + ".json", data) &&
+					       Config::getInstance().loadThemeFromFile(finalName);
+				}
+				if (good) {
 					Config::getInstance().setCustomThemeEnabled(true);
 					sm.showToast(TR("theme.imported"));
 				} else {
-					remove((dir + "/" + name + ".json").c_str());
 					sm.showToast(TR("theme.import_failed"));
 				}
 			});
