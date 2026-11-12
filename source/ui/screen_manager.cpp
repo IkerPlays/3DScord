@@ -29,6 +29,7 @@
 #include "ui/camera_screen.h"
 #include "ui/video_test_screen.h"
 #include "ui/mvd_test_screen.h"
+#include "ui/soft_test_screen.h"
 #include "utils/voice_player.h"
 #include "utils/call_recorder.h"
 #include "utils/screenshot.h"
@@ -449,6 +450,9 @@ void ScreenManager::setScreen(ScreenType type) {
 		break;
 	case ScreenType::MVD_TEST:
 		currentScreen = std::make_unique<MvdTestScreen>();
+		break;
+	case ScreenType::SOFT_TEST:
+		currentScreen = std::make_unique<SoftTestScreen>();
 		break;
 	}
 

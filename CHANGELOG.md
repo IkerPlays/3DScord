@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+- **Software Decoder Test (experimental)** (Settings > Updates): decodes the video saved from a call with openh264 (Cisco, BSD licence), a decoder
+  that reads the High profile, and shows the pictures at half size with the time each takes (`softtest.txt` on the SD card has the
+  results). It is a test of whether a call's video could be seen as a slow picture.
+
 ## 0.13.0
 Experiments with video in calls: what Discord sends was measured and saved, and the result is that the video cannot be shown on the 3DS.
 

@@ -1,5 +1,6 @@
 #include "ui/settings_screen.h"
 #include "ui/mvd_test_screen.h"
+#include "ui/soft_test_screen.h"
 #include "ui/video_test_screen.h"
 #include "core/config.h"
 #include "core/i18n.h"
@@ -914,6 +915,13 @@ void SettingsScreen::addUpdateItems() {
 	decoderTest.type = SettingItemType::ACTION;
 	decoderTest.action = []() { MvdTestScreen::open(); };
 	allItems.push_back(decoderTest);
+
+	SettingItem softTest;
+	softTest.label = TR("softtest.title");
+	softTest.description = TR("settings.desc.softtest");
+	softTest.type = SettingItemType::ACTION;
+	softTest.action = []() { SoftTestScreen::open(); };
+	allItems.push_back(softTest);
 
 	SettingItem videoTest;
 	videoTest.label = TR("videotest.title");

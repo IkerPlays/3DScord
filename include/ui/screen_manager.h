@@ -35,7 +35,8 @@ enum class ScreenType {
 	PIN_LOCK,
 	CAMERA,
 	VIDEO_TEST,
-	MVD_TEST
+	MVD_TEST,
+	SOFT_TEST
 };
 
 class Screen {
