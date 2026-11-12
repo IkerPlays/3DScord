@@ -121,7 +121,7 @@ bool Mp4Video::parse(const uint8_t *d, size_t n, std::string &error) {
 			error = "the video is not H.264";
 			return false;
 		}
-		const size_t entryEnd = std::min(stsd->end, entry + be32(d + entry));
+		const size_t entryEnd = std::min<size_t>(stsd->end, entry + be32(d + entry));
 		if (entry + 8 + 78 > entryEnd) {
 			error = "short sample entry";
 			return false;
