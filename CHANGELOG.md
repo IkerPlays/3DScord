@@ -12,6 +12,9 @@
   compact > full > video > hidden). If the decoder falls behind, or a packet is lost, it waits for the next key frame instead of drawing
   a damaged picture, and it asks Discord for a new key frame (RTCP picture loss indication, at most every 1.5 s). Sending your own camera
   is not done.
+- **Play Video (experimental, no sound)** (message menu, on MP4 attachments up to 16 MB): downloads the video and plays it on the top screen with
+  the software decoder, on the extra core of a New 3DS. Frames that cannot be decoded in time are skipped. A pauses, Left/Right jump 5 seconds.
+  Pictures up to 1280x720; H.264 in MP4 only. Sound is not played yet.
 - **Exact Time** (message menu): shows the exact date and time a message was sent, and when it was edited.
 - **Copy to Draft** and **Send Again** (message menu): put a message's text in the draft, or send one of your own messages again.
 - **@everyone / @here confirmation:** a message with a mass mention is only sent when you send the same text a second time.

@@ -24,6 +24,7 @@
 #include "ui/voice_popup.h"
 #include "ui/markdown_renderer.h"
 #include "ui/screen_manager.h"
+#include "ui/video_player_screen.h"
 #include "utils/message_utils.h"
 #include "utils/redraw.h"
 #include "utils/utf8_utils.h"
@@ -955,6 +956,37 @@ void MessageScreen::update() {
 							ScreenManager::getInstance().showToast(TR("voice_msg.playing"));
 							break;
 						}
+					}
+				}
+			} else if (action == "PlayVideo") {
+				// The video is downloaded (up to 16 MB, so it can take a while) and played from the SD card.
+				if (selectedIndex >= 0 && selectedIndex < (int)messages.size()) {
+					for (const auto &attach : messages[selectedIndex].attachments) {
+						if (!attach.isPlayableVideo()) {
+							continue;
+						}
+						ScreenManager::getInstance().showToast(TR("player.loading"));
+						Network::HttpRequest request{attach.url, "GET", "", {}, 90};
+						Network::HttpResponse resp = Network::NetworkManager::getInstance().perform(std::move(request));
+						if (!resp.success || resp.body.empty()) {
+							ScreenManager::getInstance().showToast(TR("player.download_failed"));
+							break;
+						}
+						const std::string dir = Utils::Transfers::downloadDir();
+						mkdir("sdmc:/3ds", 0777);
+						mkdir(CONFIG_DIR_PATH, 0777);
+						mkdir(dir.c_str(), 0777);
+						const std::string path = dir + "/play_" + attach.id + ".mp4";
+						if (!Utils::File::writeFile(path, resp.body)) {
+							ScreenManager::getInstance().showToast(TR("player.download_failed"));
+							break;
+						}
+						resp.body.clear();
+						resp.body.shrink_to_fit();
+						updateLock.unlock();
+						VideoPlayerScreen::open(path);
+						updateLock.lock();
+						break;
 					}
 				}
 			} else if (action == "ReadFile") {
@@ -3822,6 +3854,10 @@ void MessageScreen::showMessageOptions() {
 		}
 		if (firstImage) {
 			addOption("ViewImage", "message.menu.view_image");
+		}
+		if (std::any_of(msg.attachments.begin(), msg.attachments.end(),
+		                [](const Discord::Attachment &a) { return a.isPlayableVideo(); })) {
+			addOption("PlayVideo", "message.menu.play_video");
 		}
 		if (std::any_of(msg.attachments.begin(), msg.attachments.end(),
 		                [](const Discord::Attachment &a) { return a.isReadableText(); })) {

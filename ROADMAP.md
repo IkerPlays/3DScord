@@ -94,7 +94,8 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
 - [x] Attachment gallery for a channel
 - [x] Configurable image cache size
 - [x] YouTube link preview (shown as an embed, already in TriCord)
-- [ ] Not possible for now: playing videos and music attachments, WebP pictures and animated avatars (the app has no
+- [x] Videos (MP4, H.264) play without sound in the message menu (software decoder, up to 1280x720, 16 MB)
+- [ ] Not possible for now: playing music attachments and sound of videos, WebP pictures and animated avatars (the app has no
       decoder for them; the preview of such files shows their information instead)
 
 ## Phase 9 — Interface
@@ -169,9 +170,9 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
 - [x] Upload up to the account's limit (Nitro, boosted servers), streamed from the SD card
 - [x] Experimental video, measured: Discord does send the video (H.264 High, 928x522, 30 fps) and the app joins and decrypts it
       (checked on a computer). The H.264 encoder (minih264e) works and a Video Test measures it on the console.
-- [ ] Not possible (tested on a New 2DS XL): showing other people's cameras or shared screens. The software decoder cannot
-      handle 928x522 High on the 3DS, and the New 3DS hardware decoder blocks in `mvdstdInit` with every work buffer size
-      tried. Sending your own camera in a call is not done (it also needs Discord's video signalling and frame encryption).
+- [x] Other people's cameras and shared screens in calls: not possible with the hardware decoder (it blocks in `mvdstdInit` with
+      every work buffer size tried) but possible in software with openh264: about 20 ms per picture on a New 2DS XL (see 0.14.0).
+- [ ] Sending your own camera in a call is not done (it also needs Discord's video signalling and frame encryption).
 - [x] Previews in the chat: play Ogg sounds and read small text files from the message menu
 
 ## Not possible on the 3DS

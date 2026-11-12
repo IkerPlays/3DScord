@@ -209,6 +209,18 @@ struct Attachment {
 		}
 		return ext == "ogg" || ext == "opus" || ext == "oga";
 	}
+	// MP4 videos (H.264) of up to 16 MB can be played, without sound.
+	bool isPlayableVideo() const {
+		if (size > 16 * 1024 * 1024) {
+			return false;
+		}
+		const size_t dot = filename.rfind('.');
+		std::string ext = dot == std::string::npos ? "" : filename.substr(dot + 1);
+		for (char &c : ext) {
+			c = (char)tolower((unsigned char)c);
+		}
+		return ext == "mp4" || ext == "m4v" || content_type == "video/mp4";
+	}
 	// Small text files can be read in the app.
 	bool isReadableText() const {
 		if (size <= 0 || size > 256 * 1024) {
