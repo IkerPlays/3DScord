@@ -151,6 +151,16 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
 > with the lid closed). They will be tried on a real console and may change or be dropped.
 
 
+## Phase 16 — Voice I (ideas 91-115)
+- [x] Call view on the top screen: speaker in the corner, everyone as tiles, or hidden (L+R)
+- [x] List of people in the call with mute/deafen state; call time and statistics
+- [x] Sounds when someone joins or leaves; Call Volume; Busy mode; reconnect when the call drops
+- [x] Call a friend from their profile; mute or remove someone from the call (with permission)
+- [x] Receive voice messages: length, play, 1.5x, queue; record one from Channel Tools; soundboard
+- [ ] Not done yet: move someone to another voice channel, equalizer, stronger noise cancelling, record the call,
+      mute when the lid closes
+- [ ] Not possible: cameras and shared screens (no video on the 3DS; they show as badges)
+
 ## Not possible on the 3DS
 
 - **HOME menu widget.** The HOME menu cannot show anything from a running or closed app; only the icon and banner

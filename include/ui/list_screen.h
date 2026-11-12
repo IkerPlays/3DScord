@@ -15,7 +15,7 @@ namespace UI {
 // quick replies and the formatting helpers. The mode is chosen with open() before the screen is created.
 class ListScreen : public Screen {
   public:
-	enum class Mode { TOOLS, PINS, SEARCH, MENTIONS, SAVED, DRAFTS, QUICK_REPLIES, FORMAT, GIFS, STICKERS, FIND, MEMBERS, THREADS, HUB, FRIENDS, GROUP_PICK, SOUNDS, VOICE_CHANNELS, VOICE_PEOPLE, GALLERY, THEME_EDIT, SESSIONS, EVENTS, AUDIT, PERMISSIONS, MOD, DIAG, SERVER, COMMANDS, FOLLOW };
+	enum class Mode { TOOLS, PINS, SEARCH, MENTIONS, SAVED, DRAFTS, QUICK_REPLIES, FORMAT, GIFS, STICKERS, FIND, MEMBERS, THREADS, HUB, FRIENDS, GROUP_PICK, SOUNDS, VOICE_CHANNELS, VOICE_PEOPLE, GALLERY, THEME_EDIT, SESSIONS, EVENTS, AUDIT, PERMISSIONS, MOD, DIAG, SERVER, COMMANDS, FOLLOW, SOUNDBOARD };
 
 	static void open(Mode mode);
 	// Switches to another list without adding the current one to the back history.

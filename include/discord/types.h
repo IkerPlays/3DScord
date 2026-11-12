@@ -193,6 +193,8 @@ struct Attachment {
 	int height = 0;
 	std::string content_type;
 	bool spoiler = false;
+	float durationSecs = 0.0f; // voice messages
+	bool isVoice() const { return durationSecs > 0.0f && content_type.rfind("audio/", 0) == 0; }
 };
 
 struct Sticker {

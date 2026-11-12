@@ -8,6 +8,7 @@
 #include "network/http_client.h"
 #include "network/network_manager.h"
 #include "ui/file_browser_screen.h"
+#include "ui/voice_recorder_screen.h"
 #include "discord/commands.h"
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
@@ -238,6 +239,9 @@ void ListScreen::load() {
 		break;
 	case Mode::SEARCH:
 		startSearch();
+		break;
+	case Mode::SOUNDBOARD:
+		fetch("/soundboard-default-sounds");
 		break;
 	case Mode::COMMANDS:
 		fetch("/channels/" + channelId + "/application-commands/search?type=1&limit=25&include_applications=false&query=" +
@@ -530,6 +534,8 @@ void ListScreen::loadLocal() {
 		        {"readserver", channelId, TR("list.mark_server_read"), TR("list.tools.read_server")},
 		        {"archive", channelId, TR("list.archive_thread"), TR("list.tools.archive")},
 		        {"follow", channelId, TR("follow.title"), TR("list.tools.follow")},
+		        {"soundboard", channelId, TR("soundboard.title"), TR("list.tools.soundboard")},
+		        {"voicemsg", channelId, TR("voice_msg.title"), TR("list.tools.voicemsg")},
 		        {"photo", channelId, TR("photo.title"), TR("list.tools.photo")},
 		        {"commands", channelId, TR("commands.title"), TR("list.tools.commands")},
 		        {"themeshare", channelId, TR("theme.share"), TR("list.tools.theme_share")},
@@ -637,6 +643,14 @@ void ListScreen::fetch(const std::string &path) {
 					    e.preview = usable(still) ? still : moving;
 					    e.animated = e.preview == moving ? std::string() : moving;
 					    list.push_back(e);
+				    }
+			    }
+		    } else if (fetchMode == Mode::SOUNDBOARD) {
+			    if (doc.IsArray()) {
+				    for (const auto &snd : doc.GetArray()) {
+					    if (snd.IsObject() && !str(snd, "sound_id").empty()) {
+						    list.push_back({str(snd, "sound_id"), "", str(snd, "name"), str(snd, "emoji_name")});
+					    }
 				    }
 			    }
 		    } else if (fetchMode == Mode::COMMANDS) {
@@ -1042,6 +1056,8 @@ std::string ListScreen::headerTitle() const {
 		return TR("list.permissions");
 	case Mode::MOD:
 		return TR("mod.title") + (soundTargetName.empty() ? "" : ": " + soundTargetName);
+	case Mode::SOUNDBOARD:
+		return TR("soundboard.title");
 	case Mode::FOLLOW:
 		return TR("follow.title");
 	case Mode::COMMANDS:
@@ -1104,6 +1120,8 @@ std::string ListScreen::hintLine() const {
 		return TR("events.hint");
 	case Mode::MOD:
 		return TR("mod.hint");
+	case Mode::SOUNDBOARD:
+		return TR("soundboard.hint");
 	case Mode::FOLLOW:
 		return TR("follow.hint");
 	case Mode::COMMANDS:
@@ -1213,6 +1231,16 @@ void ListScreen::primaryAction(const Entry &entry) {
 		if (r.ok) {
 			sm.returnToPreviousScreen();
 		}
+		break;
+	}
+	case Mode::SOUNDBOARD: {
+		auto &voice = Discord::VoiceClient::getInstance();
+		if (voice.getState() != Discord::VoiceState::ESTABLISHED) {
+			sm.showToast(TR("soundboard.need_call"));
+			break;
+		}
+		const auto r = Discord::GuildTools::playSoundboard(voice.getChannelId(), entry.id, "");
+		sm.showToast(r.ok ? TR("soundboard.played") : r.message);
 		break;
 	}
 	case Mode::FOLLOW: {
@@ -1466,6 +1494,14 @@ void ListScreen::primaryAction(const Entry &entry) {
 			} else {
 				sm.showToast(TR("follow.not_announcement"));
 			}
+		} else if (entry.id == "soundboard") {
+			if (Discord::VoiceClient::getInstance().getState() != Discord::VoiceState::ESTABLISHED) {
+				sm.showToast(TR("soundboard.need_call"));
+			} else {
+				openReplacing(Mode::SOUNDBOARD);
+			}
+		} else if (entry.id == "voicemsg") {
+			VoiceRecorderScreen::open(channelId);
 		} else if (entry.id == "photo") {
 			const std::string photo = Utils::Screenshot::takePhoto();
 			if (photo.empty()) {

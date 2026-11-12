@@ -2885,6 +2885,9 @@ Attachment DiscordClient::parseAttachmentObject(const rapidjson::Value &aObj) {
 	attachment.width = Utils::Json::getInt(aObj, "width");
 	attachment.height = Utils::Json::getInt(aObj, "height");
 	attachment.content_type = Utils::Json::getString(aObj, "content_type");
+	if (aObj.HasMember("duration_secs") && aObj["duration_secs"].IsNumber()) {
+		attachment.durationSecs = (float)aObj["duration_secs"].GetDouble();
+	}
 	// The prefix is how clients mark a spoiler on upload; the docs only describe the flag.
 	attachment.spoiler =
 	    (Utils::Json::getInt(aObj, "flags") & ATTACHMENT_FLAG_SPOILER) || attachment.filename.rfind("SPOILER_", 0) == 0;

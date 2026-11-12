@@ -26,6 +26,7 @@
 #include "ui/voice_recorder_screen.h"
 #include "utils/redraw.h"
 #include "ui/call_view.h"
+#include "utils/voice_player.h"
 #include "utils/screenshot.h"
 #include "utils/transfers.h"
 #include "utils/utf8_utils.h"
@@ -502,6 +503,13 @@ void ScreenManager::update() {
 	if (kDown & KEY_START) {
 		appExitRequested = true;
 		return;
+	}
+
+	{
+		const std::string playerError = Utils::VoicePlayer::getInstance().takeError();
+		if (!playerError.empty()) {
+			showToast(TR("voice_msg.play_failed"));
+		}
 	}
 
 	// Voice shortcuts that work on every screen while a call is on:

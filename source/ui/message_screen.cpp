@@ -1,4 +1,5 @@
 #include "ui/message_screen.h"
+#include "utils/voice_player.h"
 #include "core/local_store.h"
 #include "discord/threads.h"
 #include "ui/image_viewer_screen.h"
@@ -933,6 +934,24 @@ void MessageScreen::update() {
 						ScreenManager::getInstance().showToast(TR("message.pin_failed"));
 					}
 				}
+			} else if (action == "PlayVoice" || action == "PlayVoiceFast" || action == "QueueVoice" ||
+			           action == "StopVoice") {
+				if (action == "StopVoice") {
+					Utils::VoicePlayer::getInstance().stop();
+				} else if (selectedIndex >= 0 && selectedIndex < (int)messages.size()) {
+					for (const auto &attach : messages[selectedIndex].attachments) {
+						if (attach.isVoice()) {
+							const float speed = action == "PlayVoiceFast" ? 1.5f : 1.0f;
+							if (action == "QueueVoice") {
+								Utils::VoicePlayer::getInstance().enqueue(attach.url, 1.0f);
+							} else {
+								Utils::VoicePlayer::getInstance().play(attach.url, speed);
+							}
+							ScreenManager::getInstance().showToast(TR("voice_msg.playing"));
+							break;
+						}
+					}
+				}
 			} else if (action == "ViewImage" || action == "SaveAttachment") {
 				if (selectedIndex >= 0 && selectedIndex < (int)messages.size()) {
 					const Discord::Message &target = messages[selectedIndex];
@@ -1809,6 +1828,14 @@ float MessageScreen::drawAttachment(const Discord::Attachment &attach, float x, 
 	const bool hidden = attach.spoiler && !revealed;
 
 	if (!isImageAttachment(attach)) {
+		if (attach.isVoice()) {
+			char length[48];
+			const int secs = (int)(attach.durationSecs + 0.5f);
+			snprintf(length, sizeof(length), "%d:%02d", secs / 60, secs % 60);
+			drawText(x, y, 0.5f, 0.35f, 0.35f, ScreenManager::colorSelection(),
+			         TR("message.voice_message") + " " + length);
+			return y + 12.0f;
+		}
 		const std::string name = hidden ? TR("message.spoiler") : attach.filename;
 		drawText(x, y, 0.5f, 0.35f, 0.35f, ScreenManager::colorTextMuted(),
 		         Core::I18n::format(TR("message.file"), name));
@@ -3679,6 +3706,15 @@ void MessageScreen::showMessageOptions() {
 		}
 		if (firstImage) {
 			addOption("ViewImage", "message.menu.view_image");
+		}
+		if (std::any_of(msg.attachments.begin(), msg.attachments.end(),
+		                [](const Discord::Attachment &a) { return a.isVoice(); })) {
+			addOption("PlayVoice", "message.menu.play_voice");
+			addOption("PlayVoiceFast", "message.menu.play_voice_fast");
+			addOption("QueueVoice", "message.menu.queue_voice");
+			if (Utils::VoicePlayer::getInstance().isBusy()) {
+				addOption("StopVoice", "message.menu.stop_voice");
+			}
 		}
 		if (!msg.attachments.empty()) {
 			addOption("SaveAttachment", "message.menu.save_attachment");

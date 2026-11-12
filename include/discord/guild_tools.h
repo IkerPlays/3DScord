@@ -38,6 +38,9 @@ Result followAnnouncements(const std::string &announcementChannelId, const std::
 Result setVoiceMute(const std::string &guildId, const std::string &userId, bool muted);
 Result disconnectFromVoice(const std::string &guildId, const std::string &userId);
 
+// Plays a soundboard sound for everyone in the voice channel you are in. guildId is empty for Discord's own sounds.
+Result playSoundboard(const std::string &voiceChannelId, const std::string &soundId, const std::string &guildId);
+
 // Your "About Me" inside one server.
 Result setServerBio(const std::string &guildId, const std::string &bio);
 

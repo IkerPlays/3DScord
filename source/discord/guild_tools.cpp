@@ -70,6 +70,22 @@ Result disconnectFromVoice(const std::string &guildId, const std::string &userId
 	                     "Guild");
 }
 
+Result playSoundboard(const std::string &voiceChannelId, const std::string &soundId, const std::string &guildId) {
+	auto http = Api::authorized();
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> w(s);
+	w.StartObject();
+	w.Key("sound_id");
+	w.String(soundId.c_str());
+	if (!guildId.empty()) {
+		w.Key("source_guild_id");
+		w.String(guildId.c_str());
+	}
+	w.EndObject();
+	return Api::toResult(http.post(base() + "/channels/" + voiceChannelId + "/send-soundboard-sound", s.GetString()),
+	                     "Guild");
+}
+
 Result setServerBio(const std::string &guildId, const std::string &bio) {
 	auto http = Api::authorized();
 	rapidjson::StringBuffer s;
