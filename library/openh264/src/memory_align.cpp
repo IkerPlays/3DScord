@@ -30,6 +30,9 @@
  *
  */
 
+#ifdef __3DS__
+#include <3ds/allocator/linear.h>
+#endif
 #include <stdlib.h>
 #include <string.h>
 #include "memory_align.h"
@@ -69,7 +72,14 @@ void* WelsMalloc (const uint32_t kuiSize, const char* kpTag, const uint32_t kiAl
   const uint32_t kiActualRequestedSize   = kiTrialRequestedSize;
   const uint32_t kiPayloadSize          = kuiSize;
 
+#ifdef __3DS__
+  // The process heap is small on the 3DS; big buffers (pictures) go to the linear heap.
+  uint8_t* pBuf = kiActualRequestedSize >= 32768 ? (uint8_t*) linearAlloc (kiActualRequestedSize) : NULL;
+  if (NULL == pBuf)
+    pBuf = (uint8_t*) malloc (kiActualRequestedSize);
+#else
   uint8_t* pBuf = (uint8_t*) malloc (kiActualRequestedSize);
+#endif
   if (NULL == pBuf)
     return NULL;
 
@@ -110,7 +120,15 @@ void WelsFree (void* pPointer, const char* kpTag) {
       fflush (fpMemChkPoint);
     }
 #endif
+#ifdef __3DS__
+    void* pOrig = * (((void**) pPointer) - 1);
+    if ((uintptr_t) pOrig >= 0x14000000u && (uintptr_t) pOrig < 0x1C000000u)
+      linearFree (pOrig);
+    else
+      free (pOrig);
+#else
     free (* (((void**) pPointer) - 1));
+#endif
   }
 }
 
