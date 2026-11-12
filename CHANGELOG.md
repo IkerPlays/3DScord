@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.11.0
+Big pictures are shrunk to fit, a tag filter for forums and fixes found in code review.
+
 - **Picture shrinking, improved:** it tries smaller sizes and lower quality until the picture fits in 4 MB, draws transparent
   parts over white, checks memory first and tells you the real reason when it cannot (no memory, not a picture, still too big).
   Pictures taken in portrait may come out sideways.
