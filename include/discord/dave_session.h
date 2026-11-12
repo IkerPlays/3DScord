@@ -41,6 +41,10 @@ class DaveSession {
 	bool decryptOpus(const std::string &userId, const uint8_t *frame, size_t frameLen, uint8_t *out, size_t outCapacity,
 	                 size_t *written);
 
+	// A whole video frame (all its packets joined) of someone else, decrypted.
+	bool decryptVideo(const std::string &userId, const uint8_t *frame, size_t frameLen, uint8_t *out, size_t outCapacity,
+	                  size_t *written);
+
 	std::string lastError() const;
 
   private:

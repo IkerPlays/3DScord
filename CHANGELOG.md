@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- **Video (experimental), second step:** with the setting on, the video that someone sends in a call is joined, decrypted and
+  saved on the SD card (`recordings/video_in_*.264`, up to 3 MB) so it can be checked on a computer (VLC / ffprobe tells the size
+  and the format). It is still NOT shown on the console.
 - **Diagnostics report:** it now also holds the last log lines kept in memory, so it is useful even with the log file turned off.
 
 ## 0.12.0

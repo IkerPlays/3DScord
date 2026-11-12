@@ -261,6 +261,20 @@ bool DaveSession::decryptOpus(const std::string &userId, const uint8_t *frame, s
 	return rc == discord::dave::Decryptor::ResultCode::Success;
 }
 
+bool DaveSession::decryptVideo(const std::string &userId, const uint8_t *frame, size_t frameLen, uint8_t *out,
+                               size_t outCapacity, size_t *written) {
+	std::lock_guard<std::mutex> lock(impl->frameMutex);
+
+	auto it = impl->decryptors.find(userId);
+	if (it == impl->decryptors.end() || !it->second) {
+		return false;
+	}
+
+	const auto rc = it->second->Decrypt(discord::dave::MediaType::Video, discord::dave::MakeArrayView(frame, frameLen),
+	                                    discord::dave::MakeArrayView(out, outCapacity), written);
+	return rc == discord::dave::Decryptor::ResultCode::Success;
+}
+
 std::string DaveSession::lastError() const { return impl->error; }
 
 } // namespace Discord

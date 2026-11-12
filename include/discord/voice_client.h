@@ -162,7 +162,22 @@ class VoiceClient {
 	bool speakingSent = false;
 	uint64_t transmitUntil = 0;
 	std::atomic<uint64_t> establishedAt{0};
-	std::map<int, std::pair<uint32_t, size_t>> videoSeen; // video experiment: packets and bytes per payload type
+	std::map<int, std::pair<uint32_t, size_t>> videoSeen;
+	// Video experiment: the packets of a frame are joined, decrypted and saved to the SD card to be checked on a computer.
+	std::unordered_map<uint32_t, std::string> videoSsrcToUser;
+	void handleVideoPayload(uint32_t ssrc, uint16_t seq, bool lastOfFrame, const uint8_t *payload, size_t len);
+	void closeVideoCapture();
+	uint8_t *videoAssembly = nullptr;  // the frame being joined (Annex B)
+	uint8_t *videoDecrypted = nullptr; // the same frame after DAVE
+	size_t videoAssemblyLen = 0;
+	bool videoFrameBroken = false;
+	uint16_t videoLastSeq = 0;
+	bool videoHaveSeq = false;
+	uint32_t videoFramesOk = 0;
+	uint32_t videoFramesBad = 0;
+	uint32_t videoFramesDropped = 0;
+	void *videoFile = nullptr; // FILE *
+	size_t videoFileBytes = 0; // video experiment: packets and bytes per payload type
 	std::string ringChannelId;
 	std::atomic<bool> outgoingRing{false};
 	std::atomic<bool> ringPlaying{false};

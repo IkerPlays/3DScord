@@ -1,5 +1,7 @@
 #include "discord/voice_client.h"
 #include "core/config.h"
+#include <ctime>
+#include <sys/stat.h>
 #include "utils/call_recorder.h"
 #include "discord/discord_client.h"
 #include "log.h"
@@ -49,6 +51,7 @@ constexpr int OP_READY = 2;
 constexpr int OP_HEARTBEAT = 3;
 constexpr int OP_SESSION_DESCRIPTION = 4;
 constexpr int OP_SPEAKING = 5;
+constexpr int OP_VIDEO = 12;
 constexpr int OP_HEARTBEAT_ACK = 6;
 constexpr int OP_HELLO = 8;
 constexpr int OP_CLIENTS_CONNECT = 11;
@@ -636,6 +639,155 @@ void VoiceClient::sendSelectProtocol() {
 	Logger::log("[Voice] Sent Select Protocol mode=%s addr=%s:%d", mode.c_str(), externalIp.c_str(), externalPort);
 }
 
+namespace {
+constexpr size_t VIDEO_FRAME_MAX = 160 * 1024;      // the biggest frame that is kept
+constexpr size_t VIDEO_FILE_MAX = 3 * 1024 * 1024; // the file of the experiment stops growing here
+const uint8_t START_CODE[4] = {0, 0, 0, 1};
+} // namespace
+
+void VoiceClient::closeVideoCapture() {
+	if (videoFile) {
+		fclose((FILE *)videoFile);
+		videoFile = nullptr;
+	}
+	free(videoAssembly);
+	free(videoDecrypted);
+	videoAssembly = nullptr;
+	videoDecrypted = nullptr;
+	videoAssemblyLen = 0;
+	videoFramesOk = videoFramesBad = videoFramesDropped = 0;
+	videoHaveSeq = false;
+	videoFileBytes = 0;
+}
+
+// Joins the RTP packets of an H.264 frame (single NAL units, STAP-A and FU-A) into one Annex B frame, decrypts it with DAVE
+// and writes it to recordings/video_in_*.264. The picture is not decoded or shown yet.
+void VoiceClient::handleVideoPayload(uint32_t ssrc, uint16_t seq, bool lastOfFrame, const uint8_t *payload, size_t len) {
+	std::string userId;
+	{
+		std::shared_lock<std::shared_mutex> lock(ssrcMutex);
+		auto it = videoSsrcToUser.find(ssrc);
+		if (it == videoSsrcToUser.end()) {
+			return;
+		}
+		userId = it->second;
+	}
+	if (!videoAssembly) {
+		videoAssembly = (uint8_t *)malloc(VIDEO_FRAME_MAX);
+		videoDecrypted = (uint8_t *)malloc(VIDEO_FRAME_MAX);
+		if (!videoAssembly || !videoDecrypted) {
+			closeVideoCapture();
+			return;
+		}
+	}
+
+	// A missing packet breaks the frame; it is dropped when its last packet arrives.
+	if (videoHaveSeq && seq != (uint16_t)(videoLastSeq + 1)) {
+		videoFrameBroken = true;
+	}
+	videoLastSeq = seq;
+	videoHaveSeq = true;
+
+	auto append = [&](const uint8_t *data, size_t n) {
+		if (videoAssemblyLen + n > VIDEO_FRAME_MAX) {
+			videoFrameBroken = true;
+			return;
+		}
+		memcpy(videoAssembly + videoAssemblyLen, data, n);
+		videoAssemblyLen += n;
+	};
+
+	if (len >= 2) {
+		const int nalType = payload[0] & 0x1F;
+		if (nalType >= 1 && nalType <= 23) {
+			append(START_CODE, 4);
+			append(payload, len);
+		} else if (nalType == 24) { // STAP-A: several small NAL units in one packet
+			size_t pos = 1;
+			while (pos + 2 <= len) {
+				const size_t size = ((size_t)payload[pos] << 8) | payload[pos + 1];
+				pos += 2;
+				if (size == 0 || pos + size > len) {
+					videoFrameBroken = true;
+					break;
+				}
+				append(START_CODE, 4);
+				append(payload + pos, size);
+				pos += size;
+			}
+		} else if (nalType == 28) { // FU-A: one NAL unit cut into pieces
+			const uint8_t indicator = payload[0];
+			const uint8_t header = payload[1];
+			if (header & 0x80) {
+				append(START_CODE, 4);
+				const uint8_t nalHeader = (uint8_t)((indicator & 0xE0) | (header & 0x1F));
+				append(&nalHeader, 1);
+			}
+			append(payload + 2, len - 2);
+		}
+	}
+
+	if (!lastOfFrame) {
+		return;
+	}
+
+	const bool broken = videoFrameBroken;
+	const size_t frameLen = videoAssemblyLen;
+	videoFrameBroken = false;
+	videoAssemblyLen = 0;
+	if (broken || frameLen == 0) {
+		videoFramesDropped++;
+		return;
+	}
+
+	size_t written = 0;
+	if (daveVersion != 0) {
+		if (!dave.decryptVideo(userId, videoAssembly, frameLen, videoDecrypted, VIDEO_FRAME_MAX, &written) ||
+		    written == 0) {
+			videoFramesBad++;
+			if (videoFramesBad <= 3 || videoFramesBad % 100 == 0) {
+				Logger::log("[Video] DAVE could not decrypt a frame of %zu bytes (count %u, %s)", frameLen, videoFramesBad,
+				            dave.lastError().c_str());
+			}
+			return;
+		}
+	} else {
+		memcpy(videoDecrypted, videoAssembly, frameLen);
+		written = frameLen;
+	}
+
+	videoFramesOk++;
+	if (videoFramesOk <= 3 || videoFramesOk % 150 == 0) {
+		Logger::log("[Video] Frame %u: %zu bytes sent, %zu decrypted, first NAL type %d (frames lost %u, bad %u)",
+		            videoFramesOk, frameLen, written, written > 4 ? (videoDecrypted[4] & 0x1F) : -1, videoFramesDropped,
+		            videoFramesBad);
+	}
+
+	// The decrypted frames go to the SD card so the stream can be checked on a computer (VLC, ffprobe).
+	if (videoFileBytes < VIDEO_FILE_MAX) {
+		if (!videoFile) {
+			mkdir("sdmc:/3ds", 0777);
+			mkdir(CONFIG_DIR_PATH, 0777);
+			const std::string dir = std::string(CONFIG_DIR_PATH) + "/recordings";
+			mkdir(dir.c_str(), 0777);
+			char name[64];
+			const time_t now = time(nullptr);
+			strftime(name, sizeof(name), "/video_in_%Y%m%d_%H%M%S.264", gmtime(&now));
+			videoFile = fopen((dir + name).c_str(), "wb");
+			Logger::log("[Video] Saving what %s sends to %s%s", userId.c_str(), dir.c_str(), name);
+		}
+		if (videoFile) {
+			fwrite(videoDecrypted, 1, written, (FILE *)videoFile);
+			videoFileBytes += written;
+			if (videoFileBytes >= VIDEO_FILE_MAX) {
+				fclose((FILE *)videoFile);
+				videoFile = nullptr;
+				Logger::log("[Video] Saved %zu bytes: enough for the experiment", videoFileBytes);
+			}
+		}
+	}
+}
+
 void VoiceClient::handleRtpPacket(uint8_t *packet, size_t len) {
 	if (len < 12 + GCM_TAG_SIZE + NONCE_SUFFIX_SIZE) {
 		return;
@@ -648,8 +800,9 @@ void VoiceClient::handleRtpPacket(uint8_t *packet, size_t len) {
 	if (payloadType >= RTCP_PT_MIN && payloadType <= RTCP_PT_MAX) {
 		return;
 	}
-	if (payloadType != OPUS_PAYLOAD_TYPE) {
-		// Video is not played yet: with the experiment on, what arrives is counted and written to the log.
+	const bool isVideo = payloadType == VIDEO_PAYLOAD_TYPE && Config::getInstance().isVideoExperimental();
+	if (payloadType != OPUS_PAYLOAD_TYPE && !isVideo) {
+		// With the experiment on, the other kinds of packets are only counted and written to the log.
 		if (Config::getInstance().isVideoExperimental()) {
 			auto &seen = videoSeen[payloadType];
 			seen.first++;
@@ -718,6 +871,11 @@ void VoiceClient::handleRtpPacket(uint8_t *packet, size_t len) {
 	}
 
 	if (opusLen == 0) {
+		return;
+	}
+
+	if (isVideo) {
+		handleVideoPayload(ssrc, seq, (packet[1] & 0x80) != 0, opusData, opusLen);
 		return;
 	}
 
@@ -1325,6 +1483,19 @@ void VoiceClient::handlePayload(const std::string &message) {
 		setState(VoiceState::ESTABLISHED);
 		break;
 	}
+	case OP_VIDEO: {
+		if (!doc.HasMember("d") || !doc["d"].IsObject()) {
+			break;
+		}
+		const rapidjson::Value &d = doc["d"];
+		const uint32_t videoSsrc = (uint32_t)Utils::Json::getUint64(d, "video_ssrc");
+		const std::string userId = Utils::Json::getString(d, "user_id");
+		if (videoSsrc != 0 && !userId.empty()) {
+			std::unique_lock<std::shared_mutex> lock(ssrcMutex);
+			videoSsrcToUser[videoSsrc] = userId;
+		}
+		break;
+	}
 	case OP_SPEAKING: {
 		if (!doc.HasMember("d") || !doc["d"].IsObject()) {
 			break;
@@ -1455,7 +1626,9 @@ void VoiceClient::disconnect() {
 	{
 		std::unique_lock<std::shared_mutex> lock(ssrcMutex);
 		ssrcToUser.clear();
+		videoSsrcToUser.clear();
 	}
+	closeVideoCapture(); // the media thread has stopped by now
 	{
 		std::unique_lock<std::shared_mutex> lock(speakingMutex);
 		speakingUntil.clear();
