@@ -123,6 +123,36 @@ void SemDestroy (SWelsDecSemphore* s) {
   s->h = NULL;
 }
 
+#elif defined(__3DS__)
+
+// Nintendo 3DS (3DScord): decoding runs in one thread, so events and semaphores are never waited on. They exist only so that the
+// code links; creating one reports that it is not supported.
+int EventCreate (SWelsDecEvent* e, int manualReset, int initialState) {
+  e->isSignaled = initialState;
+  e->manualReset = manualReset;
+  return 1;
+}
+void EventReset (SWelsDecEvent* e) { e->isSignaled = 0; }
+void EventPost (SWelsDecEvent* e) { e->isSignaled = 1; }
+int EventWait (SWelsDecEvent* e, int32_t timeout) {
+  (void)e; (void)timeout;
+  return WELS_DEC_THREAD_WAIT_SIGNALED;
+}
+void EventDestroy (SWelsDecEvent* e) { (void)e; }
+int SemCreate (SWelsDecSemphore* s, long value, long max) {
+  s->v = value;
+  s->max = max;
+  return 1;
+}
+int SemWait (SWelsDecSemphore* s, int32_t timeout) {
+  (void)s; (void)timeout;
+  return WELS_DEC_THREAD_WAIT_SIGNALED;
+}
+void SemRelease (SWelsDecSemphore* s, long* prev_count) {
+  if (prev_count) *prev_count = s->v;
+}
+void SemDestroy (SWelsDecSemphore* s) { (void)s; }
+
 #else /* _WIN32 */
 
 static void getTimespecFromTimeout (struct timespec* ts, int32_t timeout) {
