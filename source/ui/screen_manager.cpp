@@ -25,6 +25,7 @@
 #include "ui/updater_screen.h"
 #include "ui/voice_recorder_screen.h"
 #include "utils/redraw.h"
+#include "ui/call_view.h"
 #include "utils/screenshot.h"
 #include "utils/transfers.h"
 #include "utils/utf8_utils.h"
@@ -513,11 +514,42 @@ void ScreenManager::update() {
 		const u32 pttKey = pttMode == 1 ? KEY_R : pttMode == 2 ? KEY_ZR : 0;
 		voice.setPushToTalk(inCall && pttKey != 0, inCall && pttKey != 0 && (kHeld & pttKey));
 
+		// A call that drops by itself is joined again after a few seconds, up to three times.
+		{
+			static std::string wantedGuild, wantedChannel;
+			static int attempts = 0;
+			static int wait = 0;
+			static Discord::VoiceState lastState = Discord::VoiceState::DISCONNECTED;
+			const Discord::VoiceState now = voice.getState();
+			if (now == Discord::VoiceState::ESTABLISHED) {
+				wantedGuild = voice.getGuildId();
+				wantedChannel = voice.getChannelId();
+				attempts = 0;
+				wait = 0;
+			} else if (now == Discord::VoiceState::DISCONNECTED) {
+				wantedChannel.clear(); // the user hung up
+			} else if (now == Discord::VoiceState::FAILED && lastState != Discord::VoiceState::FAILED &&
+			           !wantedChannel.empty() && Config::getInstance().isAutoReconnect() && attempts < 3) {
+				wait = 180; // three seconds
+			}
+			if (wait > 0 && --wait == 0 && !wantedChannel.empty()) {
+				attempts++;
+				showToast(TR("voice.reconnecting"));
+				voice.connect(wantedGuild, wantedChannel);
+			}
+			lastState = now;
+		}
+
 		if (inCall) {
 			const bool chord = (kHeld & KEY_L) && !(kHeld & KEY_R);
 			const bool muteKey = (kDown & KEY_ZL) || (chord && (kDown & KEY_X));
 			const bool deafKey = (pttKey != KEY_ZR && (kDown & KEY_ZR)) || (chord && (kDown & KEY_Y));
-			if (muteKey && !voice.isServerMuted()) {
+			// L+R: the top screen shows the speaker in the corner, everyone in the call, or nothing.
+			const bool viewKey = ((kDown & KEY_R) && (kHeld & KEY_L)) || ((kDown & KEY_L) && (kHeld & KEY_R));
+			if (viewKey) {
+				CallView::cycle();
+				voiceKeyHandled = true;
+			} else if (muteKey && !voice.isServerMuted()) {
 				voice.setMuted(!voice.isMuted());
 				showToast(TR(voice.isMuted() ? "voice.muted" : "voice.unmuted"));
 				voiceKeyHandled = true;
@@ -597,7 +629,11 @@ bool ScreenManager::shouldRender() {
 	bool animating = (currentScreen && currentScreen->isAnimating()) || hamburgerMenu.isAnimating() || toastTimer > 0 ||
 	                 debugOverlayEnabled || statsOverlayEnabled;
 	// The update that ends an animation leaves its final frame still to draw.
-	bool render = requested || inputActive || animating || wasAnimating || ++framesSinceRender >= IDLE_REDRAW_FRAMES;
+	// While the call view is on the top screen it is redrawn about ten times a second, so the speaking ring follows.
+	const bool callShown = CallView::mode() != CallView::Mode::HIDDEN &&
+	                       Discord::VoiceClient::getInstance().getState() == Discord::VoiceState::ESTABLISHED;
+	const int idleLimit = callShown ? 6 : IDLE_REDRAW_FRAMES;
+	bool render = requested || inputActive || animating || wasAnimating || ++framesSinceRender >= idleLimit;
 	wasAnimating = animating;
 	if (render) {
 		framesSinceRender = 0;
@@ -622,6 +658,8 @@ void ScreenManager::render() {
 	if (currentScreen) {
 		currentScreen->renderTop(topTarget);
 	}
+
+	CallView::render();
 
 	if (!isMenuHidden()) {
 		hamburgerMenu.render();

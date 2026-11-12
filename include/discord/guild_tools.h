@@ -34,6 +34,10 @@ Result editGuildText(const std::string &guildId, const std::string &field, const
 // Posts of an announcement channel are copied into another channel by a webhook (needs Manage Webhooks there).
 Result followAnnouncements(const std::string &announcementChannelId, const std::string &targetChannelId);
 
+// Voice moderation (needs Mute Members / Move Members). Muting is for everyone in the server.
+Result setVoiceMute(const std::string &guildId, const std::string &userId, bool muted);
+Result disconnectFromVoice(const std::string &guildId, const std::string &userId);
+
 // Your "About Me" inside one server.
 Result setServerBio(const std::string &guildId, const std::string &bio);
 

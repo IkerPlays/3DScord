@@ -136,6 +136,12 @@ class Config {
 	int getPushToTalk() const { return pushToTalk; }
 	void setPushToTalk(int mode);
 	// How loud the microphone has to be to count as speaking: 0 (very sensitive) .. 10 (strict).
+	int getCallVolume() const { return callVolume; }
+	void setCallVolume(int percent);
+	bool isBusyMode() const { return busyMode; }
+	void setBusyMode(bool enabled);
+	bool isAutoReconnect() const { return autoReconnect; }
+	void setAutoReconnect(bool enabled);
 	int getNoiseGate() const { return noiseGate; }
 	void setNoiseGate(int level);
 	bool isKeepCallsAwake() const { return keepCallsAwake; }
@@ -221,6 +227,9 @@ class Config {
 	int imageCache;
 	int pushToTalk;
 	int noiseGate;
+	int callVolume = 100;
+	bool busyMode = false;
+	bool autoReconnect = true;
 	bool keepCallsAwake;
 	int quietStart;
 	int quietEnd;

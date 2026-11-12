@@ -345,6 +345,9 @@ class DiscordClient {
 	                                      const std::vector<std::string> &values, const std::string &nonce);
 	std::string buildModalSubmit(const Modal &modal, const std::string &nonce);
 	void handlePresenceUpdate(const rapidjson::Value &d);
+	std::map<std::string, std::string> knownNames; // user id to the name shown for them, learned from messages
+	void rememberName(const User &user);
+	std::string resolveName(const std::string &userId, const std::string &channelId);
 	std::map<std::string, std::string> userActivities; // what each user is listening to or playing, from presences
 	void handleUserSettingsUpdate(const rapidjson::Value &d);
 	void handleUserGuildSettingsUpdate(const rapidjson::Value &d);

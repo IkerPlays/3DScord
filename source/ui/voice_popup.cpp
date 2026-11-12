@@ -1,6 +1,8 @@
 #include "ui/voice_popup.h"
 #include "core/i18n.h"
 #include "discord/avatar_cache.h"
+#include "discord/discord_client.h"
+#include "discord/guild_tools.h"
 #include "discord/voice_client.h"
 #include "ui/image_manager.h"
 #include "ui/screen_manager.h"
@@ -52,6 +54,8 @@ void VoicePopup::show(const Discord::VoiceParticipant &participant, bool isSelfU
 	userId = participant.userId;
 	userName = participant.name;
 	userAvatar = participant.avatar;
+	guildId = participant.guildId;
+	serverMuted = participant.mute;
 	isSelf = isSelfUser;
 	open = true;
 	Utils::requestRedraw();
@@ -118,6 +122,20 @@ void VoicePopup::render() {
 	drawRoundedRect(PLUS_BTN_X, STEP_BTN_Y, 0.92f, STEP_BTN_W, STEP_BTN_H, 4.0f, ScreenManager::colorBackgroundLight());
 	drawText(PLUS_BTN_X + 8.0f, STEP_BTN_Y + 1.0f, 0.93f, 0.50f, 0.50f, ScreenManager::colorText(), "+");
 
+	// Moderators can mute someone for everyone or remove them from the call.
+	if (!isSelf && !guildId.empty() && guildId != "DM") {
+		const uint64_t have = Discord::DiscordClient::getInstance().getGuildPermissions(guildId);
+		std::string line;
+		if (have & (1ULL << 22)) {
+			line += "X: " + TR(serverMuted ? "voice.mod_unmute" : "voice.mod_mute");
+		}
+		if (have & (1ULL << 24)) {
+			line += (line.empty() ? "" : "   ") + std::string("Y: ") + TR("voice.mod_kick");
+		}
+		if (!line.empty()) {
+			drawCenteredText(POPUP_Y + 107.0f, 0.93f, 0.32f, 0.32f, ScreenManager::colorTextMuted(), line, 320.0f);
+		}
+	}
 	drawButton(RESET_X, TR("common.reset"));
 	drawButton(CLOSE_X, TR("common.close"));
 }
@@ -181,6 +199,26 @@ bool VoicePopup::handleKeys(u32 kDown) {
 		close();
 		Utils::requestRedraw();
 		return true;
+	}
+	if (!isSelf && !guildId.empty() && guildId != "DM" && (kDown & (KEY_X | KEY_Y))) {
+		const uint64_t have = Discord::DiscordClient::getInstance().getGuildPermissions(guildId);
+		auto &sm = ScreenManager::getInstance();
+		if ((kDown & KEY_X) && (have & (1ULL << 22))) {
+			const auto r = Discord::GuildTools::setVoiceMute(guildId, userId, !serverMuted);
+			if (r.ok) {
+				serverMuted = !serverMuted;
+			}
+			sm.showToast(r.ok ? TR("mod.done") : r.message);
+			return true;
+		}
+		if ((kDown & KEY_Y) && (have & (1ULL << 24))) {
+			const auto r = Discord::GuildTools::disconnectFromVoice(guildId, userId);
+			sm.showToast(r.ok ? TR("mod.done") : r.message);
+			if (r.ok) {
+				close();
+			}
+			return true;
+		}
 	}
 	return false;
 }

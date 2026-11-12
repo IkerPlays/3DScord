@@ -93,6 +93,8 @@ struct VoiceParticipant {
 	bool selfDeaf = false;
 	bool mute = false;
 	bool deaf = false;
+	bool selfVideo = false;  // camera on
+	bool selfStream = false; // sharing the screen
 };
 
 struct GuildFolder {

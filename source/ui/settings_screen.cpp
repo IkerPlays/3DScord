@@ -483,6 +483,39 @@ void SettingsScreen::onEnter() {
 	ptt.onUpdate = [](int val) { Config::getInstance().setPushToTalk(val); };
 	allItems.push_back(ptt);
 
+	SettingItem callVol;
+	callVol.label = TR("settings.call_volume");
+	callVol.description = TR("settings.desc.call_volume");
+	callVol.type = SettingItemType::STEPPER;
+	callVol.value = Config::getInstance().getCallVolume() / 10;
+	callVol.min = 2;
+	callVol.max = 20;
+	callVol.valueFormatter = [](int val) -> std::string { return std::to_string(val * 10) + "%"; };
+	callVol.onUpdate = [](int val) { Config::getInstance().setCallVolume(val * 10); };
+	allItems.push_back(callVol);
+
+	SettingItem busy;
+	busy.label = TR("settings.busy_mode");
+	busy.description = TR("settings.desc.busy_mode");
+	busy.type = SettingItemType::TOGGLE;
+	busy.value = Config::getInstance().isBusyMode() ? 1 : 0;
+	busy.min = 0;
+	busy.max = 1;
+	busy.valueFormatter = [](int val) { return (val == 1) ? TR("common.enabled") : TR("common.disabled"); };
+	busy.onUpdate = [](int val) { Config::getInstance().setBusyMode(val == 1); };
+	allItems.push_back(busy);
+
+	SettingItem reconnect;
+	reconnect.label = TR("settings.auto_reconnect");
+	reconnect.description = TR("settings.desc.auto_reconnect");
+	reconnect.type = SettingItemType::TOGGLE;
+	reconnect.value = Config::getInstance().isAutoReconnect() ? 1 : 0;
+	reconnect.min = 0;
+	reconnect.max = 1;
+	reconnect.valueFormatter = [](int val) { return (val == 1) ? TR("common.enabled") : TR("common.disabled"); };
+	reconnect.onUpdate = [](int val) { Config::getInstance().setAutoReconnect(val == 1); };
+	allItems.push_back(reconnect);
+
 	SettingItem gate;
 	gate.label = TR("settings.noise_gate");
 	gate.description = TR("settings.desc.noise_gate");

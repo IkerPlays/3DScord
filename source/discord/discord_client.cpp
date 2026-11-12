@@ -1963,6 +1963,81 @@ void DiscordClient::handleChannelDelete(const rapidjson::Value &d) {
 	}
 }
 
+void DiscordClient::rememberName(const User &user) {
+	if (user.id.empty()) {
+		return;
+	}
+	const std::string &name = user.global_name.empty() ? user.username : user.global_name;
+	if (name.empty()) {
+		return;
+	}
+	if (knownNames.size() > 3000) {
+		knownNames.clear();
+	}
+	knownNames[user.id] = name;
+}
+
+// The name to show for someone, from what the app already knows. When it knows nothing it asks Discord in the
+// background and shows "..." until the answer arrives.
+std::string DiscordClient::resolveName(const std::string &userId, const std::string &channelId) {
+	auto known = knownNames.find(userId);
+	if (known != knownNames.end()) {
+		return known->second;
+	}
+	for (const auto &dm : privateChannels) {
+		for (const auto &r : dm.recipients) {
+			if (r.id == userId) {
+				return r.global_name.empty() ? r.username : r.global_name;
+			}
+		}
+	}
+	const std::string guildId = getGuildIdFromChannel(channelId);
+	if (!guildId.empty() && guildId != "DM") {
+		if (const Guild *g = getGuildPtr(guildId)) {
+			for (const auto &m : g->members) {
+				if (m.user_id == userId) {
+					if (!m.nickname.empty()) {
+						return m.nickname;
+					}
+					return m.globalName.empty() ? m.username : m.globalName;
+				}
+			}
+		}
+	}
+	if (!token.empty()) {
+		Network::NetworkManager::getInstance().enqueue(
+		    "https://discord.com/api/v10/users/" + userId, "GET", "", Network::RequestPriority::INTERACTIVE,
+		    [this, userId](const Network::HttpResponse &resp) {
+			    if (!resp.success) {
+				    return;
+			    }
+			    rapidjson::Document doc;
+			    doc.Parse(resp.body.c_str());
+			    if (doc.HasParseError() || !doc.IsObject()) {
+				    return;
+			    }
+			    std::string name = Utils::Json::getString(doc, "global_name");
+			    if (name.empty()) {
+				    name = Utils::Json::getString(doc, "username");
+			    }
+			    if (name.empty()) {
+				    return;
+			    }
+			    std::lock_guard<std::recursive_mutex> lock(clientMutex);
+			    knownNames[userId] = name;
+			    for (auto &entry : typingUsers) {
+				    for (auto &u : entry.second) {
+					    if (u.userId == userId) {
+						    u.displayName = name;
+					    }
+				    }
+			    }
+		    },
+		    {{"Authorization", token}});
+	}
+	return "...";
+}
+
 void DiscordClient::handleTypingStart(const rapidjson::Value &d) {
 	std::lock_guard<std::recursive_mutex> lock(clientMutex);
 
@@ -1975,7 +2050,7 @@ void DiscordClient::handleTypingStart(const rapidjson::Value &d) {
 		return;
 	}
 
-	std::string displayName = userId;
+	std::string displayName;
 	if (d.HasMember("member") && d["member"].IsObject()) {
 		const rapidjson::Value &member = d["member"];
 		std::string nick = Utils::Json::getString(member, "nick");
@@ -1990,6 +2065,10 @@ void DiscordClient::handleTypingStart(const rapidjson::Value &d) {
 				displayName = Utils::Json::getString(user, "username");
 			}
 		}
+	}
+
+	if (displayName.empty()) {
+		displayName = resolveName(userId, channelId);
 	}
 
 	TypingUser user;
@@ -2017,6 +2096,7 @@ void DiscordClient::handleTypingStart(const rapidjson::Value &d) {
 void DiscordClient::handleMessageCreate(const rapidjson::Value &d) {
 	std::lock_guard<std::recursive_mutex> lock(clientMutex);
 	Message msg = parseSingleMessage(d);
+	rememberName(msg.author);
 
 	if (messageCallback) {
 		messageCallback(msg);
@@ -4654,6 +4734,8 @@ void DiscordClient::applyVoiceState(const rapidjson::Value &state, const std::st
 	p.guildId = guildId;
 	p.selfMute = Utils::Json::getBool(state, "self_mute");
 	p.selfDeaf = Utils::Json::getBool(state, "self_deaf");
+	p.selfVideo = Utils::Json::getBool(state, "self_video");
+	p.selfStream = Utils::Json::getBool(state, "self_stream");
 	p.mute = Utils::Json::getBool(state, "mute");
 	p.deaf = Utils::Json::getBool(state, "deaf");
 

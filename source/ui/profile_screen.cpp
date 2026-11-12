@@ -1,4 +1,5 @@
 #include "ui/profile_screen.h"
+#include "discord/voice_client.h"
 #include "core/config.h"
 #include "core/i18n.h"
 #include "discord/avatar_cache.h"
@@ -262,6 +263,16 @@ void ProfileScreen::update() {
 				const auto r = Discord::Social::block(userId);
 				sm.showToast(r.ok ? TR("profile.blocked") : r.message);
 			}
+		} else if (kDown & KEY_DLEFT) {
+			// Calls this person in a direct message; their phone rings.
+			const auto dm = Discord::Social::openDm(userId);
+			if (dm.result.ok && !dm.channelId.empty()) {
+				Discord::DiscordClient::getInstance().setSelectedChannelId(dm.channelId);
+				Discord::VoiceClient::getInstance().connect("DM", dm.channelId, true);
+				sm.setScreen(ScreenType::MESSAGES);
+				return;
+			}
+			sm.showToast(dm.result.message);
 		} else if ((kDown & KEY_L) && !guildId.empty()) {
 			ListScreen::openModeration(userId, guildId, displayName());
 		} else if (kDown & KEY_R) {

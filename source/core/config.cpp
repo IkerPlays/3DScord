@@ -358,6 +358,15 @@ void Config::loadSettings() {
 			if (doc.HasMember("push_to_talk") && doc["push_to_talk"].IsInt()) {
 				pushToTalk = std::clamp(doc["push_to_talk"].GetInt(), 0, 2);
 			}
+			if (doc.HasMember("call_volume") && doc["call_volume"].IsInt()) {
+				callVolume = std::clamp(doc["call_volume"].GetInt(), 20, 200);
+			}
+			if (doc.HasMember("busy_mode") && doc["busy_mode"].IsBool()) {
+				busyMode = doc["busy_mode"].GetBool();
+			}
+			if (doc.HasMember("auto_reconnect") && doc["auto_reconnect"].IsBool()) {
+				autoReconnect = doc["auto_reconnect"].GetBool();
+			}
 			if (doc.HasMember("noise_gate") && doc["noise_gate"].IsInt()) {
 				noiseGate = std::clamp(doc["noise_gate"].GetInt(), 0, 10);
 			}
@@ -452,6 +461,12 @@ void Config::saveSettings() {
 	writer.Int(imageCache);
 	writer.Key("push_to_talk");
 	writer.Int(pushToTalk);
+	writer.Key("call_volume");
+	writer.Int(callVolume);
+	writer.Key("busy_mode");
+	writer.Bool(busyMode);
+	writer.Key("auto_reconnect");
+	writer.Bool(autoReconnect);
 	writer.Key("noise_gate");
 	writer.Int(noiseGate);
 	writer.Key("keep_calls_awake");
@@ -645,6 +660,21 @@ void Config::setImageCacheLevel(int level) {
 
 void Config::setPushToTalk(int mode) {
 	pushToTalk = std::clamp(mode, 0, 2);
+	saveSettings();
+}
+
+void Config::setCallVolume(int percent) {
+	callVolume = std::clamp(percent, 20, 200);
+	saveSettings();
+}
+
+void Config::setBusyMode(bool enabled) {
+	busyMode = enabled;
+	saveSettings();
+}
+
+void Config::setAutoReconnect(bool enabled) {
+	autoReconnect = enabled;
 	saveSettings();
 }
 

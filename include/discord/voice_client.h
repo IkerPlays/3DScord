@@ -40,6 +40,7 @@ class VoiceClient {
 
 	VoiceState getState() const { return state; }
 	std::string getChannelId();
+	std::string getGuildId();
 
 	void update();
 
@@ -160,6 +161,7 @@ class VoiceClient {
 	uint32_t sendTimestamp = 0;
 	bool speakingSent = false;
 	uint64_t transmitUntil = 0;
+	std::atomic<uint64_t> establishedAt{0};
 	std::string ringChannelId;
 	std::atomic<bool> outgoingRing{false};
 	std::atomic<bool> ringPlaying{false};
@@ -173,6 +175,13 @@ class VoiceClient {
 	void setDeafened(bool d);
 	bool isDeafened() const { return audio.isDeafened(); }
 	bool isSpeaking(const std::string &userId) const;
+	// Seconds since the call was established, 0 when there is no call.
+	int connectedSeconds() const;
+	// Counters for the call statistics.
+	uint32_t statPacketsDecoded() const { return packetsDecoded; }
+	uint32_t statPacketsSent() const { return packetsSent; }
+	uint32_t statDecryptFailures() const { return decryptFailures + daveDecryptFailures; }
+	uint32_t statMicFramesDropped() const { return micFramesDropped; }
 	bool isServerMuted() const { return serverMuted; }
 	bool isServerDeafened() const { return serverDeafened; }
 

@@ -1,5 +1,6 @@
 #include "utils/key_map.h"
 #include "ui/incoming_call.h"
+#include "core/config.h"
 #include "core/local_store.h"
 #include "core/i18n.h"
 #include "discord/discord_client.h"
@@ -47,6 +48,11 @@ void IncomingCall::update() {
 		ringTimer = 0;
 		std::lock_guard<std::recursive_mutex> lock(client.getMutex());
 		callerName = MessageUtils::getChannelDisplayName(client.getChannel(channelId));
+		// "Busy" mode turns every call down without ringing.
+		if (Config::getInstance().isBusyMode()) {
+			decline();
+			return;
+		}
 	}
 
 	if (--ringTimer <= 0) {

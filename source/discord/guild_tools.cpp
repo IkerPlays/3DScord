@@ -57,6 +57,19 @@ Result followAnnouncements(const std::string &announcementChannelId, const std::
 	                     "Guild");
 }
 
+Result setVoiceMute(const std::string &guildId, const std::string &userId, bool muted) {
+	auto http = Api::authorized();
+	return Api::toResult(http.patch(base() + "/guilds/" + guildId + "/members/" + userId,
+	                                muted ? "{\"mute\":true}" : "{\"mute\":false}"),
+	                     "Guild");
+}
+
+Result disconnectFromVoice(const std::string &guildId, const std::string &userId) {
+	auto http = Api::authorized();
+	return Api::toResult(http.patch(base() + "/guilds/" + guildId + "/members/" + userId, "{\"channel_id\":null}"),
+	                     "Guild");
+}
+
 Result setServerBio(const std::string &guildId, const std::string &bio) {
 	auto http = Api::authorized();
 	rapidjson::StringBuffer s;

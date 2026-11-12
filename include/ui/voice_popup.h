@@ -28,6 +28,8 @@ class VoicePopup {
 	std::string userId;
 	std::string userName;
 	std::string userAvatar;
+	std::string guildId;
+	bool serverMuted = false;
 	bool isSelf = false;
 
 	int volume() const;

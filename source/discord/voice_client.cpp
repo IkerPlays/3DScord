@@ -84,6 +84,11 @@ VoiceClient &VoiceClient::getInstance() {
 
 VoiceClient::~VoiceClient() { disconnect(); }
 
+int VoiceClient::connectedSeconds() const {
+	const uint64_t since = establishedAt;
+	return since == 0 ? 0 : (int)((osGetTime() - since) / 1000);
+}
+
 void VoiceClient::setState(VoiceState s) {
 	Utils::requestRedraw();
 	if (s == VoiceState::ESTABLISHED && state != VoiceState::ESTABLISHED) {
@@ -96,6 +101,11 @@ void VoiceClient::setState(VoiceState s) {
 			ringPlaying = false;
 			outgoingRing = true;
 		}
+	}
+	if (s == VoiceState::ESTABLISHED && state != VoiceState::ESTABLISHED) {
+		establishedAt = osGetTime();
+	} else if (s != VoiceState::ESTABLISHED) {
+		establishedAt = 0;
 	}
 	state = s;
 	if (stateCallback) {
@@ -286,6 +296,11 @@ void VoiceClient::update() {
 std::string VoiceClient::getChannelId() {
 	std::lock_guard<std::mutex> lock(mutex);
 	return channelId;
+}
+
+std::string VoiceClient::getGuildId() {
+	std::lock_guard<std::mutex> lock(mutex);
+	return guildId;
 }
 
 void VoiceClient::publishVoiceState() {
@@ -714,6 +729,7 @@ void VoiceClient::handleRtpPacket(uint8_t *packet, size_t len) {
 	if (userId) {
 		vol = (float)Config::getInstance().getUserVolume(*userId) / 100.0f;
 	}
+	vol *= (float)Config::getInstance().getCallVolume() / 100.0f;
 	audio.pushOpus(ssrc, seq, opusData, opusLen, vol);
 }
 
