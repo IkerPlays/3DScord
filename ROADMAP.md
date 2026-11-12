@@ -113,7 +113,7 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
 - [x] Voice messages (Rec button in the chat)
 - [x] GIF previews in the GIF picker
 - [x] Quick account switching (already in the side menu, on the account card)
-- [ ] Translate the new texts into the other languages
+- [~] Translate the new texts into the other languages (done for Spanish; the rest fall back to English and are open on Crowdin)
 - [ ] Not possible: on-demand message translation (it needs an outside translation service) and the time zone from the
       system (the 3DS does not tell the app its time zone; it is set by hand in Settings)
 

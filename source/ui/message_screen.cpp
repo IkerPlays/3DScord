@@ -373,6 +373,8 @@ void MessageScreen::applyForumFilter() {
 	messages = threadMsgs;
 	rebuildLayoutCache();
 	selectedIndex = 0;
+	targetScrollY = 0.0f;
+	currentScrollY = 0.0f;
 }
 
 MessageScreen::MessageScreen(const std::string &channelId, const std::string &channelName)
@@ -3426,7 +3428,8 @@ void MessageScreen::renderBottom(C3D_RenderTarget *target) {
 		} else if (pollMode) {
 			hints += "\uE000: " + TR("poll.vote") + "  \uE001: " + TR("common.close");
 		} else if (isForumView) {
-			hints += "\uE000: " + TR("common.open") + "  \uE003: " + TR("forum.tag") + "  \uE001: " + TR("common.back");
+			hints += "\uE000: " + TR("common.open") + (forumTagList.empty() ? "" : "  \uE003: " + TR("forum.tag")) +
+			         "  \uE001: " + TR("common.back");
 		} else {
 			if (canSend) {
 				hints += "\uE003: " + TR("common.type") + "  ";

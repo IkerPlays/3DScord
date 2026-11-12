@@ -5,7 +5,6 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
-#include <vector>
 
 #include "stb_image.h"
 
@@ -29,6 +28,13 @@ std::string lowerExtension(const std::string &path) {
 	}
 	return ext;
 }
+
+// Each size and quality to try, from the best to the smallest.
+struct Attempt {
+	int side;
+	int quality;
+};
+constexpr Attempt ATTEMPTS[] = {{1600, 80}, {1280, 70}, {960, 60}, {640, 50}};
 } // namespace
 
 bool isCompressible(const std::string &path) {
@@ -36,68 +42,97 @@ bool isCompressible(const std::string &path) {
 	return ext == "png" || ext == "jpg" || ext == "jpeg" || ext == "bmp" || ext == "tga";
 }
 
-std::string compressToJpeg(const std::string &path, int maxSide, int quality) {
+CompressResult compressToJpeg(const std::string &path, long long maxBytes, std::string &jpeg) {
 	int w = 0, h = 0, comp = 0;
 	if (!stbi_info(path.c_str(), &w, &h, &comp) || w <= 0 || h <= 0) {
-		return "";
+		return CompressResult::NOT_A_PICTURE;
 	}
-	// The decoded picture (three bytes a pixel) and the shrunk copy have to fit in memory together.
-	const size_t decoded = (size_t)w * h * 3;
-	if (decoded + decoded / 4 + 1024 * 1024 > System::heapFreeBytes()) {
+	// A picture with transparency is read with four channels so it can be drawn over white.
+	const int channels = (comp == 4 || comp == 2) ? 4 : 3;
+	const size_t decoded = (size_t)w * h * channels;
+	// The decoded picture, the biggest shrunk copy and the JPEG being built have to fit together.
+	const int firstSide = std::min(std::max(w, h), ATTEMPTS[0].side);
+	const size_t shrunk = (size_t)firstSide * firstSide * 3;
+	if (decoded + shrunk + (size_t)maxBytes + 1024 * 1024 > System::heapFreeBytes()) {
 		Logger::log("[Compress] %dx%d does not fit in memory", w, h);
-		return "";
+		return CompressResult::NO_MEMORY;
 	}
-	unsigned char *pixels = stbi_load(path.c_str(), &w, &h, &comp, 3);
+	unsigned char *pixels = stbi_load(path.c_str(), &w, &h, &comp, channels);
 	if (!pixels) {
-		return "";
+		return CompressResult::NOT_A_PICTURE;
 	}
 
-	const int longest = std::max(w, h);
-	int outW = w;
-	int outH = h;
-	if (longest > maxSide) {
-		outW = std::max(1, (int)((long long)w * maxSide / longest));
-		outH = std::max(1, (int)((long long)h * maxSide / longest));
-	}
-
-	std::string jpeg;
-	if (outW == w && outH == h) {
-		stbi_write_jpg_to_func(appendBytes, &jpeg, w, h, 3, pixels, quality);
-	} else {
-		std::vector<unsigned char> small((size_t)outW * outH * 3);
-		// Each new pixel is the average of the block of old pixels it covers.
+	CompressResult result = CompressResult::STILL_TOO_BIG;
+	for (const Attempt &attempt : ATTEMPTS) {
+		const int longest = std::max(w, h);
+		int outW = w;
+		int outH = h;
+		if (longest > attempt.side) {
+			outW = std::max(1, (int)((long long)w * attempt.side / longest));
+			outH = std::max(1, (int)((long long)h * attempt.side / longest));
+		}
+		unsigned char *small = (unsigned char *)malloc((size_t)outW * outH * 3);
+		if (!small) {
+			result = CompressResult::NO_MEMORY;
+			break;
+		}
+		// The block of old columns and rows each new one covers, worked out once.
+		int *xs = (int *)malloc(sizeof(int) * 2 * (size_t)outW);
+		if (!xs) {
+			free(small);
+			result = CompressResult::NO_MEMORY;
+			break;
+		}
+		for (int x = 0; x < outW; x++) {
+			const int x0 = (int)((long long)x * w / outW);
+			xs[x * 2] = x0;
+			xs[x * 2 + 1] = std::min(w, std::max(x0 + 1, (int)((long long)(x + 1) * w / outW)));
+		}
 		for (int y = 0; y < outH; y++) {
 			const int y0 = (int)((long long)y * h / outH);
-			const int y1 = std::max(y0 + 1, (int)((long long)(y + 1) * h / outH));
+			const int y1 = std::min(h, std::max(y0 + 1, (int)((long long)(y + 1) * h / outH)));
 			for (int x = 0; x < outW; x++) {
-				const int x0 = (int)((long long)x * w / outW);
-				const int x1 = std::max(x0 + 1, (int)((long long)(x + 1) * w / outW));
 				unsigned sum[3] = {0, 0, 0};
 				unsigned count = 0;
-				for (int yy = y0; yy < y1 && yy < h; yy++) {
-					for (int xx = x0; xx < x1 && xx < w; xx++) {
-						const unsigned char *p = pixels + ((size_t)yy * w + xx) * 3;
-						sum[0] += p[0];
-						sum[1] += p[1];
-						sum[2] += p[2];
+				for (int yy = y0; yy < y1; yy++) {
+					const unsigned char *row = pixels + (size_t)yy * w * channels;
+					for (int xx = xs[x * 2]; xx < xs[x * 2 + 1]; xx++) {
+						const unsigned char *p = row + (size_t)xx * channels;
+						if (channels == 4) {
+							const unsigned a = p[3];
+							// Over white: the more transparent, the closer to 255.
+							sum[0] += (p[0] * a + 255 * (255 - a)) / 255;
+							sum[1] += (p[1] * a + 255 * (255 - a)) / 255;
+							sum[2] += (p[2] * a + 255 * (255 - a)) / 255;
+						} else {
+							sum[0] += p[0];
+							sum[1] += p[1];
+							sum[2] += p[2];
+						}
 						count++;
 					}
 				}
-				unsigned char *d = &small[((size_t)y * outW + x) * 3];
+				unsigned char *d = small + ((size_t)y * outW + x) * 3;
 				for (int k = 0; k < 3; k++) {
-					d[k] = (unsigned char)(count ? sum[k] / count : 0);
+					d[k] = (unsigned char)(count ? sum[k] / count : 255);
 				}
 			}
 		}
-		stbi_image_free(pixels);
-		pixels = nullptr;
-		stbi_write_jpg_to_func(appendBytes, &jpeg, outW, outH, 3, small.data(), quality);
+		free(xs);
+		jpeg.clear();
+		stbi_write_jpg_to_func(appendBytes, &jpeg, outW, outH, 3, small, attempt.quality);
+		free(small);
+		Logger::log("[Compress] %dx%d -> %dx%d q%d: %zu bytes", w, h, outW, outH, attempt.quality, jpeg.size());
+		if ((long long)jpeg.size() <= maxBytes) {
+			result = CompressResult::OK;
+			break;
+		}
 	}
-	if (pixels) {
-		stbi_image_free(pixels);
+	stbi_image_free(pixels);
+	if (result != CompressResult::OK) {
+		jpeg.clear();
 	}
-	Logger::log("[Compress] %dx%d -> %dx%d, %zu bytes", w, h, outW, outH, jpeg.size());
-	return jpeg;
+	return result;
 }
 
 } // namespace Image

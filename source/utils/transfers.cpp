@@ -180,9 +180,16 @@ void Transfers::uploadFile(const std::string &channelId, const std::string &path
 				return;
 			}
 			report(TR("transfer.compressing"));
-			data = Image::compressToJpeg(path, 1600, 80);
-			if (data.empty() || (long long)data.size() > MAX_UPLOAD_BYTES) {
-				report(TR("transfer.too_big"));
+			const Image::CompressResult shrunk = Image::compressToJpeg(path, MAX_UPLOAD_BYTES, data);
+			if (shrunk != Image::CompressResult::OK) {
+				report(TR(shrunk == Image::CompressResult::NO_MEMORY       ? "transfer.no_memory"
+				          : shrunk == Image::CompressResult::NOT_A_PICTURE ? "transfer.read_failed"
+				                                                           : "transfer.too_big"));
+				return;
+			}
+			// The JPEG, the form around it and the copy the request keeps must also fit.
+			if (data.size() * 3 + 512 * 1024 > System::heapFreeBytes()) {
+				report(TR("transfer.no_memory"));
 				return;
 			}
 			const size_t dot = name.rfind('.');

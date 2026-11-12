@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- **Picture shrinking, improved:** it tries smaller sizes and lower quality until the picture fits in 4 MB, draws transparent
+  parts over white, checks memory first and tells you the real reason when it cannot (no memory, not a picture, still too big).
+  Pictures taken in portrait may come out sideways.
+- **Forum filter:** the list goes back to the top when the filter changes, and the Tag hint only shows in forums that have tags.
 - **Big pictures are shrunk:** a PNG/JPEG/BMP over 4 MB is reduced to 1600 px and sent as a JPEG instead of being refused.
 - **Forum filter:** Y in a forum cycles through its tags and shows only the posts with that tag.
 
