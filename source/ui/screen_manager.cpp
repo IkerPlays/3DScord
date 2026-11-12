@@ -27,6 +27,7 @@
 #include "utils/redraw.h"
 #include "ui/call_view.h"
 #include "ui/camera_screen.h"
+#include "ui/video_test_screen.h"
 #include "utils/voice_player.h"
 #include "utils/call_recorder.h"
 #include "utils/screenshot.h"
@@ -441,6 +442,9 @@ void ScreenManager::setScreen(ScreenType type) {
 		break;
 	case ScreenType::CAMERA:
 		currentScreen = std::make_unique<CameraScreen>();
+		break;
+	case ScreenType::VIDEO_TEST:
+		currentScreen = std::make_unique<VideoTestScreen>();
 		break;
 	}
 

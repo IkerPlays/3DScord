@@ -197,6 +197,33 @@ struct Attachment {
 	bool spoiler = false;
 	float durationSecs = 0.0f; // voice messages
 	bool isVoice() const { return durationSecs > 0.0f && content_type.rfind("audio/", 0) == 0; }
+	// Ogg sound files (voice messages and short clips) can be played; other audio formats cannot.
+	bool isPlayableAudio() const {
+		if (isVoice()) {
+			return true;
+		}
+		const size_t dot = filename.rfind('.');
+		std::string ext = dot == std::string::npos ? "" : filename.substr(dot + 1);
+		for (char &c : ext) {
+			c = (char)tolower((unsigned char)c);
+		}
+		return ext == "ogg" || ext == "opus" || ext == "oga";
+	}
+	// Small text files can be read in the app.
+	bool isReadableText() const {
+		if (size <= 0 || size > 256 * 1024) {
+			return false;
+		}
+		if (content_type.rfind("text/", 0) == 0 || content_type.find("json") != std::string::npos) {
+			return true;
+		}
+		const size_t dot = filename.rfind('.');
+		std::string ext = dot == std::string::npos ? "" : filename.substr(dot + 1);
+		for (char &c : ext) {
+			c = (char)tolower((unsigned char)c);
+		}
+		return ext == "txt" || ext == "md" || ext == "log" || ext == "json" || ext == "csv" || ext == "ini" || ext == "xml";
+	}
 };
 
 struct Sticker {

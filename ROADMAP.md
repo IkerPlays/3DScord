@@ -166,8 +166,10 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
 - [x] Camera mode with a live view, outer and inner camera, preview before sending
 - [x] Choose how much big pictures are shrunk when sent
 - [x] Upload up to the account's limit (Nitro, boosted servers), streamed from the SD card
-- [ ] Not possible: video calls, seeing other people's cameras or shared screens (the 3DS has no video encoder, and its
-      hardware decoder only exists on the New 3DS and cannot be used for Discord's streams)
+- [~] Experimental video: H.264 encoder built in (minih264e) and a Video Test in Channel Tools that records camera video to
+      the SD card. Video calls themselves (Discord's video signalling, RTP packaging, DAVE encryption of frames, and a decoder
+      to see other people) are NOT done: they cannot be tested without live calls and could break the audio calls.
+- [x] Previews in the chat: play Ogg sounds and read small text files from the message menu
 
 ## Not possible on the 3DS
 

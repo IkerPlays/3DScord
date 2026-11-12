@@ -8,6 +8,10 @@
 #include "ui/voice_recorder_screen.h"
 #include "ui/profile_screen.h"
 #include "utils/transfers.h"
+#include "utils/file_utils.h"
+#include "ui/file_preview_screen.h"
+#include "network/network_manager.h"
+#include <sys/stat.h>
 #include "core/config.h"
 #include "core/i18n.h"
 #include "discord/avatar_cache.h"
@@ -940,7 +944,7 @@ void MessageScreen::update() {
 					Utils::VoicePlayer::getInstance().stop();
 				} else if (selectedIndex >= 0 && selectedIndex < (int)messages.size()) {
 					for (const auto &attach : messages[selectedIndex].attachments) {
-						if (attach.isVoice()) {
+						if (attach.isPlayableAudio()) {
 							const float speed = action == "PlayVoiceFast" ? 1.5f : 1.0f;
 							if (action == "QueueVoice") {
 								Utils::VoicePlayer::getInstance().enqueue(attach.url, 1.0f);
@@ -950,6 +954,40 @@ void MessageScreen::update() {
 							ScreenManager::getInstance().showToast(TR("voice_msg.playing"));
 							break;
 						}
+					}
+				}
+			} else if (action == "ReadFile") {
+				// A small text file is fetched and shown in the same preview that files get before they are sent.
+				if (selectedIndex >= 0 && selectedIndex < (int)messages.size()) {
+					for (const auto &attach : messages[selectedIndex].attachments) {
+						if (!attach.isReadableText()) {
+							continue;
+						}
+						Network::HttpRequest request{attach.url, "GET", "", {}, 15};
+						Network::HttpResponse resp = Network::NetworkManager::getInstance().perform(std::move(request));
+						if (!resp.success || resp.body.empty()) {
+							ScreenManager::getInstance().showToast(TR("transfer.read_failed"));
+							break;
+						}
+						const std::string dir = Utils::Transfers::downloadDir();
+						mkdir("sdmc:/3ds", 0777);
+						mkdir(CONFIG_DIR_PATH, 0777);
+						mkdir(dir.c_str(), 0777);
+						std::string clean = attach.filename;
+						for (char &c : clean) {
+							if (c == '/' || c == '\\' || c == ':') {
+								c = '_';
+							}
+						}
+						const std::string path = dir + "/read_" + clean;
+						if (!Utils::File::writeFile(path, resp.body)) {
+							ScreenManager::getInstance().showToast(TR("transfer.read_failed"));
+							break;
+						}
+						updateLock.unlock();
+						FilePreviewScreen::open(path, 0, []() {}, nullptr);
+						updateLock.lock();
+						break;
 					}
 				}
 			} else if (action == "ViewImage" || action == "SaveAttachment") {
@@ -1828,6 +1866,11 @@ float MessageScreen::drawAttachment(const Discord::Attachment &attach, float x, 
 	const bool hidden = attach.spoiler && !revealed;
 
 	if (!isImageAttachment(attach)) {
+		if (attach.isPlayableAudio() && !attach.isVoice()) {
+			drawText(x, y, 0.5f, 0.35f, 0.35f, ScreenManager::colorSelection(),
+			         TR("message.audio_file") + " " + attach.filename);
+			return y + 12.0f;
+		}
 		if (attach.isVoice()) {
 			char length[48];
 			const int secs = (int)(attach.durationSecs + 0.5f);
@@ -3718,7 +3761,11 @@ void MessageScreen::showMessageOptions() {
 			addOption("ViewImage", "message.menu.view_image");
 		}
 		if (std::any_of(msg.attachments.begin(), msg.attachments.end(),
-		                [](const Discord::Attachment &a) { return a.isVoice(); })) {
+		                [](const Discord::Attachment &a) { return a.isReadableText(); })) {
+			addOption("ReadFile", "message.menu.read_file");
+		}
+		if (std::any_of(msg.attachments.begin(), msg.attachments.end(),
+		                [](const Discord::Attachment &a) { return a.isPlayableAudio(); })) {
 			addOption("PlayVoice", "message.menu.play_voice");
 			addOption("PlayVoiceFast", "message.menu.play_voice_fast");
 			addOption("QueueVoice", "message.menu.queue_voice");

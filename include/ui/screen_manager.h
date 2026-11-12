@@ -33,7 +33,8 @@ enum class ScreenType {
 	FILE_PREVIEW,
 	VOICE_RECORDER,
 	PIN_LOCK,
-	CAMERA
+	CAMERA,
+	VIDEO_TEST
 };
 
 class Screen {

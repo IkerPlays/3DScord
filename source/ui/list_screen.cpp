@@ -11,6 +11,7 @@
 #include "ui/voice_recorder_screen.h"
 #include "discord/commands.h"
 #include "ui/camera_screen.h"
+#include "ui/video_test_screen.h"
 #include "utils/call_recorder.h"
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
@@ -556,6 +557,7 @@ void ListScreen::loadLocal() {
 		        {"recordcall", channelId, TR("record.title"), TR("list.tools.record")},
 		        {"soundboard", channelId, TR("soundboard.title"), TR("list.tools.soundboard")},
 		        {"voicemsg", channelId, TR("voice_msg.title"), TR("list.tools.voicemsg")},
+		        {"videotest", channelId, TR("videotest.title"), TR("list.tools.videotest")},
 		        {"photo", channelId, TR("photo.title"), TR("list.tools.photo")},
 		        {"commands", channelId, TR("commands.title"), TR("list.tools.commands")},
 		        {"themeshare", channelId, TR("theme.share"), TR("list.tools.theme_share")},
@@ -1569,6 +1571,9 @@ void ListScreen::primaryAction(const Entry &entry) {
 			}
 		} else if (entry.id == "voicemsg") {
 			VoiceRecorderScreen::open(channelId);
+		} else if (entry.id == "videotest") {
+			sm.returnToPreviousScreen();
+			VideoTestScreen::open();
 		} else if (entry.id == "photo") {
 			// Camera mode: the live view, A takes the photo, and it is shown before it is sent.
 			sm.returnToPreviousScreen();
