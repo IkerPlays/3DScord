@@ -1,4 +1,6 @@
 #include "ui/settings_screen.h"
+#include "ui/mvd_test_screen.h"
+#include "ui/video_test_screen.h"
 #include "core/config.h"
 #include "core/i18n.h"
 #include "log.h"
@@ -905,6 +907,20 @@ void SettingsScreen::addUpdateItems() {
 	diagnostics.type = SettingItemType::ACTION;
 	diagnostics.action = []() { ListScreen::open(ListScreen::Mode::DIAG); };
 	allItems.push_back(diagnostics);
+
+	SettingItem decoderTest;
+	decoderTest.label = TR("mvdtest.title");
+	decoderTest.description = TR("settings.desc.mvdtest");
+	decoderTest.type = SettingItemType::ACTION;
+	decoderTest.action = []() { MvdTestScreen::open(); };
+	allItems.push_back(decoderTest);
+
+	SettingItem videoTest;
+	videoTest.label = TR("videotest.title");
+	videoTest.description = TR("settings.desc.videotest");
+	videoTest.type = SettingItemType::ACTION;
+	videoTest.action = []() { VideoTestScreen::open(); };
+	allItems.push_back(videoTest);
 
 	SettingItem autoUpdate;
 	autoUpdate.label = TR("updater.auto");

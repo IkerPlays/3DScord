@@ -66,14 +66,18 @@ MvdTestScreen::~MvdTestScreen() {
 }
 
 void MvdTestScreen::onEnter() {
+	Logger::log("[MvdTest] Opened (New 3DS: %d)", Utils::System::isNew3DS() ? 1 : 0);
 	if (!Utils::System::isNew3DS()) {
 		status = TR("mvdtest.need_new");
 		return;
 	}
 	if (!loadFile()) {
+		Logger::log("[MvdTest] No usable video file (%s)", path.c_str());
 		status = TR("mvdtest.no_file");
 		return;
 	}
+	Logger::log("[MvdTest] %s: %zu bytes, %zu NAL units from the first parameter set, %dx%d", path.c_str(), dataLen, nals.size(),
+	            width, height);
 	status = TR("mvdtest.ready");
 }
 

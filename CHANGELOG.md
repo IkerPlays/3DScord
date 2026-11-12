@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- **Decoder Test and Video Test are easier to find:** they are also in Settings > Updates, next to Diagnostics.
 - **Decoder Test (experimental, New 3DS only)** (Channel Tools): plays the newest video saved from a call
   (`recordings/video_in_*.264`) with the hardware video decoder of the New 3DS, shown on the top screen at half size, and
   shows how many frames it decoded and how long each takes. It is the test to know whether the video of a call can be seen on

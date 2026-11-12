@@ -545,6 +545,8 @@
     "mvdtest.running": "Decoding...",
     "mvdtest.done": "Done",
     "mvdtest.failed": "The decoder could not start (see the log)",
+    "settings.desc.mvdtest": "New 3DS only: plays the video saved from a call with the hardware decoder, to find out whether it can be shown.",
+    "settings.desc.videotest": "Records 10 seconds of camera video as H.264 and shows how fast the console encodes it.",
     "message.menu.react": "Add Reaction",
     "message.menu.reply": "Reply",
     "message.menu.retry": "Retry Loading",

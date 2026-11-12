@@ -545,6 +545,8 @@
     "mvdtest.running": "Decodificando...",
     "mvdtest.done": "Terminado",
     "mvdtest.failed": "El decodificador no pudo arrancar (mira el registro)",
+    "settings.desc.mvdtest": "Solo New 3DS: reproduce con el decodificador por hardware el vídeo guardado de una llamada, para saber si se puede mostrar.",
+    "settings.desc.videotest": "Graba 10 segundos de vídeo de la cámara en H.264 y muestra la velocidad de codificación de la consola.",
     "message.menu.react": "Add Reaction",
     "message.menu.reply": "Responder",
     "message.menu.retry": "Intentar de nuevo",
