@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <map>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace Discord {
@@ -47,6 +48,8 @@ struct Channel {
 	std::string last_message_id;
 	std::string owner_id;
 	std::string owner_name;
+	std::vector<std::pair<std::string, std::string>> availableTags; // forum: tag id and name
+	std::vector<std::string> appliedTags;                          // forum post: ids of its tags
 	int owner_color = 0;
 	std::string last_message_content;
 	std::string op_content;

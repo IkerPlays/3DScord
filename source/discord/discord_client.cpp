@@ -5001,6 +5001,21 @@ void DiscordClient::parseChannelObject(const rapidjson::Value &cObj, Channel &ch
 	channel.topic = Utils::Json::getString(cObj, "topic");
 	channel.flags = Utils::Json::getInt(cObj, "flags");
 
+	if (cObj.HasMember("available_tags") && cObj["available_tags"].IsArray()) {
+		for (const auto &tag : cObj["available_tags"].GetArray()) {
+			if (tag.IsObject()) {
+				channel.availableTags.push_back({Utils::Json::getString(tag, "id"), Utils::Json::getString(tag, "name")});
+			}
+		}
+	}
+	if (cObj.HasMember("applied_tags") && cObj["applied_tags"].IsArray()) {
+		for (const auto &tag : cObj["applied_tags"].GetArray()) {
+			if (tag.IsString()) {
+				channel.appliedTags.push_back(tag.GetString());
+			}
+		}
+	}
+
 	if (cObj.HasMember("permission_overwrites") && cObj["permission_overwrites"].IsArray()) {
 		parseOverwrites(cObj["permission_overwrites"], channel.permission_overwrites);
 	}

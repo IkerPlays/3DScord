@@ -65,7 +65,7 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
 - [ ] Carried over: compress big images before uploading
 - [x] Carried over: voice messages recorded with the microphone
 - [x] Carried over: follow announcement channels (Channel Tools > Follow This Channel)
-- [ ] Carried over: forum tags and filters
+- [~] Carried over: forum tags (shown before each post's title). Filters: not yet
 - [~] Carried over: pin favorite servers (Y on a server). Editable folders: not yet
 - [ ] Carried over: full member list with presence (Discord only lets bots list every member)
 

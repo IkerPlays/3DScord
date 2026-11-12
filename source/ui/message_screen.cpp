@@ -502,7 +502,9 @@ void MessageScreen::onEnter() {
 	if (isHiddenChannel) {
 		isLoading = false;
 	} else if (isForumView) {
-		client.fetchForumThreads(channelId, [this, token = aliveToken](const std::vector<Discord::Channel> &threads) {
+		const auto forumTags = channel.availableTags;
+		client.fetchForumThreads(channelId, [this, forumTags,
+		                                     token = aliveToken](const std::vector<Discord::Channel> &threads) {
 			if (!*token) {
 				return;
 			}
@@ -510,8 +512,18 @@ void MessageScreen::onEnter() {
 			for (const auto &t : threads) {
 				Discord::Message m;
 				m.id = t.id;
-				m.content = t.name;
-				m.displayContent = t.name;
+				// The post's tags go in front of its title: [Help] [Solved] Title.
+				std::string title;
+				for (const auto &applied : t.appliedTags) {
+					for (const auto &tag : forumTags) {
+						if (tag.first == applied) {
+							title += "[" + tag.second + "] ";
+						}
+					}
+				}
+				title += t.name;
+				m.content = title;
+				m.displayContent = title;
 				m.author.username = TR("message.thread");
 				m.type = t.type;
 				m.timestamp = "";
