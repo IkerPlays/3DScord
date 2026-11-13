@@ -278,7 +278,7 @@ bool DaveSession::encryptVideo(uint32_t ssrc, const uint8_t *frame, size_t frame
 		impl->selfChecks++;
 		std::vector<uint8_t> back(frameLen * 2 + 256);
 		size_t backLen = 0;
-		const auto drc = impl->selfDecryptor->Decrypt(discord::dave::MediaType::Video, discord::dave::MakeArrayView(out, *written),
+		const auto drc = impl->selfDecryptor->Decrypt(discord::dave::MediaType::Video, discord::dave::MakeArrayView(static_cast<const uint8_t *>(out), *written),
 		                                              discord::dave::MakeArrayView(back.data(), back.size()), &backLen);
 		Logger::log("[DAVE] Video self-check: %zu bytes in, %zu encrypted, decrypting our own frame %s (%zu bytes back)", frameLen,
 		            *written, drc == discord::dave::Decryptor::ResultCode::Success ? "WORKS" : "FAILS", backLen);
