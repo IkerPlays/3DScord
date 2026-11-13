@@ -76,6 +76,8 @@ struct TypingUser {
 
 class DiscordClient {
   public:
+	// What Discord last said about our own video in the voice state: -1 nothing yet, 0 off, 1 on (for the call view).
+	std::atomic<int> selfVideoEcho{-1};
 	static DiscordClient &getInstance();
 
 	void init();

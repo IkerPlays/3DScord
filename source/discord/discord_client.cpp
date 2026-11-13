@@ -1080,8 +1080,10 @@ void DiscordClient::handleDispatch(const rapidjson::Document &doc) {
 			std::string voiceSession = Utils::Json::getString(d, "session_id");
 			bool serverMute = Utils::Json::getBool(d, "mute");
 			bool serverDeaf = Utils::Json::getBool(d, "deaf");
-			Logger::log("[Voice] VOICE_STATE_UPDATE session=%s mute=%d deaf=%d", voiceSession.c_str(), serverMute,
-			            serverDeaf);
+			const bool selfVideo = Utils::Json::getBool(d, "self_video");
+			selfVideoEcho = selfVideo ? 1 : 0;
+			Logger::log("[Voice] VOICE_STATE_UPDATE session=%s mute=%d deaf=%d self_video=%d", voiceSession.c_str(), serverMute,
+			            serverDeaf, selfVideo);
 			if (voiceStateCallback) {
 				voiceStateCallback(voiceSession, serverMute, serverDeaf);
 			}

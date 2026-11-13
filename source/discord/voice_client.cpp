@@ -877,6 +877,11 @@ void VoiceClient::handleRtpPacket(uint8_t *packet, size_t len) {
 	uint8_t payloadType = packet[1] & 0x7F;
 	if (payloadType >= RTCP_PT_MIN && payloadType <= RTCP_PT_MAX) {
 		if (cameraSending.load()) {
+			const uint32_t seen = ++rtcpSeenWhileVideo;
+			if (seen <= 8 || seen % 100 == 0) {
+				Logger::log("[VideoTx] RTCP from the call: type %d, format %d, %zu bytes (count %u)", payloadType, packet[0] & 0x1F, len,
+				            (unsigned)seen);
+			}
 			handleRtcp(packet, len);
 		}
 		return;
@@ -1192,6 +1197,8 @@ void VoiceClient::sendRtp(uint8_t payloadType, uint32_t ssrcOut, uint16_t seq, u
 	memcpy(tag + GCM_TAG_SIZE, iv, NONCE_SUFFIX_SIZE);
 	send(udpSocket, packet, headerLen + extLen + len + GCM_TAG_SIZE + NONCE_SUFFIX_SIZE, 0);
 	sendNonce++;
+	videoPacketCount++;
+	videoOctetCount += (uint32_t)len;
 }
 
 // A whole coded frame (Annex B): encrypted with DAVE as a frame, cut into NAL units, and each one sent as one RTP packet or as
@@ -1272,12 +1279,59 @@ void VoiceClient::sendVideoFrame(const uint8_t *annexB, size_t len) {
 	}
 }
 
+// RTCP sender report (RFC 3550) for the video stream, like the clients of Discord send: when it is, how many packets and bytes went. The
+// first 8 bytes are in the clear, the rest is encrypted like the media.
+void VoiceClient::sendSenderReport() {
+	if (!gcm || udpSocket < 0) {
+		return;
+	}
+	uint8_t packet[8 + 20 + GCM_TAG_SIZE + NONCE_SUFFIX_SIZE];
+	packet[0] = 0x80;
+	packet[1] = 200; // sender report
+	packet[2] = 0;
+	packet[3] = 6; // seven 32-bit words, minus one
+	packet[4] = (uint8_t)(videoOwnSsrc >> 24);
+	packet[5] = (uint8_t)(videoOwnSsrc >> 16);
+	packet[6] = (uint8_t)(videoOwnSsrc >> 8);
+	packet[7] = (uint8_t)videoOwnSsrc;
+
+	uint8_t body[20];
+	const time_t now = time(nullptr);
+	const uint32_t ntpSeconds = (uint32_t)((uint64_t)now + 2208988800ULL); // seconds since 1900
+	const uint32_t rtpNow = (uint32_t)((osGetTime() - videoClockStart) * 90);
+	const uint32_t words[5] = {ntpSeconds, 0, rtpNow, videoPacketCount, videoOctetCount};
+	for (int i = 0; i < 5; i++) {
+		body[i * 4] = (uint8_t)(words[i] >> 24);
+		body[i * 4 + 1] = (uint8_t)(words[i] >> 16);
+		body[i * 4 + 2] = (uint8_t)(words[i] >> 8);
+		body[i * 4 + 3] = (uint8_t)words[i];
+	}
+	uint8_t iv[12];
+	memset(iv, 0, sizeof(iv));
+	iv[0] = (uint8_t)(sendNonce >> 24);
+	iv[1] = (uint8_t)(sendNonce >> 16);
+	iv[2] = (uint8_t)(sendNonce >> 8);
+	iv[3] = (uint8_t)sendNonce;
+	uint8_t *tag = packet + 8 + 20;
+	if (mbedtls_gcm_crypt_and_tag(gcm, MBEDTLS_GCM_ENCRYPT, sizeof(body), iv, sizeof(iv), packet, 8, body, packet + 8,
+	                              GCM_TAG_SIZE, tag) != 0) {
+		return;
+	}
+	memcpy(tag + GCM_TAG_SIZE, iv, NONCE_SUFFIX_SIZE);
+	send(udpSocket, packet, sizeof(packet), 0);
+	sendNonce++;
+}
+
 void VoiceClient::pumpVideoOut() {
 	if (!cameraSending.load()) {
 		return;
 	}
 	if (Utils::VideoSender::getInstance().takeResolutionChange()) {
 		sendVideoSignal(true); // the size of the picture changed: tell Discord
+	}
+	if (osGetTime() >= videoReportAt) {
+		videoReportAt = osGetTime() + 1000;
+		sendSenderReport();
 	}
 	bool key = false;
 	// Not more than a frame or two per pass: the audio comes first.
@@ -1366,6 +1420,11 @@ bool VoiceClient::setVideoSource(int source) {
 	videoClockStart = osGetTime();
 	videoSendSequence = 0;
 	videoFramesSent = 0;
+	rtcpSeenWhileVideo = 0;
+	videoPacketCount = 0;
+	videoOctetCount = 0;
+	videoReportAt = 0;
+	DiscordClient::getInstance().selfVideoEcho = -1;
 	videoSourceNow = source;
 	cameraSending = true;
 	sendVideoSignal(true);

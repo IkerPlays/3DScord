@@ -170,6 +170,14 @@ void drawTile(const Discord::VoiceParticipant &p, Discord::VoiceClient &voice, f
 		snprintf(stat, sizeof(stat), "%d fps  %d ms  K%d  D%d", tx.statFps(), tx.statMs(), tx.statKeyAsks(), tx.statDrops());
 		drawRoundedRect(x + border + 3.0f, y + border + 3.0f, 0.57f + zOff, 112.0f, 12.0f, 4.0f, C2D_Color32(0, 0, 0, 170));
 		drawText(x + border + 6.0f, y + border + 3.0f, 0.58f + zOff, 0.34f, 0.34f, ScreenManager::colorText(), stat);
+		// What Discord says: its confirmation of our video state (S) and the control messages that come back from the call (R). If
+		// someone receives the video, R goes up and K (key frames they ask for) too.
+		const int echo = Discord::DiscordClient::getInstance().selfVideoEcho.load();
+		char state[48];
+		snprintf(state, sizeof(state), "S%s  R%u", echo < 0 ? "?" : echo ? "1" : "0",
+		         (unsigned)Discord::VoiceClient::getInstance().rtcpWhileSending());
+		drawRoundedRect(x + border + 3.0f, y + border + 17.0f, 0.57f + zOff, 70.0f, 12.0f, 4.0f, C2D_Color32(0, 0, 0, 170));
+		drawText(x + border + 6.0f, y + border + 17.0f, 0.58f + zOff, 0.34f, 0.34f, ScreenManager::colorText(), state);
 	} else if (showCamera && rx.isLive() && rx.userId() == p.userId) {
 		C2D_DrawRectSolid(x + border + 2.0f, y + border + 2.0f, 0.515f + zOff, w - 2 * border - 4.0f, h - 2 * border - 4.0f,
 		                  C2D_Color32(0, 0, 0, 255));

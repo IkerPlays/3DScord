@@ -171,6 +171,7 @@ class VoiceClient {
 	// Own camera.
 	std::atomic<bool> cameraSending{false};
 	std::atomic<int> videoSourceNow{0};
+	std::atomic<uint32_t> rtcpSeenWhileVideo{0};
 	uint32_t videoOwnSsrc = 0;
 	uint32_t videoOwnRtxSsrc = 0;
 	uint16_t videoSendSequence = 0;
@@ -185,6 +186,10 @@ class VoiceClient {
 	             size_t len, bool withExtension = false);
 	uint8_t videoPlainBuffer[1500];
 	void sendVideoSignal(bool on);
+	void sendSenderReport();
+	uint32_t videoPacketCount = 0;
+	uint32_t videoOctetCount = 0;
+	uint64_t videoReportAt = 0;
 	void handleRtcp(const uint8_t *packet, size_t len);
 	std::atomic<uint32_t> videoKeyAskSsrc{0}; // set when someone starts sending video: the media thread asks for a key frame at once
 	uint64_t videoKeyRequestAt = 0;
@@ -215,6 +220,8 @@ class VoiceClient {
 	bool setVideoSource(int source);
 	int videoSource() const { return videoSourceNow.load(); }
 	bool isCameraOn() const { return cameraSending.load(); }
+	// RTCP messages that came from the call while we were sending video (someone receives it when they come).
+	uint32_t rtcpWhileSending() const { return rtcpSeenWhileVideo.load(); }
 	void setDeafened(bool d);
 	bool isDeafened() const { return audio.isDeafened(); }
 	bool isSpeaking(const std::string &userId) const;

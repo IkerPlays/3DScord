@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- **What Discord says about your video, in your own tile:** under `N fps  M ms  K  D` there is now `S1  R5`: S is Discord's confirmation of your video state
+  (`S1` on, `S0` off, `S?` nothing yet), R the RTCP control messages that come back from the call while you send (if someone receives the video they come, and
+  K, the key frames they ask for, goes up). The log (`[VideoTx]`, `[Voice] VOICE_STATE_UPDATE ... self_video`) says the same.
+- **RTCP sender reports** for your video once a second, as Discord's own clients send them (when, how many packets and bytes).
 - **Outer camera in the call** (experimental): the camera button next to the microphone now goes nothing > inner camera > outer camera (the one on the back) > top
   screen > nothing. If the camera or the encoder cannot start (for example the Camera screen has the camera) it says so at once and nothing is announced to Discord.
 - **Better camera picture:** the camera is read at 256x192 and starts sending at 192x144; the size now also goes UP (to 256x192) when the encoder has room (under
