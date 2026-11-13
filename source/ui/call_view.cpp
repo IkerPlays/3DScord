@@ -156,6 +156,11 @@ void drawTile(const Discord::VoiceParticipant &p, Discord::VoiceClient &voice, f
 		C2D_DrawRectSolid(x + border + 2.0f, y + border + 2.0f, 0.515f + zOff, w - 2 * border - 4.0f, h - 2 * border - 4.0f,
 		                  C2D_Color32(0, 0, 0, 255));
 		tx.drawPreview(x + border + 2.0f, y + border + 2.0f, 0.52f + zOff, w - 2 * border - 4.0f, h - 2 * border - 4.0f);
+		// How the encoder is doing: frames a second, milliseconds a frame, key frames asked for, times it could not keep up.
+		char stat[64];
+		snprintf(stat, sizeof(stat), "%d fps  %d ms  K%d  D%d", tx.statFps(), tx.statMs(), tx.statKeyAsks(), tx.statDrops());
+		drawRoundedRect(x + border + 3.0f, y + border + 3.0f, 0.57f + zOff, 112.0f, 12.0f, 4.0f, C2D_Color32(0, 0, 0, 170));
+		drawText(x + border + 6.0f, y + border + 3.0f, 0.58f + zOff, 0.34f, 0.34f, ScreenManager::colorText(), stat);
 	} else if (showCamera && rx.isLive() && rx.userId() == p.userId) {
 		C2D_DrawRectSolid(x + border + 2.0f, y + border + 2.0f, 0.515f + zOff, w - 2 * border - 4.0f, h - 2 * border - 4.0f,
 		                  C2D_Color32(0, 0, 0, 255));

@@ -56,6 +56,10 @@ bool VideoSender::start(Source source) {
 	current = source;
 	quit = false;
 	keyRequested = true;
+	statFpsNow = 0;
+	statMsNow = 0;
+	keyAsks = 0;
+	drops = 0;
 	{
 		std::lock_guard<std::mutex> lock(mutex);
 		queue.clear();
@@ -153,10 +157,10 @@ void VideoSender::run() {
 			return;
 		}
 		packed = (unsigned char *)malloc((size_t)W * H * 2);
-		// The inner camera, YUYV, 15 frames a second.
+		// The inner camera, YUYV, 10 frames a second (15 left the encoder no room next to the audio and the decoder).
 		ok = ok && packed && R_SUCCEEDED(CAMU_SetSize(SELECT_IN1, SIZE_QVGA, CONTEXT_A));
 		ok = ok && R_SUCCEEDED(CAMU_SetOutputFormat(SELECT_IN1, OUTPUT_YUV_422, CONTEXT_A));
-		ok = ok && R_SUCCEEDED(CAMU_SetFrameRate(SELECT_IN1, FRAME_RATE_15));
+		ok = ok && R_SUCCEEDED(CAMU_SetFrameRate(SELECT_IN1, FRAME_RATE_10));
 		ok = ok && R_SUCCEEDED(CAMU_SetNoiseFilter(SELECT_IN1, true));
 		ok = ok && R_SUCCEEDED(CAMU_SetAutoExposure(SELECT_IN1, true));
 		ok = ok && R_SUCCEEDED(CAMU_SetAutoWhiteBalance(SELECT_IN1, true));
@@ -194,6 +198,9 @@ void VideoSender::run() {
 	bool receiving = false;
 	u64 receivingSince = 0;
 	uint32_t restarts = 0;
+	u64 windowStart = osGetTime();
+	int windowFrames = 0;
+	double windowMs = 0;
 	while (!quit) {
 		if (camera) {
 			// The request for a frame stays open until the camera fills it; it is never abandoned (a second request while the first
@@ -258,8 +265,8 @@ void VideoSender::run() {
 			}
 		}
 
-		// A small copy for the preview (every other frame is enough).
-		if ((frames & 1) == 0) {
+		// A copy for the preview.
+		if (true) { // every frame: a preview at a few frames a second looks like the camera is stuck
 			std::vector<uint16_t> tiled((size_t)VIDEO_TEX_W * VIDEO_TEX_H, 0);
 			int pw = 0, ph = 0;
 			if (convertToTiledTexture(yPlane.data(), uPlane.data(), vPlane.data(), W, H, W, W / 2, tiled.data(), pw, ph)) {
@@ -278,8 +285,18 @@ void VideoSender::run() {
 		int codedBytes = 0;
 		if (encoder.encode(yPlane.data(), uPlane.data(), vPlane.data(), forceKey, &coded, &codedBytes) && coded &&
 		    codedBytes > 0) {
-			msTotal += ticksToMs(svcGetSystemTick() - t0);
+			const double frameMs = ticksToMs(svcGetSystemTick() - t0);
+			msTotal += frameMs;
+			windowMs += frameMs;
+			windowFrames++;
 			frames++;
+			if (osGetTime() - windowStart >= 1000) {
+				statFpsNow = windowFrames;
+				statMsNow = (int)(windowMs / std::max(1, windowFrames));
+				windowStart = osGetTime();
+				windowFrames = 0;
+				windowMs = 0;
+			}
 			if (frames <= 3 || frames % 150 == 0) {
 				Logger::log("[VideoTx] %u frames, %.1f ms each, last %d bytes%s", frames, msTotal / frames, codedBytes,
 				            forceKey ? " (key)" : "");
@@ -288,6 +305,7 @@ void VideoSender::run() {
 			if (queue.size() >= MAX_QUEUED) {
 				queue.clear(); // the call cannot keep up: start again with a key frame
 				keyRequested = true;
+				drops++;
 			} else {
 				Frame frame;
 				frame.data.assign(coded, coded + codedBytes);

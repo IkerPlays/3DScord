@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- **Camera in the call, steadier:** the camera now goes at 10 frames a second (15 left the encoder no room next to the audio and the decoder), and your own tile
+  shows how the encoder is doing (`N fps  M ms  K  D`: frames a second, milliseconds a frame, key frames asked for by the others, times the call could not keep
+  up), so a stutter can be read without a report.
 - **Fix (camera black, photos black, camera of the call frozen on one frame):** the camera writes each frame into memory by itself, behind the cache of the
   processor, and since the picture is read by the processor (not by the display transfer any more) the cache kept the first frame, a black one.
   The cache is now invalidated after every frame, in the camera view, the photo, the video test and the camera of the call. The attempt to

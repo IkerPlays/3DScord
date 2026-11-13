@@ -29,12 +29,21 @@ class VideoSender {
 	Source source() const { return current; }
 	int width() const { return current == Source::SCREEN ? 400 : 320; }
 	int height() const { return 240; }
-	int fps() const { return current == Source::SCREEN ? 8 : 15; }
+	int fps() const { return current == Source::SCREEN ? 8 : 10; }
 
 	// Media thread: the oldest coded frame (Annex B, with SPS and PPS when it is a key frame).
 	bool takeFrame(std::vector<uint8_t> &out, bool &key);
+	// What the encoder is doing, for the screen: frames coded in the last second, the average time of a frame in milliseconds, key frames
+	// asked for by the others and times the call could not keep up.
+	int statFps() const { return statFpsNow.load(); }
+	int statMs() const { return statMsNow.load(); }
+	int statKeyAsks() const { return keyAsks.load(); }
+	int statDrops() const { return drops.load(); }
 	// Someone asked for a new key frame (RTCP picture loss).
-	void requestKeyFrame() { keyRequested = true; }
+	void requestKeyFrame() {
+		keyRequested = true;
+		keyAsks++;
+	}
 
 	// Screen thread: copies the newest preview picture to a texture. Call it once per frame before drawing.
 	void updatePreview();
@@ -52,6 +61,10 @@ class VideoSender {
 	std::atomic<bool> active{false};
 	std::atomic<bool> quit{false};
 	std::atomic<bool> keyRequested{false};
+	std::atomic<int> statFpsNow{0};
+	std::atomic<int> statMsNow{0};
+	std::atomic<int> keyAsks{0};
+	std::atomic<int> drops{0};
 	Source current = Source::OFF;
 	std::mutex mutex;
 	struct Frame {
