@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- **SPS and PPS now travel together in a single RTP packet (STAP-A, RFC 6184)** before every key frame, as the Discord web client and libwebrtc do, instead of two
+  separate packets.
 - **Your camera should now show to the others (found by comparing with Discord-video-stream, a community project that sends video to Discord):** the SPS of the
   H.264 of the encoder had no "bitstream restriction", so WebRTC receivers (the browsers and phones of Discord) take the stream as one that may reorder pictures and
   hold frames back or show nothing (and ask for key frames without end, which is what the `K` counter showed). Every key frame now gets its SPS rewritten with

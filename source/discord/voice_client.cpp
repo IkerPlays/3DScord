@@ -1272,6 +1272,26 @@ void VoiceClient::sendVideoFrame(const uint8_t *annexB, size_t len) {
 	for (size_t k = 0; k < nals.size(); k++) {
 		const bool lastNal = k + 1 == nals.size();
 		const Nal &nal = nals[k];
+		// Parameter sets travel together in a STAP-A (RFC 6184 5.7), like WebRTC does before a key frame.
+		if ((nal.p[0] & 0x1F) == 7 && k + 1 < nals.size() && (nals[k + 1].p[0] & 0x1F) == 8) {
+			const Nal &pps = nals[k + 1];
+			if (nal.n + pps.n + 5 <= MTU) {
+				uint8_t stap[MTU + 8];
+				size_t o = 0;
+				stap[o++] = (uint8_t)((nal.p[0] & 0x60) | 24);
+				stap[o++] = (uint8_t)(nal.n >> 8);
+				stap[o++] = (uint8_t)nal.n;
+				memcpy(stap + o, nal.p, nal.n);
+				o += nal.n;
+				stap[o++] = (uint8_t)(pps.n >> 8);
+				stap[o++] = (uint8_t)pps.n;
+				memcpy(stap + o, pps.p, pps.n);
+				o += pps.n;
+				sendRtp(VIDEO_PAYLOAD_TYPE, videoOwnSsrc, videoSendSequence++, timestamp, k + 2 == nals.size(), stap, o, true);
+				k++;
+				continue;
+			}
+		}
 		if (nal.n <= MTU) {
 			sendRtp(VIDEO_PAYLOAD_TYPE, videoOwnSsrc, videoSendSequence++, timestamp, lastNal, nal.p, nal.n, true);
 			continue;
