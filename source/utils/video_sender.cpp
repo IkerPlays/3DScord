@@ -13,24 +13,40 @@ constexpr int TARGET_KBPS_SCREEN = 350;
 constexpr size_t MAX_QUEUED = 4;
 double ticksToMs(u64 ticks) { return (double)ticks * 1000.0 / (double)SYSCLOCK_ARM11; }
 
-// The top screen as planar YUV 4:2:0. The framebuffer is stored rotated: column by column, bottom to top, three bytes (B, G, R)
-// per pixel.
+// The top screen (400x240), reduced by half, as planar YUV 4:2:0 of W x H (the picture is clamped at the edges when W x H is bigger).
+// The framebuffer is stored rotated: column by column, bottom to top, three bytes (B, G, R) per pixel.
 bool screenToYuv(int W, int H, std::vector<uint8_t> &yPlane, std::vector<uint8_t> &uPlane, std::vector<uint8_t> &vPlane) {
 	u16 fbW = 0, fbH = 0;
 	const u8 *fb = gfxGetFramebuffer(GFX_TOP, GFX_LEFT, &fbW, &fbH);
-	if (!fb || fbW < H) {
+	if (!fb || fbW < 240) {
 		return false;
 	}
+	auto pixel = [&](int sx, int sy, int &r, int &g, int &b) {
+		sx = std::min(sx, 399);
+		sy = std::min(sy, 239);
+		const u8 *p = fb + ((size_t)sx * fbW + (fbW - 1 - sy)) * 3;
+		b = p[0];
+		g = p[1];
+		r = p[2];
+	};
 	for (int y = 0; y < H; y += 2) {
 		for (int x = 0; x < W; x += 2) {
 			int sumU = 0;
 			int sumV = 0;
 			for (int dy = 0; dy < 2; dy++) {
 				for (int dx = 0; dx < 2; dx++) {
-					const u8 *p = fb + ((size_t)(x + dx) * fbW + (fbW - 1 - (y + dy))) * 3;
-					const int b = p[0];
-					const int g = p[1];
-					const int r = p[2];
+					// Each pixel of the stream is the average of 2x2 pixels of the screen.
+					int r = 0, g = 0, b = 0;
+					for (int k = 0; k < 4; k++) {
+						int pr, pg, pb;
+						pixel((x + dx) * 2 + (k & 1), (y + dy) * 2 + (k >> 1), pr, pg, pb);
+						r += pr;
+						g += pg;
+						b += pb;
+					}
+					r /= 4;
+					g /= 4;
+					b /= 4;
 					yPlane[(size_t)(y + dy) * W + x + dx] = (uint8_t)(((66 * r + 129 * g + 25 * b + 128) >> 8) + 16);
 					sumU += ((-38 * r - 74 * g + 112 * b + 128) >> 8) + 128;
 					sumV += ((112 * r - 94 * g - 18 * b + 128) >> 8) + 128;
@@ -102,14 +118,14 @@ void VideoSender::updatePreview() {
 	}
 	if (!previewReady) {
 		memset(&previewTex, 0, sizeof(previewTex));
-		previewReady = C3D_TexInit(&previewTex, VIDEO_TEX_W, VIDEO_TEX_H, GPU_RGB565);
+		previewReady = C3D_TexInit(&previewTex, PREVIEW_W, PREVIEW_H, GPU_RGB565);
 		if (previewReady) {
 			C3D_TexSetFilter(&previewTex, GPU_LINEAR, GPU_LINEAR);
 		}
 	}
 	if (previewReady) {
-		memcpy(previewTex.data, previewBuffer.data(), (size_t)VIDEO_TEX_W * VIDEO_TEX_H * 2);
-		GSPGPU_FlushDataCache(previewTex.data, (u32)VIDEO_TEX_W * VIDEO_TEX_H * 2);
+		memcpy(previewTex.data, previewBuffer.data(), (size_t)PREVIEW_W * PREVIEW_H * 2);
+		GSPGPU_FlushDataCache(previewTex.data, (u32)PREVIEW_W * PREVIEW_H * 2);
 		shownW = previewW;
 		shownH = previewH;
 		gotPreview = true;
@@ -158,7 +174,7 @@ void VideoSender::run() {
 		}
 		packed = (unsigned char *)malloc((size_t)W * H * 2);
 		// The inner camera, YUYV, 10 frames a second (15 left the encoder no room next to the audio and the decoder).
-		ok = ok && packed && R_SUCCEEDED(CAMU_SetSize(SELECT_IN1, SIZE_QVGA, CONTEXT_A));
+		ok = ok && packed && R_SUCCEEDED(CAMU_SetSize(SELECT_IN1, SIZE_QCIF, CONTEXT_A));
 		ok = ok && R_SUCCEEDED(CAMU_SetOutputFormat(SELECT_IN1, OUTPUT_YUV_422, CONTEXT_A));
 		ok = ok && R_SUCCEEDED(CAMU_SetFrameRate(SELECT_IN1, FRAME_RATE_10));
 		ok = ok && R_SUCCEEDED(CAMU_SetNoiseFilter(SELECT_IN1, true));
@@ -186,7 +202,7 @@ void VideoSender::run() {
 	}
 	{
 		std::lock_guard<std::mutex> lock(mutex);
-		previewBuffer.assign((size_t)VIDEO_TEX_W * VIDEO_TEX_H, 0);
+		previewBuffer.assign((size_t)PREVIEW_W * PREVIEW_H, 0);
 		previewVersion = 0;
 	}
 	Logger::log("[VideoTx] Sending the %s: %dx%d, %d fps, %d kbps", camera ? "camera" : "screen", W, H, FPS, kbps);
@@ -267,9 +283,10 @@ void VideoSender::run() {
 
 		// A copy for the preview.
 		if (true) { // every frame: a preview at a few frames a second looks like the camera is stuck
-			std::vector<uint16_t> tiled((size_t)VIDEO_TEX_W * VIDEO_TEX_H, 0);
+			std::vector<uint16_t> tiled((size_t)PREVIEW_W * PREVIEW_H, 0);
 			int pw = 0, ph = 0;
-			if (convertToTiledTexture(yPlane.data(), uPlane.data(), vPlane.data(), W, H, W, W / 2, tiled.data(), pw, ph)) {
+			if (convertToTiledTexture(yPlane.data(), uPlane.data(), vPlane.data(), W, H, W, W / 2, tiled.data(), pw, ph, PREVIEW_W,
+			                       PREVIEW_H)) {
 				std::lock_guard<std::mutex> lock(mutex);
 				previewBuffer.swap(tiled);
 				previewW = pw;

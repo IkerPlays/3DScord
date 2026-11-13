@@ -59,7 +59,7 @@ bool H264Encoder::encode(const uint8_t *y, const uint8_t *u, const uint8_t *v, b
 
 	H264E_run_param_t run;
 	memset(&run, 0, sizeof(run));
-	run.encode_speed = 8; // the fastest settings: a processor like the 3DS's has little time per frame
+	run.encode_speed = H264E_SPEED_FASTEST; // minimum tools: a processor like the 3DS's has little time per frame
 	run.frame_type = forceKey ? H264E_FRAME_TYPE_KEY : 0;
 	run.desired_frame_bytes = targetBytes;
 	run.qp_min = 20;

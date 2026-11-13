@@ -17,7 +17,7 @@ constexpr int VIDEO_TEX_H = 256;
 // in the tiled order the GPU reads (8x8 tiles, Z order inside), so no display transfer is needed. `dst` has VIDEO_TEX_W x VIDEO_TEX_H
 // pixels. Gives the size of the original picture (its proportions). False when it is too small.
 bool convertToTiledTexture(const uint8_t *y, const uint8_t *u, const uint8_t *v, int width, int height, int strideY, int strideUV,
-                           uint16_t *dst, int &outW, int &outH);
+                           uint16_t *dst, int &outW, int &outH, int texW = VIDEO_TEX_W, int texH = VIDEO_TEX_H);
 
 // The same for a picture that is already RGB565 (the camera of the console): stretched to fill the 512x256 texture, tiled.
 void convertRgb565ToTiledTexture(const uint16_t *src, int width, int height, uint16_t *dst);

@@ -13,8 +13,8 @@
 
 namespace Utils {
 
-// EXPERIMENTAL. What you send to a call as video: your inner camera (320x240, 15 frames a second) or the top screen of the console
-// (400x240, 8 frames a second). The picture is coded as H.264 (baseline, minih264e) on a worker thread, and the coded frames wait for
+// EXPERIMENTAL. What you send to a call as video: your inner camera (176x144, 10 frames a second) or the top screen of the console
+// (reduced to 208x128, 8 frames a second). The picture is coded as H.264 (baseline, minih264e) on a worker thread, and the coded frames wait for
 // the call's media thread to encrypt and send them. A small copy is kept to show you what you send.
 class VideoSender {
   public:
@@ -27,8 +27,8 @@ class VideoSender {
 	void stop();
 	bool running() const { return active.load(); }
 	Source source() const { return current; }
-	int width() const { return current == Source::SCREEN ? 400 : 320; }
-	int height() const { return 240; }
+	int width() const { return current == Source::SCREEN ? 208 : 176; }
+	int height() const { return current == Source::SCREEN ? 128 : 144; }
 	int fps() const { return current == Source::SCREEN ? 8 : 10; }
 
 	// Media thread: the oldest coded frame (Annex B, with SPS and PPS when it is a key frame).
@@ -73,6 +73,8 @@ class VideoSender {
 	};
 	std::deque<Frame> queue;
 
+	static constexpr int PREVIEW_W = 256; // the preview texture is small: the tile it goes in is small
+	static constexpr int PREVIEW_H = 128;
 	// The preview: the worker writes a picture in the order of the texture, the screen thread copies it.
 	std::vector<uint16_t> previewBuffer;
 	uint32_t previewVersion = 0;

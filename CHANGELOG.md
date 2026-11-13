@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- **Camera and screen in the call, lighter** (the encoder ran at 1 to 4 frames a second at 320x240): the camera goes out at 176x144 and the screen at 208x128 (half
+  size), the encoder uses its fastest settings, and your own preview is drawn from a smaller texture (256x128).
 - **Fix (every picture came out turned, cameras and shared screens alike):** citro2d reads a sub-texture whose `top` is below its `bottom` as one that is
   turned a quarter (it swaps the axes); the flips tried before used exactly that, so the pictures came out turned and mirrored. The pictures are now
   written with their top row first in the texture and drawn with the usual orientation (top above bottom), for the cameras and screens of others,

@@ -269,7 +269,7 @@ void VideoReceiver::run() {
 }
 
 bool convertToTiledTexture(const uint8_t *py0, const uint8_t *pu0, const uint8_t *pv0, int width, int height, int strideY,
-                           int strideUV, uint16_t *dst, int &outW, int &outH) {
+                           int strideUV, uint16_t *dst, int &outW, int &outH, int texW, int texH) {
 	if (width < 16 || height < 16) {
 		return false;
 	}
@@ -277,13 +277,13 @@ bool convertToTiledTexture(const uint8_t *py0, const uint8_t *pu0, const uint8_t
 	// no part of the texture that is left empty whichever way the GPU counts the rows.
 	static const uint8_t mx[8] = {0, 1, 4, 5, 16, 17, 20, 21};
 	static const uint8_t my[8] = {0, 2, 8, 10, 32, 34, 40, 42};
-	const int tilesPerRow = TEX_W / 8;
+	const int tilesPerRow = texW / 8;
 	int srcX[TEX_W];
-	for (int x = 0; x < TEX_W; x++) {
-		srcX[x] = std::min(x * width / TEX_W, width - 2);
+	for (int x = 0; x < texW; x++) {
+		srcX[x] = std::min(x * width / texW, width - 2);
 	}
-	for (int y = 0; y < TEX_H; y++) {
-		const int sy = std::min(y * height / TEX_H, height - 2);
+	for (int y = 0; y < texH; y++) {
+		const int sy = std::min(y * height / texH, height - 2);
 		const uint8_t *py = py0 + (size_t)sy * strideY;
 		const uint8_t *pu = pu0 + (size_t)(sy / 2) * strideUV;
 		const uint8_t *pv = pv0 + (size_t)(sy / 2) * strideUV;
@@ -291,7 +291,7 @@ bool convertToTiledTexture(const uint8_t *py0, const uint8_t *pu0, const uint8_t
 		// vertical flip) holds, and what citro2d draws upright with top 1 and bottom 0.
 		const int row = y;
 		uint16_t *rowBase = dst + (size_t)(row >> 3) * tilesPerRow * 64 + my[row & 7];
-		for (int x = 0; x < TEX_W; x++) {
+		for (int x = 0; x < texW; x++) {
 			const int sx = srcX[x];
 			const int c = ((py[sx] + py[sx + 1] + py[sx + strideY] + py[sx + 1 + strideY]) >> 2) - 16;
 			const int d = pu[sx / 2] - 128;
@@ -431,11 +431,13 @@ void drawVideoTextureOriented(C3D_Tex *texture, int picW, int picH, float x, flo
 	const float fit = std::min(w / shownW, h / shownH);
 	const float drawW = (float)picW * fit;
 	const float drawH = (float)picH * fit;
-	const float scaleX = drawW / (float)TEX_W;
-	const float scaleY = drawH / (float)TEX_H;
+	const float texWidth = (float)texture->width;
+	const float texHeight = (float)texture->height;
+	const float scaleX = drawW / texWidth;
+	const float scaleY = drawH / texHeight;
 	// top must stay above bottom: citro2d reads top < bottom as a sub-texture that is turned a quarter (it swaps the axes), which is what
 	// made every earlier attempt come out turned. A mirror swaps left and right.
-	Tex3DS_SubTexture sub = {(u16)TEX_W, (u16)TEX_H, mirror ? 1.0f : 0.0f, 1.0f, mirror ? 0.0f : 1.0f, 0.0f};
+	Tex3DS_SubTexture sub = {(u16)texture->width, (u16)texture->height, mirror ? 1.0f : 0.0f, 1.0f, mirror ? 0.0f : 1.0f, 0.0f};
 	C2D_Image img = {texture, &sub};
 	const float cx = x + w / 2.0f;
 	const float cy = y + h / 2.0f;
