@@ -361,6 +361,12 @@ void Config::loadSettings() {
 			if (doc.HasMember("call_volume") && doc["call_volume"].IsInt()) {
 				callVolume = std::clamp(doc["call_volume"].GetInt(), 20, 200);
 			}
+			if (doc.HasMember("video_rotation") && doc["video_rotation"].IsInt()) {
+				videoRotation = std::clamp(doc["video_rotation"].GetInt(), 0, 3);
+			}
+			if (doc.HasMember("video_flipped") && doc["video_flipped"].IsBool()) {
+				videoFlipped = doc["video_flipped"].GetBool();
+			}
 			if (doc.HasMember("video_experimental") && doc["video_experimental"].IsBool()) {
 				videoExperimental = doc["video_experimental"].GetBool();
 			}
@@ -474,6 +480,10 @@ void Config::saveSettings() {
 	writer.Int(callVolume);
 	writer.Key("video_experimental");
 	writer.Bool(videoExperimental);
+	writer.Key("video_rotation");
+	writer.Int(videoRotation);
+	writer.Key("video_flipped");
+	writer.Bool(videoFlipped);
 	writer.Key("upload_quality");
 	writer.Int(uploadQuality);
 	writer.Key("voice_tone");
@@ -680,6 +690,16 @@ void Config::setPushToTalk(int mode) {
 
 void Config::setCallVolume(int percent) {
 	callVolume = std::clamp(percent, 20, 200);
+	saveSettings();
+}
+
+void Config::setVideoRotation(int quarterTurns) {
+	videoRotation = std::clamp(quarterTurns, 0, 3);
+	saveSettings();
+}
+
+void Config::setVideoFlipped(bool flipped) {
+	videoFlipped = flipped;
 	saveSettings();
 }
 

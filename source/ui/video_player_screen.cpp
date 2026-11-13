@@ -3,6 +3,7 @@
 #include "log.h"
 #include "utils/redraw.h"
 #include "utils/soft_decoder.h"
+#include "utils/video_receiver.h"
 #include <algorithm>
 #include <citro2d.h>
 #include <cstdio>
@@ -299,10 +300,7 @@ void VideoPlayerScreen::renderTop(C3D_RenderTarget *target) {
 	C2D_TargetClear(target, C2D_Color32(0, 0, 0, 255));
 	C2D_SceneBegin(target);
 	if (havePicture && textureReady) {
-		Tex3DS_SubTexture sub = {(u16)picW, (u16)picH, 0.0f, 1.0f, (float)picW / TEX_W, 1.0f - (float)picH / TEX_H};
-		C2D_Image img = {&texture, &sub};
-		const float scale = std::min(400.0f / picW, 240.0f / picH);
-		C2D_DrawImageAt(img, (400.0f - picW * scale) / 2.0f, (240.0f - picH * scale) / 2.0f, 0.5f, nullptr, scale, scale);
+		Utils::drawVideoTexture(&texture, picW, picH, 0.0f, 0.0f, 0.5f, 400.0f, 240.0f);
 	} else {
 		drawCenteredText(100.0f, 0.5f, 0.5f, 0.5f, ScreenManager::colorTextMuted(), status, 400.0f);
 	}

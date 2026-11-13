@@ -52,6 +52,10 @@ class VideoReceiver {
 	u64 lastUpdate = 0;
 };
 
+// Draws a picture that is in the top left of a 512x512 texture (the video textures) inside the box, keeping its proportions and
+// applying the rotation and flip of Settings > Voice.
+void drawVideoTexture(C3D_Tex *texture, int picW, int picH, float x, float y, float z, float w, float h);
+
 } // namespace Utils
 
 #endif // VIDEO_RECEIVER_H

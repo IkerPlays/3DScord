@@ -8,6 +8,8 @@
   need, which left the video black); when the decoder falls behind it drops the oldest frame nothing refers to instead of emptying the queue
   and waiting for a key frame; frames are only drawn when no other is waiting; the call asks Discord for a lower video quality (40 %,
   smaller pictures) that a 3DS can decode in time; the log tells how the picture buffers were made.
+- **Video Rotation** and **Flip Video** (Settings > Voice): turn the picture of cameras, shared screens and videos in quarter turns and flip it, in case it
+  comes out turned or upside down on your console.
 - **Fix (video in calls):** after a lost packet the picture is no longer frozen until the next key frame (every ~25 s): the decoder keeps going
   (a stripe may show) while a new key frame is asked for. The picture is sent to the texture with the same size on both sides (512x512), which
   should fix the 90 degree turn.

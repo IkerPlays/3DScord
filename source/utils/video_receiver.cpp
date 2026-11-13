@@ -1,4 +1,5 @@
 #include "utils/video_receiver.h"
+#include "core/config.h"
 #include "log.h"
 #include "utils/redraw.h"
 #include "utils/soft_decoder.h"
@@ -372,14 +373,34 @@ std::string VideoReceiver::userId() const {
 	return id;
 }
 
-void VideoReceiver::draw(float x, float y, float z, float w, float h) const {
-	if (!hasPicture() || picW <= 0 || picH <= 0) {
+void drawVideoTexture(C3D_Tex *texture, int picW, int picH, float x, float y, float z, float w, float h) {
+	if (!texture || picW <= 0 || picH <= 0) {
 		return;
 	}
-	const float scale = std::min(w / picW, h / picH);
-	Tex3DS_SubTexture sub = {(u16)picW, (u16)picH, 0.0f, 1.0f, (float)picW / TEX_W, 1.0f - (float)picH / TEX_H};
-	C2D_Image img = {const_cast<C3D_Tex *>(&texture), &sub};
-	C2D_DrawImageAt(img, x + (w - picW * scale) / 2.0f, y + (h - picH * scale) / 2.0f, z, nullptr, scale, scale);
+	const int turns = Config::getInstance().getVideoRotation();
+	const bool flip = Config::getInstance().isVideoFlipped();
+	const float shownW = (turns & 1) ? (float)picH : (float)picW;
+	const float shownH = (turns & 1) ? (float)picW : (float)picH;
+	const float scale = std::min(w / shownW, h / shownH);
+	const float top = flip ? 1.0f - (float)picH / TEX_H : 1.0f;
+	const float bottom = flip ? 1.0f : 1.0f - (float)picH / TEX_H;
+	Tex3DS_SubTexture sub = {(u16)picW, (u16)picH, 0.0f, top, (float)picW / TEX_W, bottom};
+	C2D_Image img = {texture, &sub};
+	const float cx = x + w / 2.0f;
+	const float cy = y + h / 2.0f;
+	if (turns == 0) {
+		C2D_DrawImageAt(img, cx - picW * scale / 2.0f, cy - picH * scale / 2.0f, z, nullptr, scale, scale);
+	} else {
+		// citro2d turns around the centre of the picture, and the position given is that centre.
+		C2D_DrawImageAtRotated(img, cx, cy, z, C3D_AngleFromDegrees((float)(turns * 90)), nullptr, scale, scale);
+	}
+}
+
+void VideoReceiver::draw(float x, float y, float z, float w, float h) const {
+	if (!hasPicture()) {
+		return;
+	}
+	drawVideoTexture(const_cast<C3D_Tex *>(&texture), picW, picH, x, y, z, w, h);
 }
 
 void VideoReceiver::stop() {
