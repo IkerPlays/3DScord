@@ -4,6 +4,8 @@
 - **Full call view redesigned like Discord:** black background, big rounded tiles with the avatar in the middle, a green border while someone
   speaks and the muted icons at the bottom; one person fills the screen, two sit side by side, more make a grid. When someone shares their
   screen it takes the left side and everyone else is stacked on the right. A camera shows inside its person's tile.
+- **Video picture fills the whole texture:** the picture is stretched to the 512x256 texture and drawn with its own proportions, so no part of the texture
+  is left empty (a picture that sat in a corner of the texture could be read from the empty corner and show black).
 - **Video picture written straight into the texture:** the display transfer of the console turns the picture a quarter turn when it writes a texture
   (that was the picture that came out sideways, and then black). The picture is now converted straight into the GPU's tiled order, with no
   transfer, in a 512x256 texture; the buffers use the normal heap. (The Software Decoder Test still uses the old way.)

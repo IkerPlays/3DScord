@@ -260,38 +260,39 @@ void VideoReceiver::run() {
 
 bool convertToTiledTexture(const uint8_t *py0, const uint8_t *pu0, const uint8_t *pv0, int width, int height, int strideY,
                            int strideUV, uint16_t *dst, int &outW, int &outH) {
-	int div = 2;
-	while ((width / div) > TEX_W || (height / div) > TEX_H) {
-		div *= 2;
-	}
-	const int w = (width / div) & ~7;
-	const int h = (height / div) & ~7;
-	if (w <= 0 || h <= 0) {
+	if (width < 16 || height < 16) {
 		return false;
 	}
-	// Position inside an 8x8 tile, in Z order: bits of x and y interleaved.
+	// The picture fills the whole texture (it is stretched to 512x256 here and drawn with its own proportions later), so there is
+	// no part of the texture that is left empty whichever way the GPU counts the rows.
 	static const uint8_t mx[8] = {0, 1, 4, 5, 16, 17, 20, 21};
 	static const uint8_t my[8] = {0, 2, 8, 10, 32, 34, 40, 42};
 	const int tilesPerRow = TEX_W / 8;
-	for (int y = 0; y < h; y++) {
-		const uint8_t *py = py0 + (size_t)(y * div) * strideY;
-		const uint8_t *pu = pu0 + (size_t)(y * div / 2) * strideUV;
-		const uint8_t *pv = pv0 + (size_t)(y * div / 2) * strideUV;
-		// The picture's top row goes to the highest row of the texture, which is where texture coordinate 1 is.
+	int srcX[TEX_W];
+	for (int x = 0; x < TEX_W; x++) {
+		srcX[x] = std::min(x * width / TEX_W, width - 2);
+	}
+	for (int y = 0; y < TEX_H; y++) {
+		const int sy = std::min(y * height / TEX_H, height - 2);
+		const uint8_t *py = py0 + (size_t)sy * strideY;
+		const uint8_t *pu = pu0 + (size_t)(sy / 2) * strideUV;
+		const uint8_t *pv = pv0 + (size_t)(sy / 2) * strideUV;
+		// The top row of the picture goes to the last row of the texture.
 		const int row = TEX_H - 1 - y;
 		uint16_t *rowBase = dst + (size_t)(row >> 3) * tilesPerRow * 64 + my[row & 7];
-		for (int x = 0; x < w; x++) {
-			const int c = ((py[x * div] + py[x * div + 1] + py[x * div + strideY] + py[x * div + 1 + strideY]) >> 2) - 16;
-			const int d = pu[x * div / 2] - 128;
-			const int e = pv[x * div / 2] - 128;
+		for (int x = 0; x < TEX_W; x++) {
+			const int sx = srcX[x];
+			const int c = ((py[sx] + py[sx + 1] + py[sx + strideY] + py[sx + 1 + strideY]) >> 2) - 16;
+			const int d = pu[sx / 2] - 128;
+			const int e = pv[sx / 2] - 128;
 			const int r = clamp255((298 * c + 409 * e + 128) >> 8);
 			const int g = clamp255((298 * c - 100 * d - 208 * e + 128) >> 8);
 			const int b = clamp255((298 * c + 516 * d + 128) >> 8);
 			rowBase[(size_t)(x >> 3) * 64 + mx[x & 7]] = (uint16_t)(((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3));
 		}
 	}
-	outW = w;
-	outH = h;
+	outW = width;
+	outH = height;
 	return true;
 }
 
@@ -395,20 +396,23 @@ void drawVideoTexture(C3D_Tex *texture, int picW, int picH, float x, float y, fl
 	}
 	const int turns = Config::getInstance().getVideoRotation();
 	const bool flip = Config::getInstance().isVideoFlipped();
+	// picW x picH are the proportions of the picture; the texture holds all of it, stretched to fill 512x256.
 	const float shownW = (turns & 1) ? (float)picH : (float)picW;
 	const float shownH = (turns & 1) ? (float)picW : (float)picH;
-	const float scale = std::min(w / shownW, h / shownH);
-	const float top = flip ? 1.0f - (float)picH / TEX_H : 1.0f;
-	const float bottom = flip ? 1.0f : 1.0f - (float)picH / TEX_H;
-	Tex3DS_SubTexture sub = {(u16)picW, (u16)picH, 0.0f, top, (float)picW / TEX_W, bottom};
+	const float fit = std::min(w / shownW, h / shownH);
+	const float drawW = (float)picW * fit;
+	const float drawH = (float)picH * fit;
+	const float scaleX = drawW / (float)TEX_W;
+	const float scaleY = drawH / (float)TEX_H;
+	Tex3DS_SubTexture sub = {(u16)TEX_W, (u16)TEX_H, 0.0f, flip ? 0.0f : 1.0f, 1.0f, flip ? 1.0f : 0.0f};
 	C2D_Image img = {texture, &sub};
 	const float cx = x + w / 2.0f;
 	const float cy = y + h / 2.0f;
 	if (turns == 0) {
-		C2D_DrawImageAt(img, cx - picW * scale / 2.0f, cy - picH * scale / 2.0f, z, nullptr, scale, scale);
+		C2D_DrawImageAt(img, cx - drawW / 2.0f, cy - drawH / 2.0f, z, nullptr, scaleX, scaleY);
 	} else {
 		// citro2d turns around the centre of the picture, and the position given is that centre.
-		C2D_DrawImageAtRotated(img, cx, cy, z, C3D_AngleFromDegrees((float)(turns * 90)), nullptr, scale, scale);
+		C2D_DrawImageAtRotated(img, cx, cy, z, C3D_AngleFromDegrees((float)(turns * 90)), nullptr, scaleX, scaleY);
 	}
 }
 

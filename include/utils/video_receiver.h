@@ -9,13 +9,13 @@
 
 namespace Utils {
 
-// The video textures are 512x256 (RGB565); the picture sits in the top left of the part that is used.
+// The video textures are 512x256 (RGB565) and hold the whole picture, stretched.
 constexpr int VIDEO_TEX_W = 512;
 constexpr int VIDEO_TEX_H = 256;
 
-// Turns a decoded YUV 4:2:0 picture into RGB565, reduced to half size (a quarter or an eighth when it is bigger), written straight
+// Turns a decoded YUV 4:2:0 picture into RGB565, stretched to fill the whole texture, written straight
 // in the tiled order the GPU reads (8x8 tiles, Z order inside), so no display transfer is needed. `dst` has VIDEO_TEX_W x VIDEO_TEX_H
-// pixels. Gives the size of the reduced picture. False when it does not fit.
+// pixels. Gives the size of the original picture (its proportions). False when it is too small.
 bool convertToTiledTexture(const uint8_t *y, const uint8_t *u, const uint8_t *v, int width, int height, int strideY, int strideUV,
                            uint16_t *dst, int &outW, int &outH);
 
