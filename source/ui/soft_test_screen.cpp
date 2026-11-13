@@ -137,9 +137,9 @@ void SoftTestScreen::show(const Utils::SoftDecoder::Picture &pic) {
 		if (picture) {
 			linearFree(picture);
 		}
-		picture = (u16 *)linearAlloc((size_t)TEX_W * h * 2);
+		picture = (u16 *)linearAlloc((size_t)TEX_W * TEX_H * 2);
 		if (picture) {
-			memset(picture, 0, (size_t)TEX_W * h * 2);
+			memset(picture, 0, (size_t)TEX_W * TEX_H * 2);
 		}
 		picW = w;
 		picH = h;
@@ -169,8 +169,8 @@ void SoftTestScreen::show(const Utils::SoftDecoder::Picture &pic) {
 		}
 	}
 	if (textureReady) {
-		GSPGPU_FlushDataCache(picture, (u32)TEX_W * h * 2);
-		C3D_SyncDisplayTransfer((u32 *)picture, GX_BUFFER_DIM(TEX_W, h), (u32 *)texture.data, GX_BUFFER_DIM(TEX_W, TEX_H),
+		GSPGPU_FlushDataCache(picture, (u32)TEX_W * TEX_H * 2);
+		C3D_SyncDisplayTransfer((u32 *)picture, GX_BUFFER_DIM(TEX_W, TEX_H), (u32 *)texture.data, GX_BUFFER_DIM(TEX_W, TEX_H),
 		                        (GX_TRANSFER_FLIP_VERT(1) | GX_TRANSFER_OUT_TILED(1) | GX_TRANSFER_RAW_COPY(0) |
 		                         GX_TRANSFER_IN_FORMAT(GX_TRANSFER_FMT_RGB565) |
 		                         GX_TRANSFER_OUT_FORMAT(GX_TRANSFER_FMT_RGB565) |
@@ -242,7 +242,7 @@ void SoftTestScreen::renderTop(C3D_RenderTarget *target) {
 	C2D_TargetClear(target, C2D_Color32(0, 0, 0, 255));
 	C2D_SceneBegin(target);
 	if (haveFrame && textureReady) {
-		Tex3DS_SubTexture sub = {(u16)picW, (u16)picH, 0.0f, 1.0f - (float)picH / TEX_H, (float)picW / TEX_W, 1.0f}; // top and bottom swapped: the transfer already flips the picture
+		Tex3DS_SubTexture sub = {(u16)picW, (u16)picH, 0.0f, 1.0f, (float)picW / TEX_W, 1.0f - (float)picH / TEX_H};
 		C2D_Image img = {&texture, &sub};
 		const float scale = std::min(400.0f / picW, 240.0f / picH);
 		C2D_DrawImageAt(img, (400.0f - picW * scale) / 2.0f, (240.0f - picH * scale) / 2.0f, 0.5f, nullptr, scale, scale);

@@ -48,7 +48,8 @@ struct VideoReceiver::Impl {
 	size_t lens[SLOTS] = {0, 0, 0};
 	int head = 0;
 	int count = 0;
-	bool needKey = true;
+	bool needKey = true;   // nothing decoded yet: wait for a key frame
+	bool wantKey = false;  // something was lost: a key frame would repair the picture
 	// The picture the worker produced, waiting for the screen thread.
 	u16 *front = nullptr; // being written by the worker
 	u16 *ready = nullptr; // finished, linear memory
@@ -135,11 +136,9 @@ void VideoReceiver::lost() {
 		return;
 	}
 	LightLock_Lock(&impl->lock);
-	if (!impl->needKey) {
-		impl->count = 0;
-		impl->needKey = true;
-		impl->lostFrames++;
-	}
+	// A frame was lost: keep decoding (the decoder hides what is missing, a stripe may show) and ask for a new key frame.
+	impl->wantKey = true;
+	impl->lostFrames++;
 	LightLock_Unlock(&impl->lock);
 }
 
@@ -148,7 +147,7 @@ bool VideoReceiver::wantsKeyFrame() {
 		return false;
 	}
 	LightLock_Lock(&impl->lock);
-	const bool want = impl->needKey && !impl->owner.empty();
+	const bool want = (impl->needKey || impl->wantKey) && !impl->owner.empty();
 	LightLock_Unlock(&impl->lock);
 	return want;
 }
@@ -185,7 +184,12 @@ void VideoReceiver::run() {
 			LightLock_Unlock(&s.lock);
 
 			// A key frame carries the parameter sets (NAL 7) or is an IDR (NAL 5).
-			const bool key = needKey ? isKeyFrame(frame, len) : false;
+			const bool key = isKeyFrame(frame, len);
+			if (key) {
+				LightLock_Lock(&s.lock);
+				s.wantKey = false;
+				LightLock_Unlock(&s.lock);
+			}
 			if (needKey) {
 				if (!key) {
 					continue;
@@ -206,10 +210,13 @@ void VideoReceiver::run() {
 				if (s.errors <= 5 || s.errors % 50 == 0) {
 					Logger::log("[VideoRx] Decoder state %d (count %u, frames lost %u)", state, s.errors, s.lostFrames);
 				}
+				// Missing references: show what the decoder made anyway and ask for a key frame.
 				LightLock_Lock(&s.lock);
-				s.needKey = true;
+				s.wantKey = true;
 				LightLock_Unlock(&s.lock);
-				continue;
+				if (!got) {
+					continue;
+				}
 			}
 			if (got) {
 				s.decoded++;
@@ -243,13 +250,13 @@ void VideoReceiver::convert(const uint8_t *py0, const uint8_t *pu0, const uint8_
 		}
 		// Rows are as wide as the texture: the display transfer lays the 8x8 tiles out by the width of its input, so an input
 		// narrower than the texture would come out sheared.
-		s.front = (u16 *)linearAlloc((size_t)TEX_W * h * 2);
-		s.ready = (u16 *)linearAlloc((size_t)TEX_W * h * 2);
+		s.front = (u16 *)linearAlloc((size_t)TEX_W * TEX_H * 2);
+		s.ready = (u16 *)linearAlloc((size_t)TEX_W * TEX_H * 2);
 		if (s.front) {
-			memset(s.front, 0, (size_t)TEX_W * h * 2);
+			memset(s.front, 0, (size_t)TEX_W * TEX_H * 2);
 		}
 		if (s.ready) {
-			memset(s.ready, 0, (size_t)TEX_W * h * 2);
+			memset(s.ready, 0, (size_t)TEX_W * TEX_H * 2);
 		}
 		s.readyW = w;
 		s.readyH = h;
@@ -310,8 +317,8 @@ void VideoReceiver::update() {
 	if (textureReady) {
 		picW = s.readyW;
 		picH = s.readyH;
-		GSPGPU_FlushDataCache(s.ready, (u32)TEX_W * picH * 2);
-		C3D_SyncDisplayTransfer((u32 *)s.ready, GX_BUFFER_DIM(TEX_W, picH), (u32 *)texture.data, GX_BUFFER_DIM(TEX_W, TEX_H),
+		GSPGPU_FlushDataCache(s.ready, (u32)TEX_W * TEX_H * 2);
+		C3D_SyncDisplayTransfer((u32 *)s.ready, GX_BUFFER_DIM(TEX_W, TEX_H), (u32 *)texture.data, GX_BUFFER_DIM(TEX_W, TEX_H),
 		                        (GX_TRANSFER_FLIP_VERT(1) | GX_TRANSFER_OUT_TILED(1) | GX_TRANSFER_RAW_COPY(0) |
 		                         GX_TRANSFER_IN_FORMAT(GX_TRANSFER_FMT_RGB565) |
 		                         GX_TRANSFER_OUT_FORMAT(GX_TRANSFER_FMT_RGB565) |
@@ -340,7 +347,7 @@ void VideoReceiver::draw(float x, float y, float z, float w, float h) const {
 		return;
 	}
 	const float scale = std::min(w / picW, h / picH);
-	Tex3DS_SubTexture sub = {(u16)picW, (u16)picH, 0.0f, 1.0f - (float)picH / TEX_H, (float)picW / TEX_W, 1.0f}; // top and bottom swapped: the transfer already flips the picture
+	Tex3DS_SubTexture sub = {(u16)picW, (u16)picH, 0.0f, 1.0f, (float)picW / TEX_W, 1.0f - (float)picH / TEX_H};
 	C2D_Image img = {const_cast<C3D_Tex *>(&texture), &sub};
 	C2D_DrawImageAt(img, x + (w - picW * scale) / 2.0f, y + (h - picH * scale) / 2.0f, z, nullptr, scale, scale);
 }

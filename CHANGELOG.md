@@ -4,6 +4,9 @@
 - **Full call view redesigned like Discord:** black background, big rounded tiles with the avatar in the middle, a green border while someone
   speaks and the muted icons at the bottom; one person fills the screen, two sit side by side, more make a grid. When someone shares their
   screen it takes the left side and everyone else is stacked on the right. A camera shows inside its person's tile.
+- **Fix (video in calls):** after a lost packet the picture is no longer frozen until the next key frame (every ~25 s): the decoder keeps going
+  (a stripe may show) while a new key frame is asked for. The picture is sent to the texture with the same size on both sides (512x512), which
+  should fix the 90 degree turn.
 - **Fix (video in calls):** the picture was upside down (now upright) and the reduction to half size takes the average of 2x2 pixels instead
   of one pixel of every four, which left thin stripes.
 - **Fix (video in calls, the noise):** the picture was uploaded to the texture with rows narrower than the texture, and the display transfer
