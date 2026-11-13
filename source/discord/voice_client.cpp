@@ -1358,8 +1358,9 @@ bool VoiceClient::setVideoSource(int source) {
 	if (state != VoiceState::ESTABLISHED || !gcm || udpSocket < 0 || !Config::getInstance().isVideoExperimental()) {
 		return false;
 	}
-	if (!Utils::VideoSender::getInstance().start(source == 2 ? Utils::VideoSender::Source::SCREEN
-	                                                          : Utils::VideoSender::Source::CAMERA)) {
+	if (!Utils::VideoSender::getInstance().start(source == 3   ? Utils::VideoSender::Source::SCREEN
+	                                             : source == 2 ? Utils::VideoSender::Source::OUTER
+	                                                           : Utils::VideoSender::Source::CAMERA)) {
 		return false;
 	}
 	videoClockStart = osGetTime();

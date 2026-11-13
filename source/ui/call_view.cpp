@@ -118,6 +118,15 @@ void drawCompact(const std::vector<Discord::VoiceParticipant> &people, Discord::
 		rx.draw(x, lineY, 0.51f, w, vh);
 		lineY += vh + 3.0f;
 	}
+	// What you send (your camera or your screen), small, so you can see it while you chat.
+	Utils::VideoSender &tx = Utils::VideoSender::getInstance();
+	if (tx.running() && tx.hasPreview()) {
+		const float pw = w * 0.5f;
+		const float ph = pw * 0.75f;
+		C2D_DrawRectSolid(x + w - pw, lineY, 0.5f, pw, ph, C2D_Color32(0, 0, 0, 255));
+		tx.drawPreview(x + w - pw, lineY, 0.51f, pw, ph);
+		lineY += ph + 3.0f;
+	}
 	// Anyone with the camera on or sharing the screen gets a line under the panel, speaking or not.
 	int lines = 0;
 	for (const auto &p : people) {

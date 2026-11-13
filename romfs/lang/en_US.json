@@ -518,6 +518,7 @@
     "videoorient.help1": "Right: red edge on top, blue at the bottom, green on the left, yellow on the right,",
     "videoorient.help2": "the orange square top left and the F readable.",
     "videoorient.hint": "A: next orientation   B: leave. Tell me the number that looks right.",
+    "callcam.outer_on": "Outer camera on (the one on the back). Touch again for the screen.",
     "call.view_hidden": "Call: hidden",
     "settings.call_volume": "Call Volume",
     "settings.desc.call_volume": "How loud everyone sounds in a call, on top of each person's own volume.",

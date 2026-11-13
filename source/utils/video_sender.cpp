@@ -8,7 +8,6 @@
 namespace Utils {
 
 namespace {
-constexpr int TARGET_KBPS_CAMERA = 280;
 constexpr int TARGET_KBPS_SCREEN = 350;
 constexpr size_t MAX_QUEUED = 4;
 double ticksToMs(u64 ticks) { return (double)ticks * 1000.0 / (double)SYSCLOCK_ARM11; }
@@ -70,7 +69,8 @@ bool VideoSender::start(Source source) {
 		return active.load();
 	}
 	current = source;
-	curW = source == Source::SCREEN ? 208 : 176;
+	mirrorPreview = source == Source::CAMERA;
+	curW = source == Source::SCREEN ? 208 : 192;
 	curH = source == Source::SCREEN ? 128 : 144;
 	resChanged = false;
 	quit = false;
@@ -83,9 +83,23 @@ bool VideoSender::start(Source source) {
 		std::lock_guard<std::mutex> lock(mutex);
 		queue.clear();
 	}
+	ready = false;
 	active = true;
 	worker.start([this] { run(); }, 3, 128 * 1024, true); // the encoder keeps some big arrays on the stack
 	if (!worker.joinable()) {
+		active = false;
+		current = Source::OFF;
+		return false;
+	}
+	// The camera or the encoder may fail to start (the camera is in use, for example): wait to know, so the call is not told
+	// about a video that never comes.
+	const u64 until = osGetTime() + 2500;
+	while (!ready.load() && active.load() && osGetTime() < until) {
+		svcSleepThread(20 * 1000000LL);
+	}
+	if (!ready.load()) {
+		quit = true;
+		worker.join();
 		active = false;
 		current = Source::OFF;
 		return false;
@@ -141,7 +155,7 @@ void VideoSender::drawPreview(float x, float y, float z, float w, float h) const
 		return;
 	}
 	// Written like the pictures of the others, so it is drawn like them (no sender orientation).
-	drawVideoTexture(const_cast<C3D_Tex *>(&previewTex), shownW, shownH, x, y, z, w, h, 0);
+	drawVideoTextureOriented(const_cast<C3D_Tex *>(&previewTex), shownW, shownH, x, y, z, w, h, 0, mirrorPreview);
 }
 
 void VideoSender::releasePreview() {
@@ -159,10 +173,11 @@ struct Level {
 	int h;
 };
 // The sizes tried, from the best to the lightest (all multiples of 16 in width and height or at least of 16 for the encoder).
-const Level CAMERA_LEVELS[3] = {{176, 144}, {128, 96}, {96, 80}};
+const Level CAMERA_LEVELS[4] = {{256, 192}, {192, 144}, {128, 96}, {96, 80}};
 const Level SCREEN_LEVELS[3] = {{208, 128}, {160, 96}, {112, 64}};
-constexpr int CAM_W = 176; // what the camera gives
-constexpr int CAM_H = 144;
+constexpr int CAM_START_LEVEL = 1; // the camera starts at 192x144 and goes up when the encoder has room
+constexpr int CAM_W = 256; // what the camera gives (its "DS LCD" size)
+constexpr int CAM_H = 192;
 
 // Reduces planar YUV 4:2:0 (srcW x srcH) to dstW x dstH by taking the nearest pixel.
 void scalePlanes(const std::vector<uint8_t> &sy, const std::vector<uint8_t> &su, const std::vector<uint8_t> &sv, int srcW, int srcH,
@@ -186,14 +201,18 @@ void scalePlanes(const std::vector<uint8_t> &sy, const std::vector<uint8_t> &su,
 
 void VideoSender::run() {
 	const Source source = current;
-	const bool camera = source == Source::CAMERA;
+	const bool camera = source == Source::CAMERA || source == Source::OUTER;
+	const u32 select = source == Source::OUTER ? SELECT_OUT1 : SELECT_IN1;
 	const Level *levels = camera ? CAMERA_LEVELS : SCREEN_LEVELS;
-	int level = 0;
-	int W = levels[0].w;
-	int H = levels[0].h;
+	const int levelCount = camera ? 4 : 3;
+	int level = camera ? CAM_START_LEVEL : 0;
+	int W = levels[level].w;
+	int H = levels[level].h;
 	const int FPS = fps();
 	const int keyEvery = FPS * 2; // a key frame every two seconds
-	const int kbps = camera ? TARGET_KBPS_CAMERA : TARGET_KBPS_SCREEN;
+	// A bigger picture gets more bits.
+	auto kbpsFor = [&](int lv) { return camera ? (lv == 0 ? 380 : lv == 1 ? 300 : lv == 2 ? 220 : 160) : TARGET_KBPS_SCREEN; };
+	int kbps = kbpsFor(level);
 
 	H264Encoder encoder;
 	// What the encoder gets (W x H), and, for the camera, what the camera gave (CAM_W x CAM_H).
@@ -214,17 +233,17 @@ void VideoSender::run() {
 			return;
 		}
 		packed = (unsigned char *)malloc((size_t)CAM_W * CAM_H * 2);
-		// The inner camera, YUYV, 10 frames a second (15 left the encoder no room next to the audio and the decoder).
-		ok = ok && packed && R_SUCCEEDED(CAMU_SetSize(SELECT_IN1, SIZE_QCIF, CONTEXT_A));
-		ok = ok && R_SUCCEEDED(CAMU_SetOutputFormat(SELECT_IN1, OUTPUT_YUV_422, CONTEXT_A));
-		ok = ok && R_SUCCEEDED(CAMU_SetFrameRate(SELECT_IN1, FRAME_RATE_10));
-		ok = ok && R_SUCCEEDED(CAMU_SetNoiseFilter(SELECT_IN1, true));
-		ok = ok && R_SUCCEEDED(CAMU_SetAutoExposure(SELECT_IN1, true));
-		ok = ok && R_SUCCEEDED(CAMU_SetAutoWhiteBalance(SELECT_IN1, true));
+		// The camera (inner or outer), YUYV, 10 frames a second (15 left the encoder no room next to the audio and the decoder).
+		ok = ok && packed && R_SUCCEEDED(CAMU_SetSize(select, SIZE_DS_LCD, CONTEXT_A));
+		ok = ok && R_SUCCEEDED(CAMU_SetOutputFormat(select, OUTPUT_YUV_422, CONTEXT_A));
+		ok = ok && R_SUCCEEDED(CAMU_SetFrameRate(select, FRAME_RATE_10));
+		ok = ok && R_SUCCEEDED(CAMU_SetNoiseFilter(select, true));
+		ok = ok && R_SUCCEEDED(CAMU_SetAutoExposure(select, true));
+		ok = ok && R_SUCCEEDED(CAMU_SetAutoWhiteBalance(select, true));
 		ok = ok && R_SUCCEEDED(CAMU_SetTrimming(PORT_CAM1, false));
 		ok = ok && R_SUCCEEDED(CAMU_GetMaxBytes(&maxBytes, CAM_W, CAM_H));
 		ok = ok && R_SUCCEEDED(CAMU_SetTransferBytes(PORT_CAM1, maxBytes, CAM_W, CAM_H));
-		ok = ok && R_SUCCEEDED(CAMU_Activate(SELECT_IN1));
+		ok = ok && R_SUCCEEDED(CAMU_Activate(select));
 	}
 	if (!ok) {
 		Logger::log("[VideoTx] The source or the encoder could not start");
@@ -246,7 +265,8 @@ void VideoSender::run() {
 		previewBuffer.assign((size_t)PREVIEW_W * PREVIEW_H, 0);
 		previewVersion = 0;
 	}
-	Logger::log("[VideoTx] Sending the %s: %dx%d, %d fps, %d kbps", camera ? "camera" : "screen", W, H, FPS, kbps);
+	ready = true;
+	Logger::log("[VideoTx] Sending the %s: %dx%d, %d fps, %d kbps", camera ? (source == Source::OUTER ? "outer camera" : "inner camera") : "screen", W, H, FPS, kbps);
 
 	uint32_t frames = 0;
 	double msTotal = 0;
@@ -388,12 +408,12 @@ void VideoSender::run() {
 			}
 
 			// Every two seconds: too slow (more than 90 ms a frame) goes to a lighter size; with lots of room (under 35 ms for
-			// eight seconds) goes back to a bigger one.
+			// eight seconds) goes to a bigger one.
 			const u64 nowMs = osGetTime();
 			if (nowMs - judgeStart >= 2000 && judgeFrames >= 3) {
 				const double avg = judgeMs / judgeFrames;
 				int target = level;
-				if (avg > 90.0 && level < 2) {
+				if (avg > 90.0 && level < levelCount - 1) {
 					target = level + 1;
 				} else if (avg < 35.0 && level > 0 && nowMs - lastLevelChange > 8000) {
 					target = level - 1;
@@ -402,6 +422,7 @@ void VideoSender::run() {
 					level = target;
 					W = levels[level].w;
 					H = levels[level].h;
+					kbps = kbpsFor(level);
 					yPlane.assign((size_t)W * H, 0);
 					uPlane.assign((size_t)W * H / 4, 128);
 					vPlane.assign((size_t)W * H / 4, 128);

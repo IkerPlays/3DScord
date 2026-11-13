@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- **Outer camera in the call** (experimental): the camera button next to the microphone now goes nothing > inner camera > outer camera (the one on the back) > top
+  screen > nothing. If the camera or the encoder cannot start (for example the Camera screen has the camera) it says so at once and nothing is announced to Discord.
+- **Better camera picture:** the camera is read at 256x192 and starts sending at 192x144; the size now also goes UP (to 256x192) when the encoder has room (under
+  35 ms a frame for eight seconds), and down (to 128x96 and 96x80) when it is slow; bigger pictures get more bits (160 to 380 kbps).
+- **Your own picture:** the preview of your inner camera is mirrored, like a mirror (what is sent is not), and in the compact call view a small preview of what you send
+  shows under the speaker panel.
 
 ## 0.16.0
 You can now send video to a call: your inner camera or the top screen of the console. Experimental (Settings > Voice > Video, then join the call again).

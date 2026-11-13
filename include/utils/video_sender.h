@@ -13,12 +13,12 @@
 
 namespace Utils {
 
-// EXPERIMENTAL. What you send to a call as video: your inner camera (176x144, 10 frames a second) or the top screen of the console
-// (reduced to 208x128, 8 frames a second). The picture is coded as H.264 (baseline, minih264e) on a worker thread, and the coded frames wait for
+// EXPERIMENTAL. What you send to a call as video: your inner or outer camera (192x144 to start, 10 frames a second) or the top screen
+// of the console (reduced to 208x128, 8 frames a second). The picture is coded as H.264 (baseline, minih264e) on a worker thread, and the coded frames wait for
 // the call's media thread to encrypt and send them. A small copy is kept to show you what you send.
 class VideoSender {
   public:
-	enum class Source { OFF, CAMERA, SCREEN };
+	enum class Source { OFF, CAMERA, OUTER, SCREEN }; // CAMERA is the inner one (facing you), OUTER the one on the back
 
 	static VideoSender &getInstance();
 
@@ -33,6 +33,8 @@ class VideoSender {
 	// True once after the size changed, so the call tells Discord.
 	bool takeResolutionChange() { return resChanged.exchange(false); }
 	int fps() const { return current == Source::SCREEN ? 8 : 10; }
+	// Your preview of the inner camera is mirrored, like a mirror; what is sent is not.
+	bool previewMirrored() const { return mirrorPreview; }
 
 	// Media thread: the oldest coded frame (Annex B, with SPS and PPS when it is a key frame).
 	bool takeFrame(std::vector<uint8_t> &out, bool &key);
@@ -62,9 +64,10 @@ class VideoSender {
 
 	WorkerThread worker;
 	std::atomic<bool> active{false};
+	std::atomic<bool> ready{false}; // the source and the encoder started
 	std::atomic<bool> quit{false};
 	std::atomic<bool> keyRequested{false};
-	std::atomic<int> curW{176};
+	std::atomic<int> curW{192};
 	std::atomic<int> curH{144};
 	std::atomic<bool> resChanged{false};
 	std::atomic<int> statFpsNow{0};
@@ -87,6 +90,7 @@ class VideoSender {
 	int previewW = 0;
 	int previewH = 0;
 	C3D_Tex previewTex;
+	bool mirrorPreview = false;
 	bool previewReady = false;
 	bool gotPreview = false;
 	uint32_t shownVersion = 0;

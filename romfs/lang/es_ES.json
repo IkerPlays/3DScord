@@ -518,6 +518,7 @@
     "videoorient.help1": "Correcta: borde rojo arriba, azul abajo, verde a la izquierda, amarillo a la derecha,",
     "videoorient.help2": "el cuadrado naranja arriba a la izquierda y la F legible.",
     "videoorient.hint": "A: siguiente   B: salir. Dime el número que se ve bien.",
+    "callcam.outer_on": "Cámara exterior activada (la de atrás). Toca otra vez para compartir la pantalla.",
     "call.view_hidden": "Llamada: oculta",
     "settings.call_volume": "Volumen de las llamadas",
     "settings.desc.call_volume": "Cuánto se oye a todos en una llamada, además del volumen de cada persona.",

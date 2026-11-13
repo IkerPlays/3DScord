@@ -210,7 +210,7 @@ class VoiceClient {
   public:
 	void setMuted(bool m);
 	bool isMuted() const { return capture.isMuted(); }
-	// EXPERIMENTAL: what you send as video in the call: 0 nothing, 1 the inner camera (320x240), 2 the top screen (400x240). False when
+	// EXPERIMENTAL: what you send as video in the call: 0 nothing, 1 the inner camera, 2 the outer camera, 3 the top screen. False when
 	// it cannot start (not in a call, the Video setting is off, or the camera is busy).
 	bool setVideoSource(int source);
 	int videoSource() const { return videoSourceNow.load(); }
