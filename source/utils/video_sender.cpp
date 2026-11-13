@@ -1,5 +1,6 @@
 #include "utils/video_sender.h"
 #include "log.h"
+#include "utils/h264_sps.h"
 #include "utils/video_receiver.h"
 #include <algorithm>
 #include <cstdlib>
@@ -413,6 +414,11 @@ void VideoSender::run() {
 					Frame frame;
 					frame.data.assign(coded, coded + codedBytes);
 					frame.key = forceKey;
+					// The SPS of the encoder has no bitstream restriction, and the receivers of Discord (WebRTC) then hold pictures back or show
+					// nothing: it gets one with max_num_reorder_frames = 0.
+					if (forceKey && !rewriteAnnexBSps(frame.data) && frames <= 3) {
+						Logger::log("[VideoTx] The SPS could not be rewritten");
+					}
 					queue.push_back(std::move(frame));
 				}
 			}

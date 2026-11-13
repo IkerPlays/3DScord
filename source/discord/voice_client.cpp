@@ -1165,7 +1165,7 @@ void VoiceClient::handleRtcp(const uint8_t *packet, size_t len) {
 
 void VoiceClient::sendRtp(uint8_t payloadType, uint32_t ssrcOut, uint16_t seq, uint32_t timestamp, bool marker,
                           const uint8_t *payload, size_t len, bool withExtension) {
-	// With the extension (playout delay 0, element id 5) the header is 16 bytes and the element goes at the front of the encrypted
+	// With the extension (playout delay 0, element id 5; the same bytes as the working UDP sender of Discord-video-stream) the header is 16 bytes and the element goes at the front of the encrypted
 	// body, as the "rtpsize" modes want.
 	const size_t headerLen = withExtension ? 16 : 12;
 	const size_t extLen = withExtension ? 4 : 0;
@@ -1191,7 +1191,9 @@ void VoiceClient::sendRtp(uint8_t payloadType, uint32_t ssrcOut, uint16_t seq, u
 		packet[13] = 0xDE;
 		packet[14] = 0x00;
 		packet[15] = 0x01;
-		videoPlainBuffer[0] = 0x51;
+		// Playout delay (extension id 5): the element is 4 bytes, an id and a length (the length is the number of data bytes minus one, so
+		// 2 for three bytes), then the minimum and maximum delay in 12 bits each (units of 10 ms). Zero for both asks for no delay.
+		videoPlainBuffer[0] = 0x52;
 		videoPlainBuffer[1] = 0x00;
 		videoPlainBuffer[2] = 0x00;
 		videoPlainBuffer[3] = 0x00;
@@ -1408,7 +1410,7 @@ void VoiceClient::sendVideoSignal(bool on) {
 	writer.Key("rtx_ssrc");
 	writer.Uint(videoOwnRtxSsrc);
 	writer.Key("max_bitrate");
-	writer.Int(400000);
+	writer.Int(2000000);
 	writer.Key("max_framerate");
 	writer.Int(Utils::VideoSender::getInstance().fps());
 	writer.Key("max_resolution");

@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- **Your camera should now show to the others (found by comparing with Discord-video-stream, a community project that sends video to Discord):** the SPS of the
+  H.264 of the encoder had no "bitstream restriction", so WebRTC receivers (the browsers and phones of Discord) take the stream as one that may reorder pictures and
+  hold frames back or show nothing (and ask for key frames without end, which is what the `K` counter showed). Every key frame now gets its SPS rewritten with
+  `max_num_reorder_frames = 0` and `max_dec_frame_buffering`, saying constrained baseline level 3.1, as WebRTC's own rewriter does (checked on a computer: the
+  pictures decode the same, ffprobe reads "Constrained Baseline, level 31, no B frames").
+- The playout-delay header extension had the wrong length (`0x51` where the element is `0x52`: three data bytes), and the stream says a maximum bitrate of 2 Mbit/s.
 - **Audio files in the chat play:** MP3 and WAV attachments (besides Ogg) can be played from the message menu (Play, Play 1.5x, Queue), with a small
   public-domain MP3 decoder (minimp3). The first three minutes are played; stereo is mixed to mono and a high sample rate is halved to save memory.
 - **Fix (the video of the others vanished while you sent yours):** the decoder had a lower priority than your encoder, and on the console a thread of lower priority only
