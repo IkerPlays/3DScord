@@ -13,8 +13,8 @@ namespace Utils {
 namespace {
 constexpr size_t FRAME_MAX = 256 * 1024;
 constexpr int SLOTS = 6;
-constexpr int TEX_W = 512;
-constexpr int TEX_H = 512;
+constexpr int TEX_W = VIDEO_TEX_W;
+constexpr int TEX_H = VIDEO_TEX_H;
 
 // A key frame has the parameter sets (NAL 7) or an IDR slice (NAL 5) before its first ordinary slice. An access unit can
 // start with other NAL units (delimiter, SEI), so the start codes are searched until the first slice.
@@ -258,56 +258,75 @@ void VideoReceiver::run() {
 	}
 }
 
-// Reduces the picture (half size, or a quarter when it is very big) and turns YUV into RGB565.
-void VideoReceiver::convert(const uint8_t *py0, const uint8_t *pu0, const uint8_t *pv0, int width, int height, int strideY,
-                            int strideUV) {
-	Impl &s = *impl;
-	const int div = width > 1024 ? 4 : 2;
+bool convertToTiledTexture(const uint8_t *py0, const uint8_t *pu0, const uint8_t *pv0, int width, int height, int strideY,
+                           int strideUV, uint16_t *dst, int &outW, int &outH) {
+	int div = 2;
+	while ((width / div) > TEX_W || (height / div) > TEX_H) {
+		div *= 2;
+	}
 	const int w = (width / div) & ~7;
 	const int h = (height / div) & ~7;
-	if (w <= 0 || h <= 0 || w > TEX_W || h > TEX_H) {
-		return;
+	if (w <= 0 || h <= 0) {
+		return false;
 	}
-	if (!s.front || !s.ready) {
-		// Rows are as wide as the texture: the display transfer lays the 8x8 tiles out by the width of its input. The two buffers
-		// are made once and reused when the picture size changes (Discord lowers the resolution during a call).
-		LightLock_Lock(&s.lock);
-		s.front = (u16 *)linearAlloc((size_t)TEX_W * TEX_H * 2);
-		s.ready = (u16 *)linearAlloc((size_t)TEX_W * TEX_H * 2);
-		if (s.front && s.ready) {
-			memset(s.front, 0, (size_t)TEX_W * TEX_H * 2);
-			memset(s.ready, 0, (size_t)TEX_W * TEX_H * 2);
-			GSPGPU_FlushDataCache(s.front, (u32)TEX_W * TEX_H * 2);
-			GSPGPU_FlushDataCache(s.ready, (u32)TEX_W * TEX_H * 2);
-		}
-		LightLock_Unlock(&s.lock);
-		if (!s.front || !s.ready) {
-			Logger::log("[VideoRx] No linear memory for the picture buffers (%u KB free)", (unsigned)(linearSpaceFree() / 1024));
-			if (s.front) {
-				linearFree(s.front);
-			}
-			if (s.ready) {
-				linearFree(s.ready);
-			}
-			s.front = s.ready = nullptr;
-			return;
-		}
-		Logger::log("[VideoRx] Picture buffers ready (%u KB of linear memory left)", (unsigned)(linearSpaceFree() / 1024));
-	}
+	// Position inside an 8x8 tile, in Z order: bits of x and y interleaved.
+	static const uint8_t mx[8] = {0, 1, 4, 5, 16, 17, 20, 21};
+	static const uint8_t my[8] = {0, 2, 8, 10, 32, 34, 40, 42};
+	const int tilesPerRow = TEX_W / 8;
 	for (int y = 0; y < h; y++) {
 		const uint8_t *py = py0 + (size_t)(y * div) * strideY;
 		const uint8_t *pu = pu0 + (size_t)(y * div / 2) * strideUV;
 		const uint8_t *pv = pv0 + (size_t)(y * div / 2) * strideUV;
-		u16 *dst = s.front + (size_t)y * TEX_W;
+		// The picture's top row goes to the highest row of the texture, which is where texture coordinate 1 is.
+		const int row = TEX_H - 1 - y;
+		uint16_t *rowBase = dst + (size_t)(row >> 3) * tilesPerRow * 64 + my[row & 7];
 		for (int x = 0; x < w; x++) {
-			const int c = ((py[x * div] + py[x * div + 1] + py[x * div + strideY] + py[x * div + 1 + strideY]) >> 2) - 16; // 2x2 average, no stripes
+			const int c = ((py[x * div] + py[x * div + 1] + py[x * div + strideY] + py[x * div + 1 + strideY]) >> 2) - 16;
 			const int d = pu[x * div / 2] - 128;
 			const int e = pv[x * div / 2] - 128;
 			const int r = clamp255((298 * c + 409 * e + 128) >> 8);
 			const int g = clamp255((298 * c - 100 * d - 208 * e + 128) >> 8);
 			const int b = clamp255((298 * c + 516 * d + 128) >> 8);
-			dst[x] = (u16)(((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3));
+			rowBase[(size_t)(x >> 3) * 64 + mx[x & 7]] = (uint16_t)(((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3));
 		}
+	}
+	outW = w;
+	outH = h;
+	return true;
+}
+
+// Reduces the picture (half size, or a quarter when it is very big) and turns YUV into RGB565.
+void VideoReceiver::convert(const uint8_t *py0, const uint8_t *pu0, const uint8_t *pv0, int width, int height, int strideY,
+                            int strideUV) {
+	Impl &s = *impl;
+	if (!s.front || !s.ready) {
+		// Rows are as wide as the texture: the display transfer lays the 8x8 tiles out by the width of its input. The two buffers
+		// are made once and reused when the picture size changes (Discord lowers the resolution during a call).
+		LightLock_Lock(&s.lock);
+		s.front = (u16 *)malloc((size_t)TEX_W * TEX_H * 2);
+		s.ready = (u16 *)malloc((size_t)TEX_W * TEX_H * 2);
+		if (s.front && s.ready) {
+			memset(s.front, 0, (size_t)TEX_W * TEX_H * 2);
+			memset(s.ready, 0, (size_t)TEX_W * TEX_H * 2);
+		}
+		LightLock_Unlock(&s.lock);
+		if (!s.front || !s.ready) {
+			Logger::log("[VideoRx] No memory for the picture buffers");
+			if (s.front) {
+				free(s.front);
+			}
+			if (s.ready) {
+				free(s.ready);
+			}
+			s.front = s.ready = nullptr;
+			return;
+		}
+		Logger::log("[VideoRx] Picture buffers ready");
+	}
+	int w = 0;
+	int h = 0;
+	if (!convertToTiledTexture(py0, pu0, pv0, width, height, strideY, strideUV, s.front, w, h)) {
+		return;
 	}
 	LightLock_Lock(&s.lock);
 	std::swap(s.front, s.ready);
@@ -348,12 +367,9 @@ void VideoReceiver::update() {
 	if (textureReady) {
 		picW = s.readyW;
 		picH = s.readyH;
-		GSPGPU_FlushDataCache(s.ready, (u32)TEX_W * TEX_H * 2);
-		C3D_SyncDisplayTransfer((u32 *)s.ready, GX_BUFFER_DIM(TEX_W, TEX_H), (u32 *)texture.data, GX_BUFFER_DIM(TEX_W, TEX_H),
-		                        (GX_TRANSFER_FLIP_VERT(1) | GX_TRANSFER_OUT_TILED(1) | GX_TRANSFER_RAW_COPY(0) |
-		                         GX_TRANSFER_IN_FORMAT(GX_TRANSFER_FMT_RGB565) |
-		                         GX_TRANSFER_OUT_FORMAT(GX_TRANSFER_FMT_RGB565) |
-		                         GX_TRANSFER_SCALING(GX_TRANSFER_SCALE_NO)));
+		// The picture is already in the order of the texture: copy it and make sure the GPU sees it.
+		memcpy(texture.data, s.ready, (size_t)TEX_W * TEX_H * 2);
+		GSPGPU_FlushDataCache(texture.data, (u32)TEX_W * TEX_H * 2);
 		gotPicture = true;
 		lastUpdate = s.lastPicture;
 	}
@@ -419,10 +435,10 @@ void VideoReceiver::stop() {
 		slot = nullptr;
 	}
 	if (s.front) {
-		linearFree(s.front);
+		free(s.front);
 	}
 	if (s.ready) {
-		linearFree(s.ready);
+		free(s.ready);
 	}
 	s.front = s.ready = nullptr;
 	s.readyW = s.readyH = 0;

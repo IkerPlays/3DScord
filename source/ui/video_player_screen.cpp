@@ -14,8 +14,8 @@ namespace UI {
 
 namespace {
 
-constexpr int TEX_W = 512;
-constexpr int TEX_H = 512;
+constexpr int TEX_W = Utils::VIDEO_TEX_W;
+constexpr int TEX_H = Utils::VIDEO_TEX_H;
 constexpr size_t MAX_FILE = 16 * 1024 * 1024;
 std::string pendingPath;
 
@@ -47,10 +47,10 @@ VideoPlayerScreen::~VideoPlayerScreen() {
 		C3D_TexDelete(&texture);
 	}
 	if (front) {
-		linearFree(front);
+		free(front);
 	}
 	if (ready) {
-		linearFree(ready);
+		free(ready);
 	}
 	remove(path.c_str());
 }
@@ -190,56 +190,40 @@ void VideoPlayerScreen::playLoop() {
 	playing = false;
 }
 
-// Half size (a quarter when the picture is very big), YUV to RGB565.
+// Half size (a quarter or an eighth when the picture is big), YUV to RGB565, in the order the GPU reads the texture.
 void VideoPlayerScreen::convert(const uint8_t *py0, const uint8_t *pu0, const uint8_t *pv0, int width, int height,
                                 int strideY, int strideUV) {
-	const int div = width > 1024 ? 4 : 2;
-	const int w = (width / div) & ~7;
-	const int h = (height / div) & ~7;
-	if (w <= 0 || h <= 0 || w > TEX_W || h > TEX_H) {
-		return;
-	}
-	if (!front || readyW != w || readyH != h) {
+	if (!front || !ready) {
 		LightLock_Lock(&lock);
 		if (front) {
-			linearFree(front);
+			free(front);
 		}
 		if (ready) {
-			linearFree(ready);
+			free(ready);
 		}
 		// Rows as wide as the texture, or the display transfer shears the picture.
-		front = (u16 *)linearAlloc((size_t)TEX_W * TEX_H * 2);
-		ready = (u16 *)linearAlloc((size_t)TEX_W * TEX_H * 2);
+		front = (u16 *)malloc((size_t)TEX_W * TEX_H * 2);
+		ready = (u16 *)malloc((size_t)TEX_W * TEX_H * 2);
 		if (front) {
 			memset(front, 0, (size_t)TEX_W * TEX_H * 2);
 		}
 		if (ready) {
 			memset(ready, 0, (size_t)TEX_W * TEX_H * 2);
 		}
-		readyW = w;
-		readyH = h;
 		LightLock_Unlock(&lock);
 		if (!front || !ready) {
 			return;
 		}
 	}
-	for (int y = 0; y < h; y++) {
-		const uint8_t *py = py0 + (size_t)(y * div) * strideY;
-		const uint8_t *pu = pu0 + (size_t)(y * div / 2) * strideUV;
-		const uint8_t *pv = pv0 + (size_t)(y * div / 2) * strideUV;
-		u16 *dst = front + (size_t)y * TEX_W;
-		for (int x = 0; x < w; x++) {
-			const int c = ((py[x * div] + py[x * div + 1] + py[x * div + strideY] + py[x * div + 1 + strideY]) >> 2) - 16; // 2x2 average, no stripes
-			const int d = pu[x * div / 2] - 128;
-			const int e = pv[x * div / 2] - 128;
-			const int r = clamp255((298 * c + 409 * e + 128) >> 8);
-			const int g = clamp255((298 * c - 100 * d - 208 * e + 128) >> 8);
-			const int b = clamp255((298 * c + 516 * d + 128) >> 8);
-			dst[x] = (u16)(((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3));
-		}
+	int w = 0;
+	int h = 0;
+	if (!Utils::convertToTiledTexture(py0, pu0, pv0, width, height, strideY, strideUV, front, w, h)) {
+		return;
 	}
 	LightLock_Lock(&lock);
 	std::swap(front, ready);
+	readyW = w;
+	readyH = h;
 	version++;
 	LightLock_Unlock(&lock);
 	Utils::requestRedraw();
@@ -279,13 +263,8 @@ void VideoPlayerScreen::update() {
 		if (textureReady) {
 			picW = readyW;
 			picH = readyH;
-			GSPGPU_FlushDataCache(ready, (u32)TEX_W * TEX_H * 2);
-			C3D_SyncDisplayTransfer((u32 *)ready, GX_BUFFER_DIM(TEX_W, TEX_H), (u32 *)texture.data,
-			                        GX_BUFFER_DIM(TEX_W, TEX_H),
-			                        (GX_TRANSFER_FLIP_VERT(1) | GX_TRANSFER_OUT_TILED(1) | GX_TRANSFER_RAW_COPY(0) |
-			                         GX_TRANSFER_IN_FORMAT(GX_TRANSFER_FMT_RGB565) |
-			                         GX_TRANSFER_OUT_FORMAT(GX_TRANSFER_FMT_RGB565) |
-			                         GX_TRANSFER_SCALING(GX_TRANSFER_SCALE_NO)));
+			memcpy(texture.data, ready, (size_t)TEX_W * TEX_H * 2);
+			GSPGPU_FlushDataCache(texture.data, (u32)TEX_W * TEX_H * 2);
 			havePicture = true;
 		}
 		shownVersion = version;

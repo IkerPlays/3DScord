@@ -9,6 +9,16 @@
 
 namespace Utils {
 
+// The video textures are 512x256 (RGB565); the picture sits in the top left of the part that is used.
+constexpr int VIDEO_TEX_W = 512;
+constexpr int VIDEO_TEX_H = 256;
+
+// Turns a decoded YUV 4:2:0 picture into RGB565, reduced to half size (a quarter or an eighth when it is bigger), written straight
+// in the tiled order the GPU reads (8x8 tiles, Z order inside), so no display transfer is needed. `dst` has VIDEO_TEX_W x VIDEO_TEX_H
+// pixels. Gives the size of the reduced picture. False when it does not fit.
+bool convertToTiledTexture(const uint8_t *y, const uint8_t *u, const uint8_t *v, int width, int height, int strideY, int strideUV,
+                           uint16_t *dst, int &outW, int &outH);
+
 // EXPERIMENTAL. Shows the camera or the shared screen of one person in the call. The H.264 frames (already joined and
 // decrypted) are queued by the media thread; a worker thread, on the extra core of a New 3DS, decodes them in software and
 // turns the last picture into a small RGB565 image that the screen thread uploads to a texture. When the worker falls

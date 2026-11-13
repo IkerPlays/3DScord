@@ -4,6 +4,9 @@
 - **Full call view redesigned like Discord:** black background, big rounded tiles with the avatar in the middle, a green border while someone
   speaks and the muted icons at the bottom; one person fills the screen, two sit side by side, more make a grid. When someone shares their
   screen it takes the left side and everyone else is stacked on the right. A camera shows inside its person's tile.
+- **Video picture written straight into the texture:** the display transfer of the console turns the picture a quarter turn when it writes a texture
+  (that was the picture that came out sideways, and then black). The picture is now converted straight into the GPU's tiled order, with no
+  transfer, in a 512x256 texture; the buffers use the normal heap. (The Software Decoder Test still uses the old way.)
 - **Video in calls, decoder reworked:** the pictures of the decoder stay in the normal heap (they took the linear memory that the picture buffers
   need, which left the video black); when the decoder falls behind it drops the oldest frame nothing refers to instead of emptying the queue
   and waiting for a key frame; frames are only drawn when no other is waiting; the call asks Discord for a lower video quality (40 %,
