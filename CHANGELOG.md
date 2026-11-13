@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- **Fix (camera black, photos black, camera of the call frozen on one frame):** the camera writes each frame into memory by itself, behind the cache of the
+  processor, and since the picture is read by the processor (not by the display transfer any more) the cache kept the first frame, a black one.
+  The cache is now invalidated after every frame, in the camera view, the photo, the video test and the camera of the call. The attempt to
+  pick between the two outer cameras (previous version) is removed: it was not the cause.
 - **Camera in the call no longer freezes after one frame:** the request for a frame is kept open until the camera fills it (a second request while
   the first was open failed, and then no frame came again); if nothing comes for three seconds the capture restarts.
 - **Video Orientation Test** (Settings > Updates): shows a test picture (an F with a red edge on top, blue at the bottom, green on the left,

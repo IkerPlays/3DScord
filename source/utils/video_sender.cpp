@@ -223,6 +223,9 @@ void VideoSender::run() {
 			svcCloseHandle(event);
 			event = 0;
 			receiving = false;
+			// The camera writes the frame into memory by itself (DMA), behind the cache of the processor: without this the processor
+			// keeps reading the first frame and the picture freezes.
+			GSPGPU_InvalidateDataCache(packed, (u32)W * H * 2);
 
 			// The camera gives YUYV (a pair of pixels shares its colour); the encoder wants separate planes.
 			for (int row = 0; row < H; row++) {

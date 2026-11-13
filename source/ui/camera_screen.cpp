@@ -1,7 +1,6 @@
 #include "ui/camera_screen.h"
 #include "utils/video_receiver.h"
 #include "utils/video_sender.h"
-#include "utils/camera_probe.h"
 #include "core/config.h"
 #include "core/i18n.h"
 #include "discord/discord_client.h"
@@ -85,7 +84,7 @@ bool CameraScreen::startCamera() {
 		camExit();
 		return false;
 	}
-	const u32 select = inner ? SELECT_IN1 : Utils::CameraProbe::outerCamera();
+	const u32 select = inner ? SELECT_IN1 : SELECT_OUT1;
 	bool ok = R_SUCCEEDED(CAMU_SetSize(select, SIZE_CTR_TOP_LCD, CONTEXT_A));
 	ok = ok && R_SUCCEEDED(CAMU_SetOutputFormat(select, OUTPUT_RGB_565, CONTEXT_A));
 	ok = ok && R_SUCCEEDED(CAMU_SetNoiseFilter(select, true));
@@ -159,6 +158,9 @@ void CameraScreen::pumpFrame() {
 	svcCloseHandle(event);
 	event = 0;
 	receiving = false;
+	// The camera writes the frame into memory by itself (DMA), behind the cache of the processor: without this the processor keeps
+	// reading the first frame (black), and the photo is black too.
+	GSPGPU_InvalidateDataCache(buffer, (u32)CAM_W * CAM_H * 2);
 	if (textureReady) {
 		// Written straight into the texture in the order the GPU reads it (the display transfer of the console turns and moves
 		// the picture, which left this view black).
