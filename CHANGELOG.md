@@ -1,7 +1,7 @@
 # Changelog
 
 ## Unreleased
-- **Full call view redesigned like Discord:** dark background, big rounded tiles with the avatar in the middle, a green border while someone
+- **Full call view redesigned like Discord:** black background, big rounded tiles with the avatar in the middle, a green border while someone
   speaks and the muted icons at the bottom; one person fills the screen, two sit side by side, more make a grid. When someone shares their
   screen it takes the left side and everyone else is stacked on the right. A camera shows inside its person's tile.
 - **Fix (video in calls, the noise):** the picture was uploaded to the texture with rows narrower than the texture, and the display transfer

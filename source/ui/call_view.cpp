@@ -145,7 +145,7 @@ void drawTile(const Discord::VoiceParticipant &p, Discord::VoiceClient &voice, f
 	if (speaking) {
 		drawRoundedRect(x, y, 0.5f + zOff, w, h, 10.0f, GREEN);
 	}
-	drawRoundedRect(x + border, y + border, 0.51f + zOff, w - 2 * border, h - 2 * border, 8.0f, ScreenManager::colorBackground());
+	drawRoundedRect(x + border, y + border, 0.51f + zOff, w - 2 * border, h - 2 * border, 8.0f, C2D_Color32(17, 18, 20, 255));
 
 	Utils::VideoReceiver &rx = Utils::VideoReceiver::getInstance();
 	if (showCamera && rx.isLive() && rx.userId() == p.userId) {
@@ -181,7 +181,7 @@ void drawTile(const Discord::VoiceParticipant &p, Discord::VoiceClient &voice, f
 // side and everyone else is stacked on the right.
 void drawFull(const std::vector<Discord::VoiceParticipant> &people, Discord::VoiceClient &voice) {
 	zOff = 0.4f;
-	C2D_DrawRectSolid(0, 0, 0.45f + zOff, 400, 240, ScreenManager::colorBackgroundDark());
+	C2D_DrawRectSolid(0, 0, 0.45f + zOff, 400, 240, C2D_Color32(0, 0, 0, 255));
 
 	constexpr float margin = 6.0f;
 	constexpr float gap = 6.0f;
