@@ -19,6 +19,9 @@ constexpr int VIDEO_TEX_H = 256;
 bool convertToTiledTexture(const uint8_t *y, const uint8_t *u, const uint8_t *v, int width, int height, int strideY, int strideUV,
                            uint16_t *dst, int &outW, int &outH);
 
+// The same for a picture that is already RGB565 (the camera of the console): stretched to fill the 512x256 texture, tiled.
+void convertRgb565ToTiledTexture(const uint16_t *src, int width, int height, uint16_t *dst);
+
 // EXPERIMENTAL. Shows the camera or the shared screen of one person in the call. The H.264 frames (already joined and
 // decrypted) are queued by the media thread; a worker thread, on the extra core of a New 3DS, decodes them in software and
 // turns the last picture into a small RGB565 image that the screen thread uploads to a texture. When the worker falls

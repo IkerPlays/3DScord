@@ -296,6 +296,24 @@ bool convertToTiledTexture(const uint8_t *py0, const uint8_t *pu0, const uint8_t
 	return true;
 }
 
+void convertRgb565ToTiledTexture(const uint16_t *src, int width, int height, uint16_t *dst) {
+	static const uint8_t mx[8] = {0, 1, 4, 5, 16, 17, 20, 21};
+	static const uint8_t my[8] = {0, 2, 8, 10, 32, 34, 40, 42};
+	const int tilesPerRow = TEX_W / 8;
+	int srcX[TEX_W];
+	for (int x = 0; x < TEX_W; x++) {
+		srcX[x] = std::min(x * width / TEX_W, width - 1);
+	}
+	for (int y = 0; y < TEX_H; y++) {
+		const uint16_t *line = src + (size_t)std::min(y * height / TEX_H, height - 1) * width;
+		const int row = TEX_H - 1 - y;
+		uint16_t *rowBase = dst + (size_t)(row >> 3) * tilesPerRow * 64 + my[row & 7];
+		for (int x = 0; x < TEX_W; x++) {
+			rowBase[(size_t)(x >> 3) * 64 + mx[x & 7]] = line[srcX[x]];
+		}
+	}
+}
+
 // Reduces the picture (half size, or a quarter when it is very big) and turns YUV into RGB565.
 void VideoReceiver::convert(const uint8_t *py0, const uint8_t *pu0, const uint8_t *pv0, int width, int height, int strideY,
                             int strideUV) {

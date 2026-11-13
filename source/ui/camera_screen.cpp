@@ -1,4 +1,5 @@
 #include "ui/camera_screen.h"
+#include "utils/video_receiver.h"
 #include "core/config.h"
 #include "core/i18n.h"
 #include "discord/discord_client.h"
@@ -152,13 +153,10 @@ void CameraScreen::pumpFrame() {
 	event = 0;
 	receiving = false;
 	if (textureReady) {
-		GSPGPU_FlushDataCache(buffer, (u32)CAM_W * CAM_H * 2);
-		C3D_SyncDisplayTransfer((u32 *)buffer, GX_BUFFER_DIM(CAM_W, CAM_H), (u32 *)texture.data,
-		                        GX_BUFFER_DIM(TEX_W, TEX_H),
-		                        (GX_TRANSFER_FLIP_VERT(1) | GX_TRANSFER_OUT_TILED(1) | GX_TRANSFER_RAW_COPY(0) |
-		                         GX_TRANSFER_IN_FORMAT(GX_TRANSFER_FMT_RGB565) |
-		                         GX_TRANSFER_OUT_FORMAT(GX_TRANSFER_FMT_RGB565) |
-		                         GX_TRANSFER_SCALING(GX_TRANSFER_SCALE_NO)));
+		// Written straight into the texture in the order the GPU reads it (the display transfer of the console turns and moves
+		// the picture, which left this view black).
+		Utils::convertRgb565ToTiledTexture((const uint16_t *)buffer, CAM_W, CAM_H, (uint16_t *)texture.data);
+		GSPGPU_FlushDataCache(texture.data, (u32)TEX_W * TEX_H * 2);
 	}
 	haveFrame = true;
 	frameCount++;
@@ -243,9 +241,9 @@ void CameraScreen::renderTop(C3D_RenderTarget *target) {
 	C2D_TargetClear(target, C2D_Color32(0, 0, 0, 255));
 	C2D_SceneBegin(target);
 	if (cameraOn && haveFrame && textureReady) {
-		Tex3DS_SubTexture sub = {(u16)CAM_W, (u16)CAM_H, 0.0f, 1.0f, CAM_W / (float)TEX_W, 1.0f - CAM_H / (float)TEX_H};
+		Tex3DS_SubTexture sub = {(u16)TEX_W, (u16)TEX_H, 0.0f, 0.0f, 1.0f, 1.0f};
 		C2D_Image img = {&texture, &sub};
-		C2D_DrawImageAt(img, 0.0f, 0.0f, 0.5f, nullptr, 1.0f, 1.0f);
+		C2D_DrawImageAt(img, 0.0f, 0.0f, 0.5f, nullptr, (float)CAM_W / TEX_W, (float)CAM_H / TEX_H);
 	} else {
 		drawCenteredText(110.0f, 0.5f, 0.5f, 0.5f, ScreenManager::colorTextMuted(),
 		                 TR(cameraOn ? "common.loading" : "photo.failed"), 400.0f);

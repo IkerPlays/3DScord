@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- **Fix:** the camera view (Camera mode, Send a Photo) was black on some consoles because of the display transfer; the picture now goes straight into the texture.
 
 ## 0.15.0
 The video of other people in calls now shows: stable on a New 2DS XL, upright, with the occasional hiccup. Experimental (Settings > Voice > Video).
