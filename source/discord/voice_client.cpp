@@ -875,11 +875,14 @@ void VoiceClient::handleRtpPacket(uint8_t *packet, size_t len) {
 	}
 
 	uint8_t payloadType = packet[1] & 0x7F;
-	if (payloadType >= RTCP_PT_MIN && payloadType <= RTCP_PT_MAX) {
+	// RTCP packets have their type (200-206) in the whole second byte, the marker bit included; masked like an RTP payload type they
+	// look like 72-78 (this check used the masked value for a long time, so no RTCP packet was ever recognised).
+	const uint8_t rawType = packet[1];
+	if (rawType >= RTCP_PT_MIN && rawType <= RTCP_PT_MAX) {
 		if (cameraSending.load()) {
 			const uint32_t seen = ++rtcpSeenWhileVideo;
 			if (seen <= 8 || seen % 100 == 0) {
-				Logger::log("[VideoTx] RTCP from the call: type %d, format %d, %zu bytes (count %u)", payloadType, packet[0] & 0x1F, len,
+				Logger::log("[VideoTx] RTCP from the call: type %d, format %d, %zu bytes (count %u)", rawType, packet[0] & 0x1F, len,
 				            (unsigned)seen);
 			}
 			handleRtcp(packet, len);
@@ -1210,8 +1213,8 @@ void VoiceClient::sendVideoFrame(const uint8_t *annexB, size_t len) {
 		videoOutCrypt.resize(len * 2 + 1024);
 		size_t written = 0;
 		if (!dave.encryptVideo(videoOwnSsrc, annexB, len, videoOutCrypt.data(), videoOutCrypt.size(), &written) || written == 0) {
-			static uint32_t failed = 0;
-			if (++failed <= 3 || failed % 100 == 0) {
+			const uint32_t failed = ++videoEncryptFails;
+			if (failed <= 3 || failed % 100 == 0) {
 				Logger::log("[VideoTx] DAVE could not encrypt a frame of %zu bytes (%s)", len, dave.lastError().c_str());
 			}
 			return;
@@ -1421,6 +1424,7 @@ bool VoiceClient::setVideoSource(int source) {
 	videoSendSequence = 0;
 	videoFramesSent = 0;
 	rtcpSeenWhileVideo = 0;
+	videoEncryptFails = 0;
 	videoPacketCount = 0;
 	videoOctetCount = 0;
 	videoReportAt = 0;

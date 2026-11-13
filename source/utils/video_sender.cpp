@@ -85,7 +85,7 @@ bool VideoSender::start(Source source) {
 	}
 	ready = false;
 	active = true;
-	worker.start([this] { run(); }, 3, 128 * 1024, true); // the encoder keeps some big arrays on the stack
+	worker.start([this] { run(); }, 2, 128 * 1024, true); // the encoder keeps some big arrays on the stack
 	if (!worker.joinable()) {
 		active = false;
 		current = Source::OFF;

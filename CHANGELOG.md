@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- **Fix (RTCP never recognised):** the check for RTCP packets used the type with the marker bit masked off (200-206 became 72-78), so no RTCP packet from the call
+  was ever recognised: not the receiver reports, and not the key frame requests (PLI and FIR) of the others. It now looks at the whole byte. The `R` in your own
+  tile counts them for real now.
+- **More about your video in your own tile:** `S1 R5 T120 E0` is Discord's confirmation (S), RTCP messages from the call (R), video frames sent (T) and frames that
+  DAVE could not encrypt (E).
+- **Fewer drops of your frame rate:** the decoder of the video of the others runs at a lower priority than the encoder of yours, so on the extra core it gives way.
 - **What Discord says about your video, in your own tile:** under `N fps  M ms  K  D` there is now `S1  R5`: S is Discord's confirmation of your video state
   (`S1` on, `S0` off, `S?` nothing yet), R the RTCP control messages that come back from the call while you send (if someone receives the video they come, and
   K, the key frames they ask for, goes up). The log (`[VideoTx]`, `[Voice] VOICE_STATE_UPDATE ... self_video`) says the same.

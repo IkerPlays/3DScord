@@ -172,6 +172,7 @@ class VoiceClient {
 	std::atomic<bool> cameraSending{false};
 	std::atomic<int> videoSourceNow{0};
 	std::atomic<uint32_t> rtcpSeenWhileVideo{0};
+	std::atomic<uint32_t> videoEncryptFails{0};
 	uint32_t videoOwnSsrc = 0;
 	uint32_t videoOwnRtxSsrc = 0;
 	uint16_t videoSendSequence = 0;
@@ -222,6 +223,9 @@ class VoiceClient {
 	bool isCameraOn() const { return cameraSending.load(); }
 	// RTCP messages that came from the call while we were sending video (someone receives it when they come).
 	uint32_t rtcpWhileSending() const { return rtcpSeenWhileVideo.load(); }
+	// Video frames sent and frames DAVE could not encrypt (for the call view).
+	uint32_t videoFramesSentCount() const { return videoFramesSent; }
+	uint32_t videoEncryptFailures() const { return videoEncryptFails.load(); }
 	void setDeafened(bool d);
 	bool isDeafened() const { return audio.isDeafened(); }
 	bool isSpeaking(const std::string &userId) const;
