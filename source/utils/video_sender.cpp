@@ -28,7 +28,7 @@ bool VideoSender::start() {
 		queue.clear();
 	}
 	active = true;
-	worker.start([this] { run(); }, 3, 64 * 1024, true);
+	worker.start([this] { run(); }, 3, 128 * 1024, true); // the encoder keeps some big arrays on the stack
 	if (!worker.joinable()) {
 		active = false;
 		return false;
