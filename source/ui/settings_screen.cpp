@@ -7,6 +7,7 @@
 #include "core/i18n.h"
 #include "log.h"
 #include "ui/screen_manager.h"
+#include "network/network_manager.h"
 #include "utils/message_utils.h"
 #include "discord/account_settings.h"
 #include "discord/avatar_cache.h"
@@ -940,6 +941,37 @@ void SettingsScreen::addUpdateItems() {
 	videoTest.type = SettingItemType::ACTION;
 	videoTest.action = []() { VideoTestScreen::open(); };
 	allItems.push_back(videoTest);
+
+	SettingItem netTest;
+	netTest.label = TR("nettest.title");
+	netTest.description = TR("settings.desc.nettest");
+	netTest.type = SettingItemType::ACTION;
+	netTest.action = []() {
+		// Three small requests to Discord; the time each takes says how good the connection is.
+		u64 total = 0;
+		u64 worst = 0;
+		int ok = 0;
+		for (int i = 0; i < 3; i++) {
+			const u64 t0 = osGetTime();
+			Network::HttpRequest request{"https://discord.com/api/v9/gateway", "GET", "", {}, 10};
+			Network::HttpResponse resp = Network::NetworkManager::getInstance().perform(std::move(request));
+			const u64 ms = osGetTime() - t0;
+			if (resp.success) {
+				ok++;
+				total += ms;
+				worst = std::max(worst, ms);
+			}
+		}
+		if (ok == 0) {
+			ScreenManager::getInstance().showToast(TR("nettest.failed"));
+			return;
+		}
+		char text[96];
+		snprintf(text, sizeof(text), "%s %llu ms (%s %llu ms), %d/3", TR("nettest.average").c_str(),
+		         (unsigned long long)(total / ok), TR("nettest.worst").c_str(), (unsigned long long)worst, ok);
+		ScreenManager::getInstance().showToast(text);
+	};
+	allItems.push_back(netTest);
 
 	SettingItem autoUpdate;
 	autoUpdate.label = TR("updater.auto");

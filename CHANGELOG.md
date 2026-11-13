@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- **Network Test** (Settings > Updates): three small requests to Discord; shows the average and the worst time.
 - **Video in calls follows whoever is sending:** if the person shown stops their camera or screen for 4 seconds, the next one who sends is shown.
 
 ## 0.14.0
