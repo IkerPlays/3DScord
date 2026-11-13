@@ -5,6 +5,7 @@
 #include "utils/worker_thread.h"
 #include <3ds.h>
 #include <atomic>
+#include <citro2d.h>
 #include <cstdint>
 #include <deque>
 #include <mutex>
@@ -12,26 +13,36 @@
 
 namespace Utils {
 
-// EXPERIMENTAL. Your own camera in a call: the inner camera is read at 320x240, 15 frames a second, coded as H.264 (baseline, minih264e)
-// on a worker thread, and the coded frames wait for the call's media thread to encrypt and send them.
+// EXPERIMENTAL. What you send to a call as video: your inner camera (320x240, 15 frames a second) or the top screen of the console
+// (400x240, 8 frames a second). The picture is coded as H.264 (baseline, minih264e) on a worker thread, and the coded frames wait for
+// the call's media thread to encrypt and send them. A small copy is kept to show you what you send.
 class VideoSender {
   public:
+	enum class Source { OFF, CAMERA, SCREEN };
+
 	static VideoSender &getInstance();
 
-	static constexpr int WIDTH = 320;
-	static constexpr int HEIGHT = 240;
-	static constexpr int FPS = 15;
-
-	// Opens the camera and starts the worker. False when the camera or the encoder cannot start (for example when the
-	// Camera screen has it).
-	bool start();
+	// Opens the source and starts the worker. False when it cannot start (for example when the Camera screen has the camera).
+	bool start(Source source);
 	void stop();
 	bool running() const { return active.load(); }
+	Source source() const { return current; }
+	int width() const { return current == Source::SCREEN ? 400 : 320; }
+	int height() const { return 240; }
+	int fps() const { return current == Source::SCREEN ? 8 : 15; }
 
 	// Media thread: the oldest coded frame (Annex B, with SPS and PPS when it is a key frame).
 	bool takeFrame(std::vector<uint8_t> &out, bool &key);
 	// Someone asked for a new key frame (RTCP picture loss).
 	void requestKeyFrame() { keyRequested = true; }
+
+	// Screen thread: copies the newest preview picture to a texture. Call it once per frame before drawing.
+	void updatePreview();
+	bool hasPreview() const { return previewReady && gotPreview; }
+	// Draws what is being sent inside the box, keeping its proportions.
+	void drawPreview(float x, float y, float z, float w, float h) const;
+	// Frees the preview texture (call it from the screen thread when nothing is sent).
+	void releasePreview();
 
   private:
 	VideoSender() = default;
@@ -41,12 +52,25 @@ class VideoSender {
 	std::atomic<bool> active{false};
 	std::atomic<bool> quit{false};
 	std::atomic<bool> keyRequested{false};
+	Source current = Source::OFF;
 	std::mutex mutex;
 	struct Frame {
 		std::vector<uint8_t> data;
 		bool key = false;
 	};
 	std::deque<Frame> queue;
+
+	// The preview: the worker writes a picture in the order of the texture, the screen thread copies it.
+	std::vector<uint16_t> previewBuffer;
+	uint32_t previewVersion = 0;
+	int previewW = 0;
+	int previewH = 0;
+	C3D_Tex previewTex;
+	bool previewReady = false;
+	bool gotPreview = false;
+	uint32_t shownVersion = 0;
+	int shownW = 0;
+	int shownH = 0;
 };
 
 } // namespace Utils

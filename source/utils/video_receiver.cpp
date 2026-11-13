@@ -1,5 +1,4 @@
 #include "utils/video_receiver.h"
-#include "core/config.h"
 #include "log.h"
 #include "utils/redraw.h"
 #include "utils/soft_decoder.h"
@@ -423,9 +422,8 @@ void drawVideoTexture(C3D_Tex *texture, int picW, int picH, float x, float y, fl
 	if (!texture || picW <= 0 || picH <= 0) {
 		return;
 	}
-	const int turns = (Config::getInstance().getVideoRotation() + (extraTurns & 3)) & 3;
-	const bool mirror = (extraTurns & 4) != 0;
-	const bool flip = Config::getInstance().isVideoFlipped();
+	// extraTurns is the orientation the sender asked for (bits 1-0 quarter turns, bit 2 a sideways flip).
+	const int turns = extraTurns & 3;
 	// picW x picH are the proportions of the picture; the texture holds all of it, stretched to fill 512x256.
 	const float shownW = (turns & 1) ? (float)picH : (float)picW;
 	const float shownH = (turns & 1) ? (float)picW : (float)picH;
@@ -434,8 +432,10 @@ void drawVideoTexture(C3D_Tex *texture, int picW, int picH, float x, float y, fl
 	const float drawH = (float)picH * fit;
 	const float scaleX = drawW / (float)TEX_W;
 	const float scaleY = drawH / (float)TEX_H;
-	// Upright by default (checked on a New 2DS XL: top 1 / bottom 0 came out upside down); "Flip Video" turns it over.
-	Tex3DS_SubTexture sub = {(u16)TEX_W, (u16)TEX_H, mirror ? 1.0f : 0.0f, flip ? 1.0f : 0.0f, mirror ? 0.0f : 1.0f, flip ? 0.0f : 1.0f};
+	// The way the picture is written into the texture leaves it turned half a turn and flipped (checked on a New 2DS XL): this
+	// mirrors it sideways, which puts it upright.
+	const bool mirror = (extraTurns & 4) == 0;
+	Tex3DS_SubTexture sub = {(u16)TEX_W, (u16)TEX_H, mirror ? 1.0f : 0.0f, 0.0f, mirror ? 0.0f : 1.0f, 1.0f};
 	C2D_Image img = {texture, &sub};
 	const float cx = x + w / 2.0f;
 	const float cy = y + h / 2.0f;

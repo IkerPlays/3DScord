@@ -547,28 +547,6 @@ void SettingsScreen::onEnter() {
 	videoExp.onUpdate = [](int val) { Config::getInstance().setVideoExperimental(val == 1); };
 	allItems.push_back(videoExp);
 
-	SettingItem videoRot;
-	videoRot.label = TR("settings.video_rotation");
-	videoRot.description = TR("settings.desc.video_rotation");
-	videoRot.type = SettingItemType::STEPPER;
-	videoRot.value = Config::getInstance().getVideoRotation();
-	videoRot.min = 0;
-	videoRot.max = 3;
-	videoRot.valueFormatter = [](int val) { return std::to_string(val * 90) + "\xC2\xB0"; };
-	videoRot.onUpdate = [](int val) { Config::getInstance().setVideoRotation(val); };
-	allItems.push_back(videoRot);
-
-	SettingItem videoFlip;
-	videoFlip.label = TR("settings.video_flip");
-	videoFlip.description = TR("settings.desc.video_flip");
-	videoFlip.type = SettingItemType::TOGGLE;
-	videoFlip.value = Config::getInstance().isVideoFlipped() ? 1 : 0;
-	videoFlip.min = 0;
-	videoFlip.max = 1;
-	videoFlip.valueFormatter = [](int val) { return (val == 1) ? TR("common.enabled") : TR("common.disabled"); };
-	videoFlip.onUpdate = [](int val) { Config::getInstance().setVideoFlipped(val == 1); };
-	allItems.push_back(videoFlip);
-
 	SettingItem busy;
 	busy.label = TR("settings.busy_mode");
 	busy.description = TR("settings.desc.busy_mode");

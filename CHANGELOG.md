@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- **Video of the others always upright:** the picture comes out right without settings (it needed half a turn and a flip, i.e. a sideways mirror), so
+  **Video Rotation** and **Flip Video** are gone from Settings > Voice.
+- **Share your screen** (experimental): the camera button next to the microphone now cycles nothing > camera > top screen > nothing. The top
+  screen goes out as video (400x240, 8 frames a second) like the camera does; it shows to the others as your video tile. In the full call view
+  your own tile shows what you are sending, where your profile picture would be.
+- **Sending video, more like Discord's own clients:** the Identify declares the video stream, and each video packet carries the playout-delay
+  header extension.
 - **Video of phones in calls:** the picture is turned (and flipped) as the sender asks through the RTP video orientation (a phone sends the picture as its
   sensor sees it); the log shows the RTP extensions that arrive.
 - **Camera in the Call (experimental)** (a camera button next to the microphone and headphones in a call; needs Settings > Voice > Video on and joining the call again): sends your inner camera

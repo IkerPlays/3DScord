@@ -170,6 +170,7 @@ class VoiceClient {
 	void maybeRequestKeyFrame(uint32_t mediaSsrc, bool force = false);
 	// Own camera.
 	std::atomic<bool> cameraSending{false};
+	std::atomic<int> videoSourceNow{0};
 	uint32_t videoOwnSsrc = 0;
 	uint32_t videoOwnRtxSsrc = 0;
 	uint16_t videoSendSequence = 0;
@@ -181,7 +182,8 @@ class VoiceClient {
 	void pumpVideoOut();
 	void sendVideoFrame(const uint8_t *annexB, size_t len);
 	void sendRtp(uint8_t payloadType, uint32_t ssrcOut, uint16_t seq, uint32_t timestamp, bool marker, const uint8_t *payload,
-	             size_t len);
+	             size_t len, bool withExtension = false);
+	uint8_t videoPlainBuffer[1500];
 	void sendVideoSignal(bool on);
 	void handleRtcp(const uint8_t *packet, size_t len);
 	std::atomic<uint32_t> videoKeyAskSsrc{0}; // set when someone starts sending video: the media thread asks for a key frame at once
@@ -208,9 +210,10 @@ class VoiceClient {
   public:
 	void setMuted(bool m);
 	bool isMuted() const { return capture.isMuted(); }
-	// EXPERIMENTAL: your own camera (inner camera, 320x240) in the call. False when it cannot start (not in a call, the Video
-	// setting is off, or the camera is busy).
-	bool setCamera(bool on);
+	// EXPERIMENTAL: what you send as video in the call: 0 nothing, 1 the inner camera (320x240), 2 the top screen (400x240). False when
+	// it cannot start (not in a call, the Video setting is off, or the camera is busy).
+	bool setVideoSource(int source);
+	int videoSource() const { return videoSourceNow.load(); }
 	bool isCameraOn() const { return cameraSending.load(); }
 	void setDeafened(bool d);
 	bool isDeafened() const { return audio.isDeafened(); }

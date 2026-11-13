@@ -140,11 +140,6 @@ class Config {
 	void setVoiceTone(int level);
 	bool isVideoExperimental() const { return videoExperimental; }
 	void setVideoExperimental(bool enabled);
-	// How the picture of a call or video is drawn: turned 0-3 quarter turns clockwise, and flipped upside down or not.
-	int getVideoRotation() const { return videoRotation; }
-	void setVideoRotation(int quarterTurns);
-	bool isVideoFlipped() const { return videoFlipped; }
-	void setVideoFlipped(bool flipped);
 	int getUploadQuality() const { return uploadQuality; }
 	void setUploadQuality(int level);
 	int getCallVolume() const { return callVolume; }
@@ -240,8 +235,6 @@ class Config {
 	int noiseGate;
 	int callVolume = 100;
 	bool videoExperimental = false;
-	int videoRotation = 0;
-	bool videoFlipped = false;
 	int uploadQuality = 1; // 0 small, 1 normal, 2 high
 	int voiceTone = 0; // -2 warmer ... 2 brighter
 	bool busyMode = false;

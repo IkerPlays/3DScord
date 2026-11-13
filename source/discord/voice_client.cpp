@@ -442,6 +442,20 @@ void VoiceClient::sendIdentify() {
 	writer.Key("video");
 	// Settings > Voice > Video (experimental): tells Discord this client can receive video.
 	writer.Bool(Config::getInstance().isVideoExperimental());
+	if (Config::getInstance().isVideoExperimental()) {
+		// The video stream we may send (the camera or the screen), as Discord's own clients declare it.
+		writer.Key("streams");
+		writer.StartArray();
+		writer.StartObject();
+		writer.Key("type");
+		writer.String("video");
+		writer.Key("rid");
+		writer.String("100");
+		writer.Key("quality");
+		writer.Int(100);
+		writer.EndObject();
+		writer.EndArray();
+	}
 	writer.Key("max_dave_protocol_version");
 	writer.Int(DAVE_PROTOCOL_VERSION);
 	writer.EndObject();
@@ -1129,12 +1143,17 @@ void VoiceClient::handleRtcp(const uint8_t *packet, size_t len) {
 }
 
 void VoiceClient::sendRtp(uint8_t payloadType, uint32_t ssrcOut, uint16_t seq, uint32_t timestamp, bool marker,
-                          const uint8_t *payload, size_t len) {
-	if (!gcm || udpSocket < 0 || 12 + len + GCM_TAG_SIZE + NONCE_SUFFIX_SIZE > sizeof(videoSendBuffer)) {
+                          const uint8_t *payload, size_t len, bool withExtension) {
+	// With the extension (playout delay 0, element id 5) the header is 16 bytes and the element goes at the front of the encrypted
+	// body, as the "rtpsize" modes want.
+	const size_t headerLen = withExtension ? 16 : 12;
+	const size_t extLen = withExtension ? 4 : 0;
+	if (!gcm || udpSocket < 0 || headerLen + extLen + len + GCM_TAG_SIZE + NONCE_SUFFIX_SIZE > sizeof(videoSendBuffer) ||
+	    extLen + len > sizeof(videoPlainBuffer)) {
 		return;
 	}
 	uint8_t *packet = videoSendBuffer;
-	packet[0] = 0x80;
+	packet[0] = withExtension ? 0x90 : 0x80;
 	packet[1] = (uint8_t)((marker ? 0x80 : 0) | payloadType);
 	packet[2] = (uint8_t)(seq >> 8);
 	packet[3] = (uint8_t)seq;
@@ -1146,6 +1165,17 @@ void VoiceClient::sendRtp(uint8_t payloadType, uint32_t ssrcOut, uint16_t seq, u
 	packet[9] = (uint8_t)(ssrcOut >> 16);
 	packet[10] = (uint8_t)(ssrcOut >> 8);
 	packet[11] = (uint8_t)ssrcOut;
+	if (withExtension) {
+		packet[12] = 0xBE;
+		packet[13] = 0xDE;
+		packet[14] = 0x00;
+		packet[15] = 0x01;
+		videoPlainBuffer[0] = 0x51;
+		videoPlainBuffer[1] = 0x00;
+		videoPlainBuffer[2] = 0x00;
+		videoPlainBuffer[3] = 0x00;
+	}
+	memcpy(videoPlainBuffer + extLen, payload, len);
 
 	uint8_t iv[12];
 	memset(iv, 0, sizeof(iv));
@@ -1153,14 +1183,14 @@ void VoiceClient::sendRtp(uint8_t payloadType, uint32_t ssrcOut, uint16_t seq, u
 	iv[1] = (uint8_t)(sendNonce >> 16);
 	iv[2] = (uint8_t)(sendNonce >> 8);
 	iv[3] = (uint8_t)sendNonce;
-	uint8_t *cipher = packet + 12;
-	uint8_t *tag = cipher + len;
-	if (mbedtls_gcm_crypt_and_tag(gcm, MBEDTLS_GCM_ENCRYPT, len, iv, sizeof(iv), packet, 12, payload, cipher, GCM_TAG_SIZE,
-	                              tag) != 0) {
+	uint8_t *cipher = packet + headerLen;
+	uint8_t *tag = cipher + extLen + len;
+	if (mbedtls_gcm_crypt_and_tag(gcm, MBEDTLS_GCM_ENCRYPT, extLen + len, iv, sizeof(iv), packet, headerLen, videoPlainBuffer,
+	                              cipher, GCM_TAG_SIZE, tag) != 0) {
 		return;
 	}
 	memcpy(tag + GCM_TAG_SIZE, iv, NONCE_SUFFIX_SIZE);
-	send(udpSocket, packet, 12 + len + GCM_TAG_SIZE + NONCE_SUFFIX_SIZE, 0);
+	send(udpSocket, packet, headerLen + extLen + len + GCM_TAG_SIZE + NONCE_SUFFIX_SIZE, 0);
 	sendNonce++;
 }
 
@@ -1218,7 +1248,7 @@ void VoiceClient::sendVideoFrame(const uint8_t *annexB, size_t len) {
 		const bool lastNal = k + 1 == nals.size();
 		const Nal &nal = nals[k];
 		if (nal.n <= MTU) {
-			sendRtp(VIDEO_PAYLOAD_TYPE, videoOwnSsrc, videoSendSequence++, timestamp, lastNal, nal.p, nal.n);
+			sendRtp(VIDEO_PAYLOAD_TYPE, videoOwnSsrc, videoSendSequence++, timestamp, lastNal, nal.p, nal.n, true);
 			continue;
 		}
 		const uint8_t indicator = (uint8_t)((nal.p[0] & 0xE0) | 28);
@@ -1231,7 +1261,7 @@ void VoiceClient::sendVideoFrame(const uint8_t *annexB, size_t len) {
 			fragment[0] = indicator;
 			fragment[1] = (uint8_t)(type | (first ? 0x80 : 0) | (end ? 0x40 : 0));
 			memcpy(fragment + 2, nal.p + offset, chunk);
-			sendRtp(VIDEO_PAYLOAD_TYPE, videoOwnSsrc, videoSendSequence++, timestamp, lastNal && end, fragment, chunk + 2);
+			sendRtp(VIDEO_PAYLOAD_TYPE, videoOwnSsrc, videoSendSequence++, timestamp, lastNal && end, fragment, chunk + 2, true);
 			offset += chunk;
 			first = false;
 		}
@@ -1289,15 +1319,15 @@ void VoiceClient::sendVideoSignal(bool on) {
 	writer.Key("max_bitrate");
 	writer.Int(400000);
 	writer.Key("max_framerate");
-	writer.Int(Utils::VideoSender::FPS);
+	writer.Int(Utils::VideoSender::getInstance().fps());
 	writer.Key("max_resolution");
 	writer.StartObject();
 	writer.Key("type");
 	writer.String("fixed");
 	writer.Key("width");
-	writer.Int(Utils::VideoSender::WIDTH);
+	writer.Int(Utils::VideoSender::getInstance().width());
 	writer.Key("height");
-	writer.Int(Utils::VideoSender::HEIGHT);
+	writer.Int(Utils::VideoSender::getInstance().height());
 	writer.EndObject();
 	writer.EndObject();
 	writer.EndArray();
@@ -1307,26 +1337,32 @@ void VoiceClient::sendVideoSignal(bool on) {
 	Logger::log("[VideoTx] Told Discord the camera is %s (video ssrc %u)", on ? "on" : "off", (unsigned)videoOwnSsrc);
 }
 
-bool VoiceClient::setCamera(bool on) {
-	if (on == cameraSending.load()) {
+bool VoiceClient::setVideoSource(int source) {
+	if (source == videoSourceNow.load()) {
 		return true;
 	}
-	if (!on) {
+	if (videoSourceNow.load() != 0) {
+		// Stop what was sent before (the camera and the screen use the same stream).
 		cameraSending = false;
+		videoSourceNow = 0;
 		sendVideoSignal(false);
 		Utils::VideoSender::getInstance().stop();
+	}
+	if (source == 0) {
 		publishVoiceState();
 		return true;
 	}
 	if (state != VoiceState::ESTABLISHED || !gcm || udpSocket < 0 || !Config::getInstance().isVideoExperimental()) {
 		return false;
 	}
-	if (!Utils::VideoSender::getInstance().start()) {
+	if (!Utils::VideoSender::getInstance().start(source == 2 ? Utils::VideoSender::Source::SCREEN
+	                                                          : Utils::VideoSender::Source::CAMERA)) {
 		return false;
 	}
 	videoClockStart = osGetTime();
 	videoSendSequence = 0;
 	videoFramesSent = 0;
+	videoSourceNow = source;
 	cameraSending = true;
 	sendVideoSignal(true);
 	publishVoiceState();
@@ -1983,6 +2019,7 @@ void VoiceClient::disconnect() {
 		ssrcToUser.clear();
 		videoSsrcToUser.clear();
 	}
+	videoSourceNow = 0;
 	if (cameraSending.exchange(false)) {
 		Utils::VideoSender::getInstance().stop();
 	}

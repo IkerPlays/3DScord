@@ -8,6 +8,7 @@
 #include "ui/voice_controls.h"
 #include "utils/redraw.h"
 #include "utils/video_receiver.h"
+#include "utils/video_sender.h"
 #include <algorithm>
 #include <cstdio>
 
@@ -148,7 +149,14 @@ void drawTile(const Discord::VoiceParticipant &p, Discord::VoiceClient &voice, f
 	drawRoundedRect(x + border, y + border, 0.51f + zOff, w - 2 * border, h - 2 * border, 8.0f, C2D_Color32(17, 18, 20, 255));
 
 	Utils::VideoReceiver &rx = Utils::VideoReceiver::getInstance();
-	if (showCamera && rx.isLive() && rx.userId() == p.userId) {
+	Utils::VideoSender &tx = Utils::VideoSender::getInstance();
+	const bool own = tx.running() && p.userId == Discord::DiscordClient::getInstance().getCurrentUser().id;
+	if (own && tx.hasPreview()) {
+		// What you are sending (your camera or your screen), where your profile picture would be.
+		C2D_DrawRectSolid(x + border + 2.0f, y + border + 2.0f, 0.515f + zOff, w - 2 * border - 4.0f, h - 2 * border - 4.0f,
+		                  C2D_Color32(0, 0, 0, 255));
+		tx.drawPreview(x + border + 2.0f, y + border + 2.0f, 0.52f + zOff, w - 2 * border - 4.0f, h - 2 * border - 4.0f);
+	} else if (showCamera && rx.isLive() && rx.userId() == p.userId) {
 		C2D_DrawRectSolid(x + border + 2.0f, y + border + 2.0f, 0.515f + zOff, w - 2 * border - 4.0f, h - 2 * border - 4.0f,
 		                  C2D_Color32(0, 0, 0, 255));
 		rx.draw(x + border + 2.0f, y + border + 2.0f, 0.52f + zOff, w - 2 * border - 4.0f, h - 2 * border - 4.0f);
@@ -289,6 +297,11 @@ void render() {
 		return;
 	}
 	Utils::VideoReceiver::getInstance().update();
+	if (Utils::VideoSender::getInstance().running()) {
+		Utils::VideoSender::getInstance().updatePreview();
+	} else {
+		Utils::VideoSender::getInstance().releasePreview();
+	}
 	if (currentMode == Mode::VIDEO) {
 		if (Utils::VideoReceiver::getInstance().isLive()) {
 			drawVideo(voice);
