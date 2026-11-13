@@ -33,6 +33,9 @@ struct DaveSession::Impl {
 	std::unique_ptr<discord::dave::mls::Session> session;
 	std::unique_ptr<discord::dave::Encryptor> encryptor;
 	std::map<std::string, std::unique_ptr<discord::dave::Decryptor>> decryptors;
+	// Decrypts our own frames, to check that what we send is a valid DAVE frame (logged for the first few video frames).
+	std::unique_ptr<discord::dave::Decryptor> selfDecryptor;
+	int selfChecks = 0;
 	std::shared_ptr<::mlspp::SignaturePrivateKey> transientKey;
 
 	uint16_t version = 0;
@@ -172,6 +175,7 @@ void DaveSession::refreshKeyRatchets(const std::set<std::string> &userIds) {
 	}
 
 	auto selfRatchet = impl->session->GetKeyRatchet(impl->selfUserId);
+	auto selfRatchetCopy = impl->session->GetKeyRatchet(impl->selfUserId);
 	const bool haveSelfRatchet = selfRatchet != nullptr;
 
 	std::map<std::string, std::unique_ptr<discord::dave::IKeyRatchet>> ratchets;
@@ -190,6 +194,11 @@ void DaveSession::refreshKeyRatchets(const std::set<std::string> &userIds) {
 		std::lock_guard<std::mutex> frameLock(impl->frameMutex);
 		if (selfRatchet) {
 			impl->encryptor->SetKeyRatchet(std::move(selfRatchet));
+		}
+		if (selfRatchetCopy) {
+			impl->selfDecryptor = std::make_unique<discord::dave::Decryptor>();
+			impl->selfDecryptor->TransitionToKeyRatchet(std::move(selfRatchetCopy));
+			impl->selfChecks = 0;
 		}
 		for (auto &pair : ratchets) {
 			auto &decryptor = impl->decryptors[pair.first];
@@ -262,7 +271,19 @@ bool DaveSession::encryptVideo(uint32_t ssrc, const uint8_t *frame, size_t frame
 	const auto rc =
 	    impl->encryptor->Encrypt(discord::dave::MediaType::Video, ssrc, discord::dave::MakeArrayView(frame, frameLen),
 	                             discord::dave::MakeArrayView(out, outCapacity), written);
-	return rc == discord::dave::Encryptor::ResultCode::Success;
+	if (rc != discord::dave::Encryptor::ResultCode::Success) {
+		return false;
+	}
+	if (impl->selfDecryptor && impl->selfChecks < 4) {
+		impl->selfChecks++;
+		std::vector<uint8_t> back(frameLen * 2 + 256);
+		size_t backLen = 0;
+		const auto drc = impl->selfDecryptor->Decrypt(discord::dave::MediaType::Video, discord::dave::MakeArrayView(out, *written),
+		                                              discord::dave::MakeArrayView(back.data(), back.size()), &backLen);
+		Logger::log("[DAVE] Video self-check: %zu bytes in, %zu encrypted, decrypting our own frame %s (%zu bytes back)", frameLen,
+		            *written, drc == discord::dave::Decryptor::ResultCode::Success ? "WORKS" : "FAILS", backLen);
+	}
+	return true;
 }
 
 bool DaveSession::decryptOpus(const std::string &userId, const uint8_t *frame, size_t frameLen, uint8_t *out,

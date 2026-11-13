@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- **Self-check of the video encryption:** the first frames we send are decrypted again with our own key and the result goes to the log (`[DAVE] Video self-check ...`).
 - **The key frames the encoder makes by itself (every 2 s) now also get the SPS rewrite:** only the first one had it, so receivers saw two different SPS. The call log now
   describes the whole RTCP packets (receiver reports about your video) to see whether Discord is getting it.
 - **SPS and PPS now travel together in a single RTP packet (STAP-A, RFC 6184)** before every key frame, as the Discord web client and libwebrtc do, instead of two
