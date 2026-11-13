@@ -228,7 +228,7 @@ void VideoPlayerScreen::convert(const uint8_t *py0, const uint8_t *pu0, const ui
 		const uint8_t *pv = pv0 + (size_t)(y * div / 2) * strideUV;
 		u16 *dst = front + (size_t)y * TEX_W;
 		for (int x = 0; x < w; x++) {
-			const int c = py[x * div] - 16;
+			const int c = ((py[x * div] + py[x * div + 1] + py[x * div + strideY] + py[x * div + 1 + strideY]) >> 2) - 16; // 2x2 average, no stripes
 			const int d = pu[x * div / 2] - 128;
 			const int e = pv[x * div / 2] - 128;
 			const int r = clamp255((298 * c + 409 * e + 128) >> 8);
@@ -299,7 +299,7 @@ void VideoPlayerScreen::renderTop(C3D_RenderTarget *target) {
 	C2D_TargetClear(target, C2D_Color32(0, 0, 0, 255));
 	C2D_SceneBegin(target);
 	if (havePicture && textureReady) {
-		Tex3DS_SubTexture sub = {(u16)picW, (u16)picH, 0.0f, 1.0f, (float)picW / TEX_W, 1.0f - (float)picH / TEX_H};
+		Tex3DS_SubTexture sub = {(u16)picW, (u16)picH, 0.0f, 1.0f - (float)picH / TEX_H, (float)picW / TEX_W, 1.0f}; // top and bottom swapped: the transfer already flips the picture
 		C2D_Image img = {&texture, &sub};
 		const float scale = std::min(400.0f / picW, 240.0f / picH);
 		C2D_DrawImageAt(img, (400.0f - picW * scale) / 2.0f, (240.0f - picH * scale) / 2.0f, 0.5f, nullptr, scale, scale);

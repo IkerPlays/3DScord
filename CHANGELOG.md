@@ -4,6 +4,8 @@
 - **Full call view redesigned like Discord:** black background, big rounded tiles with the avatar in the middle, a green border while someone
   speaks and the muted icons at the bottom; one person fills the screen, two sit side by side, more make a grid. When someone shares their
   screen it takes the left side and everyone else is stacked on the right. A camera shows inside its person's tile.
+- **Fix (video in calls):** the picture was upside down (now upright) and the reduction to half size takes the average of 2x2 pixels instead
+  of one pixel of every four, which left thin stripes.
 - **Fix (video in calls, the noise):** the picture was uploaded to the texture with rows narrower than the texture, and the display transfer
   lays its 8x8 tiles out by the width of its input, so the picture came out sheared into stripes. The rows are now as wide as the texture (this
   also fixes the Software Decoder Test and the video player). The full call view and the video view now draw above the chat, which showed

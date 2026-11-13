@@ -159,7 +159,7 @@ void SoftTestScreen::show(const Utils::SoftDecoder::Picture &pic) {
 		const uint8_t *pv = pic.v + (size_t)y * pic.strideUV;
 		u16 *dst = picture + (size_t)y * TEX_W;
 		for (int x = 0; x < w; x++) {
-			const int c = py[x * 2] - 16;
+			const int c = ((py[x * 2] + py[x * 2 + 1] + py[x * 2 + pic.strideY] + py[x * 2 + 1 + pic.strideY]) >> 2) - 16;
 			const int d = pu[x] - 128;
 			const int e = pv[x] - 128;
 			const int r = clamp255((298 * c + 409 * e + 128) >> 8);
@@ -242,7 +242,7 @@ void SoftTestScreen::renderTop(C3D_RenderTarget *target) {
 	C2D_TargetClear(target, C2D_Color32(0, 0, 0, 255));
 	C2D_SceneBegin(target);
 	if (haveFrame && textureReady) {
-		Tex3DS_SubTexture sub = {(u16)picW, (u16)picH, 0.0f, 1.0f, (float)picW / TEX_W, 1.0f - (float)picH / TEX_H};
+		Tex3DS_SubTexture sub = {(u16)picW, (u16)picH, 0.0f, 1.0f - (float)picH / TEX_H, (float)picW / TEX_W, 1.0f}; // top and bottom swapped: the transfer already flips the picture
 		C2D_Image img = {&texture, &sub};
 		const float scale = std::min(400.0f / picW, 240.0f / picH);
 		C2D_DrawImageAt(img, (400.0f - picW * scale) / 2.0f, (240.0f - picH * scale) / 2.0f, 0.5f, nullptr, scale, scale);
