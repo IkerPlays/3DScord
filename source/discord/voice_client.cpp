@@ -1137,7 +1137,7 @@ void VoiceClient::handleRtcp(const uint8_t *packet, size_t len) {
 	memset(iv, 0, sizeof(iv));
 	memcpy(iv, packet + len - NONCE_SUFFIX_SIZE, NONCE_SUFFIX_SIZE);
 	const size_t cipherLen = len - 8 - NONCE_SUFFIX_SIZE - GCM_TAG_SIZE;
-	uint8_t plain[256];
+	uint8_t plain[248];
 	if (cipherLen > sizeof(plain)) {
 		return;
 	}
@@ -1156,6 +1156,45 @@ void VoiceClient::handleRtcp(const uint8_t *packet, size_t len) {
 		}
 		const uint32_t from = ((uint32_t)packet[4] << 24) | ((uint32_t)packet[5] << 16) | ((uint32_t)packet[6] << 8) | packet[7];
 		Logger::log("[VideoTx] RTCP type %d format %d from ssrc %u, body %s", pt, fmt, (unsigned)from, hex);
+	}
+	// Walk the whole compound packet and describe it (above all the receiver reports about our video: does Discord get it?).
+	static int described = 0;
+	if (described < 40) {
+		described++;
+		uint8_t all[8 + 256];
+		memcpy(all, packet, 8);
+		memcpy(all + 8, plain, cipherLen);
+		const size_t total = 8 + cipherLen;
+		std::string text;
+		char tmp[112];
+		size_t pos = 0;
+		while (pos + 4 <= total) {
+			const int type = all[pos + 1];
+			const int count = all[pos] & 0x1F;
+			const size_t size = ((((size_t)all[pos + 2] << 8) | all[pos + 3]) + 1) * 4;
+			if (pos + size > total) {
+				break;
+			}
+			if (type == 201 || type == 200) {
+				size_t at = pos + 8 + (type == 200 ? 20 : 0);
+				for (int b = 0; b < count && at + 24 <= pos + size; b++, at += 24) {
+					const uint8_t *r = all + at;
+					const uint32_t src = ((uint32_t)r[0] << 24) | ((uint32_t)r[1] << 16) | ((uint32_t)r[2] << 8) | r[3];
+					const uint32_t seqMax = ((uint32_t)r[8] << 24) | ((uint32_t)r[9] << 16) | ((uint32_t)r[10] << 8) | r[11];
+					snprintf(tmp, sizeof(tmp), " %s[src %u lost %d/255 total %d maxseq %u]", type == 201 ? "RR" : "SR", (unsigned)src, r[4],
+					         (r[5] << 16) | (r[6] << 8) | r[7], (unsigned)seqMax);
+					text += tmp;
+				}
+				if (count == 0) {
+					text += type == 201 ? " RR[empty]" : " SR[empty]";
+				}
+			} else {
+				snprintf(tmp, sizeof(tmp), " pt%d/%d(%zu)", type, count, size);
+				text += tmp;
+			}
+			pos += size;
+		}
+		Logger::log("[VideoTx] RTCP compound (%zu bytes):%s", len, text.c_str());
 	}
 	// A picture loss indication (or full intra request): someone could not show a picture and wants a new key frame.
 	if (pt == 206 && (fmt == 1 || fmt == 4)) {
