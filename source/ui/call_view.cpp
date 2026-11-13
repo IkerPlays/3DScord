@@ -134,71 +134,112 @@ void drawCompact(const std::vector<Discord::VoiceParticipant> &people, Discord::
 	}
 }
 
+// One person as a rounded tile: avatar in the middle (or their camera), green border while speaking, name and the muted
+// icon at the bottom.
+void drawTile(const Discord::VoiceParticipant &p, Discord::VoiceClient &voice, float x, float y, float w, float h,
+              bool showCamera) {
+	const bool speaking = voice.isSpeaking(p.userId);
+	const float border = speaking ? 3.0f : 0.0f;
+	if (speaking) {
+		drawRoundedRect(x, y, 0.5f, w, h, 10.0f, GREEN);
+	}
+	drawRoundedRect(x + border, y + border, 0.51f, w - 2 * border, h - 2 * border, 8.0f, ScreenManager::colorBackground());
+
+	Utils::VideoReceiver &rx = Utils::VideoReceiver::getInstance();
+	if (showCamera && rx.isLive() && rx.userId() == p.userId) {
+		C2D_DrawRectSolid(x + border + 2.0f, y + border + 2.0f, 0.515f, w - 2 * border - 4.0f, h - 2 * border - 4.0f,
+		                  C2D_Color32(0, 0, 0, 255));
+		rx.draw(x + border + 2.0f, y + border + 2.0f, 0.52f, w - 2 * border - 4.0f, h - 2 * border - 4.0f);
+	} else {
+		const float size = std::max(22.0f, std::min(56.0f, std::min(w, h) * 0.42f));
+		drawAvatar(p, x + (w - size) / 2.0f, y + (h - size) / 2.0f - 6.0f, size, false);
+	}
+
+	// Name, bottom left, on a dark label.
+	const float labelW = std::min(w - 12.0f, 120.0f);
+	drawRoundedRect(x + 6.0f, y + h - 20.0f, 0.55f, labelW, 14.0f, 5.0f, C2D_Color32(0, 0, 0, 150));
+	drawRichText(x + 10.0f, y + h - 19.0f, 0.56f, 0.38f, 0.38f, ScreenManager::colorText(),
+	             getTruncatedRichText(p.name, labelW - 8.0f, 0.38f, 0.38f));
+
+	const bool muted = p.mute || p.selfMute;
+	const bool deaf = p.deaf || p.selfDeaf;
+	float ix = x + w - 20.0f;
+	if (muted) {
+		drawStateIcon(p.mute ? "romfs:/discord-icons/mic-denied.png" : "romfs:/discord-icons/mic-muted.png", ix,
+		              y + h - 19.0f, 13.0f, p.mute ? RED : ScreenManager::colorTextMuted());
+		ix -= 16.0f;
+	}
+	if (deaf) {
+		drawStateIcon(p.deaf ? "romfs:/discord-icons/headphones-denied.png" : "romfs:/discord-icons/headphones-muted.png",
+		              ix, y + h - 19.0f, 13.0f, p.deaf ? RED : ScreenManager::colorTextMuted());
+	}
+}
+
+// Everyone as big tiles. Alone: one tile; two: side by side; more: a grid. When someone shares their screen it takes the left
+// side and everyone else is stacked on the right.
 void drawFull(const std::vector<Discord::VoiceParticipant> &people, Discord::VoiceClient &voice) {
 	C2D_DrawRectSolid(0, 0, 0.45f, 400, 240, ScreenManager::colorBackgroundDark());
-	drawText(10.0f, 6.0f, 0.55f, 0.5f, 0.5f, ScreenManager::colorSelection(), TR("call.in_call"));
-	drawText(330.0f, 6.0f, 0.55f, 0.5f, 0.5f, ScreenManager::colorText(), clock(voice.connectedSeconds()));
 
-	constexpr int cols = 4;
-	constexpr int rows = 2;
-	constexpr float tileW = 94.0f;
-	constexpr float tileH = 88.0f;
-	const float startX = (400.0f - cols * tileW) / 2.0f;
-	const float startY = 28.0f;
+	constexpr float margin = 6.0f;
+	constexpr float gap = 6.0f;
+	const float areaX = margin;
+	const float areaY = margin;
+	const float areaW = 400.0f - 2 * margin;
+	const float areaH = 240.0f - 2 * margin - 16.0f; // the bottom strip holds the clock and the statistics
 
-	bool anyVideo = false;
-	bool shownVideo = false;
-	int shown = 0;
-	for (const auto &p : people) {
-		if (shown >= cols * rows) {
-			break;
+	Utils::VideoReceiver &rx = Utils::VideoReceiver::getInstance();
+	const Discord::VoiceParticipant *sharer = nullptr;
+	if (rx.isLive()) {
+		for (const auto &p : people) {
+			if (p.userId == rx.userId() && p.selfStream) {
+				sharer = &p;
+			}
 		}
-		const float tx = startX + (shown % cols) * tileW;
-		const float ty = startY + (shown / cols) * tileH;
-		const bool speaking = voice.isSpeaking(p.userId);
-		drawRoundedRect(tx + 3.0f, ty + 2.0f, 0.5f, tileW - 6.0f, tileH - 4.0f, 8.0f,
-		                speaking ? GREEN : ScreenManager::colorBackgroundLight());
-		drawRoundedRect(tx + 5.0f, ty + 4.0f, 0.51f, tileW - 10.0f, tileH - 8.0f, 7.0f, ScreenManager::colorBackground());
-		Utils::VideoReceiver &rx = Utils::VideoReceiver::getInstance();
-		if (rx.isLive() && rx.userId() == p.userId) {
-			rx.draw(tx + 7.0f, ty + 6.0f, 0.52f, tileW - 14.0f, 48.0f);
-			shownVideo = true;
-		} else {
-			drawAvatar(p, tx + (tileW - 44.0f) / 2.0f, ty + 10.0f, 44.0f, false);
-		}
-		drawRichText(tx + 8.0f, ty + 58.0f, 0.55f, 0.4f, 0.4f, ScreenManager::colorText(),
-		             getTruncatedRichText(p.name, tileW - 16.0f, 0.4f, 0.4f));
-		drawBadges(p, tx + 8.0f, ty + 8.0f);
-
-		const bool muted = p.mute || p.selfMute;
-		const bool deaf = p.deaf || p.selfDeaf;
-		float ix = tx + tileW - 22.0f;
-		if (deaf) {
-			drawStateIcon(p.deaf ? "romfs:/discord-icons/headphones-denied.png" : "romfs:/discord-icons/headphones-muted.png",
-			              ix, ty + 70.0f, 12.0f, p.deaf ? RED : ScreenManager::colorTextMuted());
-			ix -= 14.0f;
-		}
-		if (muted) {
-			drawStateIcon(p.mute ? "romfs:/discord-icons/mic-denied.png" : "romfs:/discord-icons/mic-muted.png", ix,
-			              ty + 70.0f, 12.0f, p.mute ? RED : ScreenManager::colorTextMuted());
-		}
-		anyVideo = anyVideo || p.selfVideo || p.selfStream;
-		shown++;
-	}
-	if ((int)people.size() > cols * rows) {
-		drawText(10.0f, startY + rows * tileH, 0.55f, 0.4f, 0.4f, ScreenManager::colorTextMuted(),
-		         "+" + std::to_string((int)people.size() - cols * rows));
 	}
 
-	// Statistics of the call, for when the sound is poor.
-	char stats[96];
-	snprintf(stats, sizeof(stats), "%s %u   %s %u   %s %u", TR("call.stat_received").c_str(),
-	         (unsigned)voice.statPacketsDecoded(), TR("call.stat_sent").c_str(), (unsigned)voice.statPacketsSent(),
-	         TR("call.stat_failed").c_str(), (unsigned)voice.statDecryptFailures());
-	drawText(10.0f, 212.0f, 0.55f, 0.36f, 0.36f, ScreenManager::colorTextMuted(), stats);
-	if (anyVideo && !shownVideo) {
-		drawText(10.0f, 224.0f, 0.55f, 0.36f, 0.36f, ScreenManager::colorTextMuted(), TR("call.no_video"));
+	bool shownCamera = false;
+	if (sharer) {
+		const float sideW = 104.0f;
+		const float mainW = areaW - sideW - gap;
+		C2D_DrawRectSolid(areaX, areaY, 0.5f, mainW, areaH, C2D_Color32(0, 0, 0, 255));
+		rx.draw(areaX, areaY, 0.52f, mainW, areaH);
+		shownCamera = true;
+		const int maxSide = 4;
+		const int count = std::min<int>((int)people.size(), maxSide);
+		const float tileH = (areaH - (count - 1) * gap) / (float)std::max(1, count);
+		for (int i = 0; i < count; i++) {
+			drawTile(people[i], voice, areaX + mainW + gap, areaY + i * (tileH + gap), sideW, tileH, false);
+		}
+		if ((int)people.size() > maxSide) {
+			drawText(areaX + 4.0f, 226.0f, 0.56f, 0.36f, 0.36f, ScreenManager::colorTextMuted(),
+			         "+" + std::to_string((int)people.size() - maxSide));
+		}
+	} else {
+		const int n = (int)people.size();
+		const int cols = n <= 1 ? 1 : n <= 2 ? 2 : n <= 4 ? 2 : n <= 6 ? 3 : n <= 9 ? 3 : 4;
+		const int rows = n <= 0 ? 1 : (std::min(n, 12) + cols - 1) / cols;
+		const int shown = std::min(n, cols * rows);
+		const float tileW = (areaW - (cols - 1) * gap) / (float)cols;
+		const float tileH = (areaH - (rows - 1) * gap) / (float)rows;
+		for (int i = 0; i < shown; i++) {
+			const float tx = areaX + (i % cols) * (tileW + gap);
+			const float ty = areaY + (i / cols) * (tileH + gap);
+			drawTile(people[i], voice, tx, ty, tileW, tileH, true);
+			shownCamera = shownCamera || (rx.isLive() && rx.userId() == people[i].userId);
+		}
+		if (n > shown) {
+			drawText(areaX + 4.0f, 226.0f, 0.56f, 0.36f, 0.36f, ScreenManager::colorTextMuted(),
+			         "+" + std::to_string(n - shown));
+		}
 	}
+
+	// Call time and statistics of the call, for when the sound is poor.
+	char stats[112];
+	snprintf(stats, sizeof(stats), "%s   %s %u   %s %u   %s %u", clock(voice.connectedSeconds()).c_str(),
+	         TR("call.stat_received").c_str(), (unsigned)voice.statPacketsDecoded(), TR("call.stat_sent").c_str(),
+	         (unsigned)voice.statPacketsSent(), TR("call.stat_failed").c_str(), (unsigned)voice.statDecryptFailures());
+	drawText(margin + 24.0f, 226.0f, 0.56f, 0.34f, 0.34f, ScreenManager::colorTextMuted(), stats);
+	(void)shownCamera;
 }
 
 void drawVideo(Discord::VoiceClient &voice) {

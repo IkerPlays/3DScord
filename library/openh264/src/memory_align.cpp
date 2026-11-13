@@ -77,9 +77,12 @@ void* WelsMalloc (const uint32_t kuiSize, const char* kpTag, const uint32_t kiAl
 
 #ifdef __3DS__
   // Big buffers (pictures) go to the linear heap while it has plenty of room left for textures; the rest uses the normal heap.
+  bool bLinear = false;
   uint8_t* pBuf = (kiActualRequestedSize >= 32768 && linearSpaceFree() > kiActualRequestedSize + 8u * 1024 * 1024) ?
                  (uint8_t*) linearAlloc (kiActualRequestedSize) : NULL;
-  if (NULL == pBuf)
+  if (pBuf != NULL)
+    bLinear = true;
+  else
     pBuf = (uint8_t*) malloc (kiActualRequestedSize);
 #else
   uint8_t* pBuf = (uint8_t*) malloc (kiActualRequestedSize);
@@ -107,7 +110,8 @@ void* WelsMalloc (const uint32_t kuiSize, const char* kpTag, const uint32_t kiAl
   pAlignedBuffer = pBuf + kiAlignedBytes + kiSizeOfVoidPointer + kiSizeOfInt;
   pAlignedBuffer -= ((uintptr_t) pAlignedBuffer & kiAlignedBytes);
   * ((void**) (pAlignedBuffer - kiSizeOfVoidPointer)) = pBuf;
-  * ((int32_t*) (pAlignedBuffer - (kiSizeOfVoidPointer + kiSizeOfInt))) = kiPayloadSize;
+  // The top bit of the stored size says the block came from the linear heap, so WelsFree gives it back to the right allocator.
+  * ((int32_t*) (pAlignedBuffer - (kiSizeOfVoidPointer + kiSizeOfInt))) = (int32_t) (kiPayloadSize | (bLinear ? 0x80000000u : 0u));
 
   return pAlignedBuffer;
 }
@@ -126,7 +130,8 @@ void WelsFree (void* pPointer, const char* kpTag) {
 #endif
 #ifdef __3DS__
     void* pOrig = * (((void**) pPointer) - 1);
-    if ((uintptr_t) pOrig >= 0x14000000u && (uintptr_t) pOrig < 0x1C000000u)
+    const int32_t iHeader = * ((int32_t*) ((uint8_t*) pPointer - (sizeof (void**) + sizeof (int32_t))));
+    if (iHeader < 0)
       linearFree (pOrig);
     else
       free (pOrig);
