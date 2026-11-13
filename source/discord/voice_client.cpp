@@ -323,7 +323,7 @@ void VoiceClient::publishVoiceState() {
 	if (channel.empty()) {
 		return;
 	}
-	DiscordClient::getInstance().updateVoiceState(guild, channel, capture.isMuted(), audio.isDeafened(), cameraSending.load());
+	DiscordClient::getInstance().updateVoiceState(guild, channel, capture.isMuted(), audio.isDeafened(), videoSourceNow.load() != 0);
 }
 
 void VoiceClient::onVoiceState(const std::string &session, bool srvMute, bool srvDeaf) {
@@ -1235,7 +1235,7 @@ void VoiceClient::sendRtp(uint8_t payloadType, uint32_t ssrcOut, uint16_t seq, u
 		videoPlainBuffer[0] = 0x52;
 		videoPlainBuffer[1] = 0x00;
 		videoPlainBuffer[2] = 0x00;
-		videoPlainBuffer[3] = 0x00;
+		videoPlainBuffer[3] = 0x0A; // maximum delay 10 x 10 ms, as the community sender (Discord-video-stream) sends for video
 	}
 	memcpy(videoPlainBuffer + extLen, payload, len);
 
@@ -1455,6 +1455,14 @@ void VoiceClient::sendVideoSignal(bool on) {
 	writer.Uint(on ? videoOwnRtxSsrc : 0);
 	writer.Key("streams");
 	writer.StartArray();
+	if (!on) {
+		writer.EndArray(); // when it stops: no streams, like the clients of Discord
+		writer.EndObject();
+		writer.EndObject();
+		ws.send(s.GetString());
+		Logger::log("[VideoTx] Told Discord the camera is off");
+		return;
+	}
 	writer.StartObject();
 	writer.Key("type");
 	writer.String("video");
@@ -1469,7 +1477,7 @@ void VoiceClient::sendVideoSignal(bool on) {
 	writer.Key("rtx_ssrc");
 	writer.Uint(videoOwnRtxSsrc);
 	writer.Key("max_bitrate");
-	writer.Int(2000000);
+	writer.Int(10000000);
 	writer.Key("max_framerate");
 	writer.Int(Utils::VideoSender::getInstance().fps());
 	writer.Key("max_resolution");
@@ -1524,9 +1532,12 @@ bool VoiceClient::setVideoSource(int source) {
 	videoReportAt = 0;
 	DiscordClient::getInstance().selfVideoEcho = -1;
 	videoSourceNow = source;
-	cameraSending = true;
-	sendVideoSignal(true);
+	// The same order as the community sender that works with DAVE: first the voice state (self_video), then speaking, then the video
+	// signal, and only then the packets. Before, the first key frame could leave before Discord knew about the stream.
 	publishVoiceState();
+	sendSpeaking(true);
+	sendVideoSignal(true);
+	cameraSending = true;
 	return true;
 }
 

@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- **Order and values like the community sender that works with DAVE:** voice state (`self_video`) first, then speaking, then the video signal and only then the packets (before,
+  the first key frame could leave before Discord knew the stream); playout delay 0–100 ms and maximum bitrate 10 Mbps in the video signal; the "off" signal carries no streams.
 - **Self-check of the video encryption:** the first frames we send are decrypted again with our own key and the result goes to the log (`[DAVE] Video self-check ...`).
 - **The key frames the encoder makes by itself (every 2 s) now also get the SPS rewrite:** only the first one had it, so receivers saw two different SPS. The call log now
   describes the whole RTCP packets (receiver reports about your video) to see whether Discord is getting it.
