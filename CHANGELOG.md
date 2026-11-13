@@ -1,42 +1,25 @@
 # Changelog
 
 ## Unreleased
-- **The size of the video you send adapts by itself:** if the encoder takes more than 90 ms a frame it goes down a size (camera 176x144, 128x96, 96x80; screen
-  208x128, 160x96, 112x64), and back up when it has room (under 35 ms for eight seconds). Discord is told each time.
-- **Camera and screen in the call, lighter** (the encoder ran at 1 to 4 frames a second at 320x240): the camera goes out at 176x144 and the screen at 208x128 (half
-  size), the encoder uses its fastest settings, and your own preview is drawn from a smaller texture (256x128).
-- **Fix (every picture came out turned, cameras and shared screens alike):** citro2d reads a sub-texture whose `top` is below its `bottom` as one that is
-  turned a quarter (it swaps the axes); the flips tried before used exactly that, so the pictures came out turned and mirrored. The pictures are now
-  written with their top row first in the texture and drawn with the usual orientation (top above bottom), for the cameras and screens of others,
-  your own preview, the camera view and the video player. The Video Orientation Test (Settings > Updates) starts on the expected one (1/8).
-- **Camera in the call, steadier:** the camera now goes at 10 frames a second (15 left the encoder no room next to the audio and the decoder), and your own tile
-  shows how the encoder is doing (`N fps  M ms  K  D`: frames a second, milliseconds a frame, key frames asked for by the others, times the call could not keep
-  up), so a stutter can be read without a report.
-- **Fix (camera black, photos black, camera of the call frozen on one frame):** the camera writes each frame into memory by itself, behind the cache of the
-  processor, and since the picture is read by the processor (not by the display transfer any more) the cache kept the first frame, a black one.
-  The cache is now invalidated after every frame, in the camera view, the photo, the video test and the camera of the call. The attempt to
-  pick between the two outer cameras (previous version) is removed: it was not the cause.
-- **Camera in the call no longer freezes after one frame:** the request for a frame is kept open until the camera fills it (a second request while
-  the first was open failed, and then no frame came again); if nothing comes for three seconds the capture restarts.
-- **Video Orientation Test** (Settings > Updates): shows a test picture (an F with a red edge on top, blue at the bottom, green on the left,
-  yellow on the right and an orange square in the top left) the way pictures of calls are drawn; A cycles the 8 orientations to find which
-  one is right. The orientation the phones ask for (RTP video orientation) is only logged for now, not applied.
-- **Fix (camera black, photos black):** the outer camera is picked by trying both selectors (right and left) and keeping the one that gives a picture. A
-  New 2DS XL has a single outer camera, and asking for the other selector gives black frames without an error. The log (`[Camera]`) tells which one
-  answered and how many pixels were lit.
-- **Video of the others always upright:** the picture comes out right without settings (it needed half a turn and a flip, i.e. a sideways mirror), so
-  **Video Rotation** and **Flip Video** are gone from Settings > Voice.
-- **Share your screen** (experimental): the camera button next to the microphone now cycles nothing > camera > top screen > nothing. The top
-  screen goes out as video (400x240, 8 frames a second) like the camera does; it shows to the others as your video tile. In the full call view
-  your own tile shows what you are sending, where your profile picture would be.
-- **Sending video, more like Discord's own clients:** the Identify declares the video stream, and each video packet carries the playout-delay
-  header extension.
-- **Video of phones in calls:** the picture is turned (and flipped) as the sender asks through the RTP video orientation (a phone sends the picture as its
-  sensor sees it); the log shows the RTP extensions that arrive.
-- **Camera in the Call (experimental)** (a camera button next to the microphone and headphones in a call; needs Settings > Voice > Video on and joining the call again): sends your inner camera
-  to the call at 320x240, 15 frames a second, coded as H.264 on the extra core, encrypted with DAVE and sent as RTP; Discord is told with the video
-  signalling (op 12) and the voice state (`self_video`), and a picture loss message from the others makes a new key frame. Press it again to stop. Not
-  tested against Discord yet: the log (`[VideoTx]`) tells what happened.
+
+## 0.16.0
+You can now send video to a call: your inner camera or the top screen of the console. Experimental (Settings > Voice > Video, then join the call again).
+
+- **Camera and Share Screen in a call:** the camera button next to the microphone and headphones goes through nothing > camera > top screen > nothing.
+  Your own tile in the full call view shows what you send, with the frames a second and the time of each (`N fps  M ms  K  D`). The picture is
+  coded as H.264 on the extra core, encrypted with DAVE and sent as RTP, with the video signalling of Discord's own clients. It works at about 12
+  frames a second on a New 2DS XL.
+- **The size adapts by itself:** if the encoder takes more than 90 ms a frame it goes down a size (camera 176x144, 128x96, 96x80; screen 208x128,
+  160x96, 112x64), and back up when it has room. Discord is told each time.
+- **Every picture comes out upright:** citro2d reads a sub-texture whose `top` is below its `bottom` as one turned a quarter (it swaps the axes), which is
+  why cameras, shared screens and videos came out turned and mirrored. They are now written with the top row first and drawn the usual way, for the
+  cameras and screens of others, your own preview, the camera view and the video player. **Video Rotation** and **Flip Video** are gone. New
+  **Video Orientation Test** (Settings > Updates) shows a test picture and cycles the 8 orientations, in case another console is different.
+- **Fix, camera black, photos black, camera of the call frozen on one frame:** the camera writes each frame into memory by itself, behind the
+  cache of the processor, and the cache kept the first frame (a black one). The cache is now invalidated after every frame. The request for a
+  frame is also kept open until the camera fills it, and the capture restarts when nothing comes for three seconds.
+- **Phones:** the log shows the RTP video orientation that phones send (it is not applied yet).
+- **Fix:** an own camera that was sending no longer blocks the Camera screen without saying why: it says the camera is busy.
 
 ## 0.15.0
 The video of other people in calls now shows: stable on a New 2DS XL, upright, with the occasional hiccup. Experimental (Settings > Voice > Video).
