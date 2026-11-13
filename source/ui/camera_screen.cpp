@@ -1,5 +1,6 @@
 #include "ui/camera_screen.h"
 #include "utils/video_receiver.h"
+#include "utils/video_sender.h"
 #include "core/config.h"
 #include "core/i18n.h"
 #include "discord/discord_client.h"
@@ -70,6 +71,11 @@ void CameraScreen::onEnter() {
 }
 
 bool CameraScreen::startCamera() {
+	if (Utils::VideoSender::getInstance().running()) {
+		// The camera is sending to the call.
+		ScreenManager::getInstance().showToast(TR("callcam.busy"));
+		return false;
+	}
 	if (R_FAILED(camInit())) {
 		return false;
 	}

@@ -247,6 +247,24 @@ bool DaveSession::encryptOpus(uint32_t ssrc, const uint8_t *frame, size_t frameL
 	return rc == discord::dave::Encryptor::ResultCode::Success;
 }
 
+bool DaveSession::encryptVideo(uint32_t ssrc, const uint8_t *frame, size_t frameLen, uint8_t *out, size_t outCapacity,
+                               size_t *written) {
+	std::lock_guard<std::mutex> lock(impl->frameMutex);
+	if (!impl->encryptor) {
+		return false;
+	}
+	const auto needed = impl->encryptor->GetMaxCiphertextByteSize(discord::dave::MediaType::Video, frameLen);
+	if (outCapacity < needed) {
+		Logger::log("[DAVE] Video encrypt buffer too small: have %zu, need %zu", outCapacity, needed);
+		return false;
+	}
+	impl->encryptor->AssignSsrcToCodec(ssrc, discord::dave::Codec::H264);
+	const auto rc =
+	    impl->encryptor->Encrypt(discord::dave::MediaType::Video, ssrc, discord::dave::MakeArrayView(frame, frameLen),
+	                             discord::dave::MakeArrayView(out, outCapacity), written);
+	return rc == discord::dave::Encryptor::ResultCode::Success;
+}
+
 bool DaveSession::decryptOpus(const std::string &userId, const uint8_t *frame, size_t frameLen, uint8_t *out,
                               size_t outCapacity, size_t *written) {
 	std::lock_guard<std::mutex> lock(impl->frameMutex);

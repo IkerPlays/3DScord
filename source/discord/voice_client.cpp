@@ -1,5 +1,6 @@
 #include "discord/voice_client.h"
 #include "utils/video_receiver.h"
+#include "utils/video_sender.h"
 #include "core/config.h"
 #include <ctime>
 #include <sys/stat.h>
@@ -321,7 +322,7 @@ void VoiceClient::publishVoiceState() {
 	if (channel.empty()) {
 		return;
 	}
-	DiscordClient::getInstance().updateVoiceState(guild, channel, capture.isMuted(), audio.isDeafened());
+	DiscordClient::getInstance().updateVoiceState(guild, channel, capture.isMuted(), audio.isDeafened(), cameraSending.load());
 }
 
 void VoiceClient::onVoiceState(const std::string &session, bool srvMute, bool srvDeaf) {
@@ -628,7 +629,7 @@ void VoiceClient::sendSelectProtocol() {
 		writer.Key("rtx_payload_type");
 		writer.Int(VIDEO_PAYLOAD_TYPE + 1);
 		writer.Key("encode");
-		writer.Bool(false);
+		writer.Bool(true); // the camera can be sent (see setCamera)
 		writer.Key("decode");
 		writer.Bool(true);
 		writer.EndObject();
@@ -861,6 +862,9 @@ void VoiceClient::handleRtpPacket(uint8_t *packet, size_t len) {
 
 	uint8_t payloadType = packet[1] & 0x7F;
 	if (payloadType >= RTCP_PT_MIN && payloadType <= RTCP_PT_MAX) {
+		if (cameraSending.load()) {
+			handleRtcp(packet, len);
+		}
 		return;
 	}
 	const bool isVideo = payloadType == VIDEO_PAYLOAD_TYPE && Config::getInstance().isVideoExperimental();
@@ -1073,6 +1077,236 @@ void VoiceClient::sendAudioFrame(const uint8_t *opusData, size_t opusLen) {
 	}
 }
 
+// Someone asks for a new picture (RTCP feedback: PLI or FIR). The first 8 bytes are in the clear, the rest is encrypted.
+void VoiceClient::handleRtcp(const uint8_t *packet, size_t len) {
+	if (!gcm || len < 8 + GCM_TAG_SIZE + NONCE_SUFFIX_SIZE + 4) {
+		return;
+	}
+	const int pt = packet[1];
+	const int fmt = packet[0] & 0x1F;
+	if (pt != 206 || (fmt != 1 && fmt != 4)) {
+		return;
+	}
+	uint8_t iv[12];
+	memset(iv, 0, sizeof(iv));
+	memcpy(iv, packet + len - NONCE_SUFFIX_SIZE, NONCE_SUFFIX_SIZE);
+	const size_t cipherLen = len - 8 - NONCE_SUFFIX_SIZE - GCM_TAG_SIZE;
+	uint8_t plain[64];
+	if (cipherLen > sizeof(plain)) {
+		return;
+	}
+	if (mbedtls_gcm_auth_decrypt(gcm, cipherLen, iv, sizeof(iv), packet, 8, packet + 8 + cipherLen, GCM_TAG_SIZE, packet + 8,
+	                             plain) != 0) {
+		return;
+	}
+	Utils::VideoSender::getInstance().requestKeyFrame();
+}
+
+void VoiceClient::sendRtp(uint8_t payloadType, uint32_t ssrcOut, uint16_t seq, uint32_t timestamp, bool marker,
+                          const uint8_t *payload, size_t len) {
+	if (!gcm || udpSocket < 0 || 12 + len + GCM_TAG_SIZE + NONCE_SUFFIX_SIZE > sizeof(videoSendBuffer)) {
+		return;
+	}
+	uint8_t *packet = videoSendBuffer;
+	packet[0] = 0x80;
+	packet[1] = (uint8_t)((marker ? 0x80 : 0) | payloadType);
+	packet[2] = (uint8_t)(seq >> 8);
+	packet[3] = (uint8_t)seq;
+	packet[4] = (uint8_t)(timestamp >> 24);
+	packet[5] = (uint8_t)(timestamp >> 16);
+	packet[6] = (uint8_t)(timestamp >> 8);
+	packet[7] = (uint8_t)timestamp;
+	packet[8] = (uint8_t)(ssrcOut >> 24);
+	packet[9] = (uint8_t)(ssrcOut >> 16);
+	packet[10] = (uint8_t)(ssrcOut >> 8);
+	packet[11] = (uint8_t)ssrcOut;
+
+	uint8_t iv[12];
+	memset(iv, 0, sizeof(iv));
+	iv[0] = (uint8_t)(sendNonce >> 24);
+	iv[1] = (uint8_t)(sendNonce >> 16);
+	iv[2] = (uint8_t)(sendNonce >> 8);
+	iv[3] = (uint8_t)sendNonce;
+	uint8_t *cipher = packet + 12;
+	uint8_t *tag = cipher + len;
+	if (mbedtls_gcm_crypt_and_tag(gcm, MBEDTLS_GCM_ENCRYPT, len, iv, sizeof(iv), packet, 12, payload, cipher, GCM_TAG_SIZE,
+	                              tag) != 0) {
+		return;
+	}
+	memcpy(tag + GCM_TAG_SIZE, iv, NONCE_SUFFIX_SIZE);
+	send(udpSocket, packet, 12 + len + GCM_TAG_SIZE + NONCE_SUFFIX_SIZE, 0);
+	sendNonce++;
+}
+
+// A whole coded frame (Annex B): encrypted with DAVE as a frame, cut into NAL units, and each one sent as one RTP packet or as
+// FU-A fragments (RFC 6184). The marker bit closes the frame.
+void VoiceClient::sendVideoFrame(const uint8_t *annexB, size_t len) {
+	const uint8_t *data = annexB;
+	size_t n = len;
+	if (daveVersion != 0) {
+		videoOutCrypt.resize(len * 2 + 1024);
+		size_t written = 0;
+		if (!dave.encryptVideo(videoOwnSsrc, annexB, len, videoOutCrypt.data(), videoOutCrypt.size(), &written) || written == 0) {
+			static uint32_t failed = 0;
+			if (++failed <= 3 || failed % 100 == 0) {
+				Logger::log("[VideoTx] DAVE could not encrypt a frame of %zu bytes (%s)", len, dave.lastError().c_str());
+			}
+			return;
+		}
+		data = videoOutCrypt.data();
+		n = written;
+	}
+
+	struct Nal {
+		const uint8_t *p;
+		size_t n;
+	};
+	std::vector<Nal> nals;
+	size_t i = 0;
+	while (i + 3 < n) {
+		if (data[i] == 0 && data[i + 1] == 0 && data[i + 2] == 1) {
+			const size_t begin = i + 3;
+			size_t end = n;
+			for (size_t j = begin; j + 2 < n; j++) {
+				if (data[j] == 0 && data[j + 1] == 0 && (data[j + 2] == 1 || (data[j + 2] == 0 && j + 3 < n && data[j + 3] == 1))) {
+					end = j;
+					break;
+				}
+			}
+			if (end > begin) {
+				nals.push_back({data + begin, end - begin});
+			}
+			i = end;
+		} else {
+			i++;
+		}
+	}
+	if (nals.empty()) {
+		return;
+	}
+
+	constexpr size_t MTU = 1000;
+	const uint32_t timestamp = (uint32_t)((osGetTime() - videoClockStart) * 90);
+	uint8_t fragment[MTU + 4];
+	for (size_t k = 0; k < nals.size(); k++) {
+		const bool lastNal = k + 1 == nals.size();
+		const Nal &nal = nals[k];
+		if (nal.n <= MTU) {
+			sendRtp(VIDEO_PAYLOAD_TYPE, videoOwnSsrc, videoSendSequence++, timestamp, lastNal, nal.p, nal.n);
+			continue;
+		}
+		const uint8_t indicator = (uint8_t)((nal.p[0] & 0xE0) | 28);
+		const uint8_t type = nal.p[0] & 0x1F;
+		size_t offset = 1;
+		bool first = true;
+		while (offset < nal.n) {
+			const size_t chunk = std::min(MTU - 2, nal.n - offset);
+			const bool end = offset + chunk == nal.n;
+			fragment[0] = indicator;
+			fragment[1] = (uint8_t)(type | (first ? 0x80 : 0) | (end ? 0x40 : 0));
+			memcpy(fragment + 2, nal.p + offset, chunk);
+			sendRtp(VIDEO_PAYLOAD_TYPE, videoOwnSsrc, videoSendSequence++, timestamp, lastNal && end, fragment, chunk + 2);
+			offset += chunk;
+			first = false;
+		}
+	}
+	videoFramesSent++;
+	if (videoFramesSent <= 3 || videoFramesSent % 150 == 0) {
+		Logger::log("[VideoTx] Sent %u frames (last %zu bytes, %zu NAL units)", videoFramesSent, len, nals.size());
+	}
+}
+
+void VoiceClient::pumpVideoOut() {
+	if (!cameraSending.load()) {
+		return;
+	}
+	bool key = false;
+	// Not more than a frame or two per pass: the audio comes first.
+	for (int i = 0; i < 2; i++) {
+		if (!Utils::VideoSender::getInstance().takeFrame(videoOutFrame, key)) {
+			break;
+		}
+		sendVideoFrame(videoOutFrame.data(), videoOutFrame.size());
+	}
+}
+
+// Voice gateway op 12: tells Discord that we send video, and with which ssrc (or that we stopped).
+void VoiceClient::sendVideoSignal(bool on) {
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+	writer.StartObject();
+	writer.Key("op");
+	writer.Int(OP_VIDEO);
+	writer.Key("d");
+	writer.StartObject();
+	writer.Key("audio_ssrc");
+	writer.Uint(ssrc);
+	writer.Key("video_ssrc");
+	writer.Uint(on ? videoOwnSsrc : 0);
+	writer.Key("rtx_ssrc");
+	writer.Uint(on ? videoOwnRtxSsrc : 0);
+	writer.Key("streams");
+	writer.StartArray();
+	writer.StartObject();
+	writer.Key("type");
+	writer.String("video");
+	writer.Key("rid");
+	writer.String("100");
+	writer.Key("ssrc");
+	writer.Uint(videoOwnSsrc);
+	writer.Key("active");
+	writer.Bool(on);
+	writer.Key("quality");
+	writer.Int(100);
+	writer.Key("rtx_ssrc");
+	writer.Uint(videoOwnRtxSsrc);
+	writer.Key("max_bitrate");
+	writer.Int(400000);
+	writer.Key("max_framerate");
+	writer.Int(Utils::VideoSender::FPS);
+	writer.Key("max_resolution");
+	writer.StartObject();
+	writer.Key("type");
+	writer.String("fixed");
+	writer.Key("width");
+	writer.Int(Utils::VideoSender::WIDTH);
+	writer.Key("height");
+	writer.Int(Utils::VideoSender::HEIGHT);
+	writer.EndObject();
+	writer.EndObject();
+	writer.EndArray();
+	writer.EndObject();
+	writer.EndObject();
+	ws.send(s.GetString());
+	Logger::log("[VideoTx] Told Discord the camera is %s (video ssrc %u)", on ? "on" : "off", (unsigned)videoOwnSsrc);
+}
+
+bool VoiceClient::setCamera(bool on) {
+	if (on == cameraSending.load()) {
+		return true;
+	}
+	if (!on) {
+		cameraSending = false;
+		sendVideoSignal(false);
+		Utils::VideoSender::getInstance().stop();
+		publishVoiceState();
+		return true;
+	}
+	if (state != VoiceState::ESTABLISHED || !gcm || udpSocket < 0 || !Config::getInstance().isVideoExperimental()) {
+		return false;
+	}
+	if (!Utils::VideoSender::getInstance().start()) {
+		return false;
+	}
+	videoClockStart = osGetTime();
+	videoSendSequence = 0;
+	videoFramesSent = 0;
+	cameraSending = true;
+	sendVideoSignal(true);
+	publishVoiceState();
+	return true;
+}
+
 void VoiceClient::mediaThreadEntry(void *arg) { static_cast<VoiceClient *>(arg)->mediaThread(); }
 
 void VoiceClient::mediaThread() {
@@ -1127,6 +1361,7 @@ void VoiceClient::mediaThread() {
 		}
 
 		pumpMicrophone(selfId);
+		pumpVideoOut();
 		const uint64_t afterMic = svcGetSystemTick();
 
 		const uint64_t pumpTicks = afterPump - woke;
@@ -1414,6 +1649,19 @@ void VoiceClient::handlePayload(const std::string &message) {
 		}
 		const rapidjson::Value &d = doc["d"];
 		ssrc = (uint32_t)Utils::Json::getUint64(d, "ssrc");
+		// The ssrc of our own video: Discord lists it in "streams", otherwise it is the next two numbers.
+		videoOwnSsrc = ssrc + 1;
+		videoOwnRtxSsrc = ssrc + 2;
+		if (d.HasMember("streams") && d["streams"].IsArray() && !d["streams"].Empty() && d["streams"][0].IsObject()) {
+			const uint32_t v = (uint32_t)Utils::Json::getUint64(d["streams"][0], "ssrc");
+			const uint32_t r = (uint32_t)Utils::Json::getUint64(d["streams"][0], "rtx_ssrc");
+			if (v != 0) {
+				videoOwnSsrc = v;
+			}
+			if (r != 0) {
+				videoOwnRtxSsrc = r;
+			}
+		}
 		udpIp = Utils::Json::getString(d, "ip");
 		udpPort = Utils::Json::getInt(d, "port");
 
@@ -1708,6 +1956,9 @@ void VoiceClient::disconnect() {
 		std::unique_lock<std::shared_mutex> lock(ssrcMutex);
 		ssrcToUser.clear();
 		videoSsrcToUser.clear();
+	}
+	if (cameraSending.exchange(false)) {
+		Utils::VideoSender::getInstance().stop();
 	}
 	closeVideoCapture(); // the media thread has stopped by now
 	{

@@ -161,7 +161,8 @@ class DiscordClient {
 		return sessionId;
 	}
 
-	void updateVoiceState(const std::string &guildId, const std::string &channelId, bool selfMute, bool selfDeaf);
+	void updateVoiceState(const std::string &guildId, const std::string &channelId, bool selfMute, bool selfDeaf,
+	                      bool selfVideo = false);
 
 	std::vector<VoiceParticipant> getVoiceParticipants(const std::string &channelId);
 	size_t getVoiceParticipantCount(const std::string &channelId);

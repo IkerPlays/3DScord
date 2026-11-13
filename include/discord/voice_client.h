@@ -168,6 +168,22 @@ class VoiceClient {
 	void handleVideoPayload(uint32_t ssrc, uint16_t seq, bool lastOfFrame, const uint8_t *payload, size_t len);
 	void closeVideoCapture();
 	void maybeRequestKeyFrame(uint32_t mediaSsrc, bool force = false);
+	// Own camera.
+	std::atomic<bool> cameraSending{false};
+	uint32_t videoOwnSsrc = 0;
+	uint32_t videoOwnRtxSsrc = 0;
+	uint16_t videoSendSequence = 0;
+	uint64_t videoClockStart = 0;
+	uint32_t videoFramesSent = 0;
+	std::vector<uint8_t> videoOutFrame;
+	std::vector<uint8_t> videoOutCrypt;
+	uint8_t videoSendBuffer[1500];
+	void pumpVideoOut();
+	void sendVideoFrame(const uint8_t *annexB, size_t len);
+	void sendRtp(uint8_t payloadType, uint32_t ssrcOut, uint16_t seq, uint32_t timestamp, bool marker, const uint8_t *payload,
+	             size_t len);
+	void sendVideoSignal(bool on);
+	void handleRtcp(const uint8_t *packet, size_t len);
 	std::atomic<uint32_t> videoKeyAskSsrc{0}; // set when someone starts sending video: the media thread asks for a key frame at once
 	uint64_t videoKeyRequestAt = 0;
 	uint32_t videoKeyRequests = 0;
@@ -192,6 +208,10 @@ class VoiceClient {
   public:
 	void setMuted(bool m);
 	bool isMuted() const { return capture.isMuted(); }
+	// EXPERIMENTAL: your own camera (inner camera, 320x240) in the call. False when it cannot start (not in a call, the Video
+	// setting is off, or the camera is busy).
+	bool setCamera(bool on);
+	bool isCameraOn() const { return cameraSending.load(); }
 	void setDeafened(bool d);
 	bool isDeafened() const { return audio.isDeafened(); }
 	bool isSpeaking(const std::string &userId) const;

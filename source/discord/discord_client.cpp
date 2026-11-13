@@ -4876,7 +4876,7 @@ size_t DiscordClient::getVoiceParticipantCount(const std::string &channelId) {
 }
 
 void DiscordClient::updateVoiceState(const std::string &guildId, const std::string &channelId, bool selfMute,
-                                     bool selfDeaf) {
+                                     bool selfDeaf, bool selfVideo) {
 	rapidjson::StringBuffer s;
 	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
 	writer.StartObject();
@@ -4904,7 +4904,7 @@ void DiscordClient::updateVoiceState(const std::string &guildId, const std::stri
 	writer.Key("self_deaf");
 	writer.Bool(selfDeaf);
 	writer.Key("self_video");
-	writer.Bool(false);
+	writer.Bool(selfVideo);
 
 	writer.EndObject();
 	writer.EndObject();
