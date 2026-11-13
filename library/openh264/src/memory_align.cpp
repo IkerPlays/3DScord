@@ -77,13 +77,9 @@ void* WelsMalloc (const uint32_t kuiSize, const char* kpTag, const uint32_t kiAl
 
   bool bLinear = false;
 #ifdef __3DS__
-  // Big buffers (pictures) go to the linear heap while it has plenty of room left for textures; the rest uses the normal heap.
-  uint8_t* pBuf = (kiActualRequestedSize >= 32768 && linearSpaceFree() > kiActualRequestedSize + 8u * 1024 * 1024) ?
-                 (uint8_t*) linearAlloc (kiActualRequestedSize) : NULL;
-  if (pBuf != NULL)
-    bLinear = true;
-  else
-    pBuf = (uint8_t*) malloc (kiActualRequestedSize);
+  // The pictures stay in the normal heap (88 MB): the linear heap is small and the screen's textures and the picture buffers of
+  // the video live there. (The header bit below is kept so WelsFree still handles a block from the linear heap.)
+  uint8_t* pBuf = (uint8_t*) malloc (kiActualRequestedSize);
 #else
   uint8_t* pBuf = (uint8_t*) malloc (kiActualRequestedSize);
 #endif

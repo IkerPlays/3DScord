@@ -11,7 +11,7 @@ namespace Utils {
 
 namespace {
 constexpr size_t FRAME_MAX = 256 * 1024;
-constexpr int SLOTS = 3;
+constexpr int SLOTS = 6;
 constexpr int TEX_W = 512;
 constexpr int TEX_H = 512;
 
@@ -44,8 +44,9 @@ struct VideoReceiver::Impl {
 	bool resetPending = false;
 	bool quit = false;
 	std::string owner;
-	uint8_t *slots[SLOTS] = {nullptr, nullptr, nullptr};
-	size_t lens[SLOTS] = {0, 0, 0};
+	uint8_t *slots[SLOTS] = {nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
+	size_t lens[SLOTS] = {0, 0, 0, 0, 0, 0};
+	uint8_t refIdc[SLOTS] = {3, 3, 3, 3, 3, 3}; // nal_ref_idc of the first slice: 0 means nothing refers to the frame
 	int head = 0;
 	int count = 0;
 	bool needKey = true;   // nothing decoded yet: wait for a key frame
@@ -94,9 +95,27 @@ void VideoReceiver::submit(const std::string &userId, const uint8_t *data, size_
 	}
 	s.lastFrameAt = now;
 	if (s.count == SLOTS) {
-		// The decoder cannot keep up: start again at the next key frame.
-		s.count = 0;
-		s.needKey = true;
+		// The decoder cannot keep up. Drop the oldest frame that nothing refers to; if every one is a reference, drop the oldest
+		// and let the decoder hide the gap while a key frame is asked for. (Emptying the queue and waiting for the next key frame
+		// froze the picture for as long as Discord takes to send one, about 25 seconds.)
+		int victim = 0;
+		for (int i = 0; i < s.count; i++) {
+			if (s.refIdc[(s.head + i) % SLOTS] == 0) {
+				victim = i;
+				break;
+			}
+			if (i == s.count - 1) {
+				s.wantKey = true;
+			}
+		}
+		for (int i = victim; i + 1 < s.count; i++) {
+			const int a = (s.head + i) % SLOTS;
+			const int b = (s.head + i + 1) % SLOTS;
+			std::swap(s.slots[a], s.slots[b]);
+			std::swap(s.lens[a], s.lens[b]);
+			std::swap(s.refIdc[a], s.refIdc[b]);
+		}
+		s.count--;
 		s.dropped++;
 	}
 	const int slot = (s.head + s.count) % SLOTS;
@@ -106,6 +125,8 @@ void VideoReceiver::submit(const std::string &userId, const uint8_t *data, size_
 	if (s.slots[slot]) {
 		memcpy(s.slots[slot], data, size);
 		s.lens[slot] = size;
+		const int type = size > 4 ? (data[4] & 0x1F) : 0;
+		s.refIdc[slot] = (type == 1 || type == 5) ? (uint8_t)((data[4] >> 5) & 3) : 3;
 		s.count++;
 	}
 	const bool start = !s.running;
@@ -224,7 +245,13 @@ void VideoReceiver::run() {
 					Logger::log("[VideoRx] %u pictures (%dx%d), %.1f ms each, %u queues dropped, %u frames lost, %u errors",
 					            s.decoded, pic.width, pic.height, s.msTotal / s.decoded, s.dropped, s.lostFrames, s.errors);
 				}
-				convert(pic.y, pic.u, pic.v, pic.width, pic.height, pic.strideY, pic.strideUV);
+				// Only the newest picture is worth drawing: while frames are waiting, keep decoding and skip the drawing.
+				LightLock_Lock(&s.lock);
+				const bool idle = s.count == 0;
+				LightLock_Unlock(&s.lock);
+				if (idle) {
+					convert(pic.y, pic.u, pic.v, pic.width, pic.height, pic.strideY, pic.strideUV);
+				}
 			}
 		}
 	}
@@ -240,30 +267,31 @@ void VideoReceiver::convert(const uint8_t *py0, const uint8_t *pu0, const uint8_
 	if (w <= 0 || h <= 0 || w > TEX_W || h > TEX_H) {
 		return;
 	}
-	if (!s.front || s.readyW != w || s.readyH != h) {
+	if (!s.front || !s.ready) {
+		// Rows are as wide as the texture: the display transfer lays the 8x8 tiles out by the width of its input. The two buffers
+		// are made once and reused when the picture size changes (Discord lowers the resolution during a call).
 		LightLock_Lock(&s.lock);
-		if (s.front) {
-			linearFree(s.front);
-		}
-		if (s.ready) {
-			linearFree(s.ready);
-		}
-		// Rows are as wide as the texture: the display transfer lays the 8x8 tiles out by the width of its input, so an input
-		// narrower than the texture would come out sheared.
 		s.front = (u16 *)linearAlloc((size_t)TEX_W * TEX_H * 2);
 		s.ready = (u16 *)linearAlloc((size_t)TEX_W * TEX_H * 2);
-		if (s.front) {
+		if (s.front && s.ready) {
 			memset(s.front, 0, (size_t)TEX_W * TEX_H * 2);
-		}
-		if (s.ready) {
 			memset(s.ready, 0, (size_t)TEX_W * TEX_H * 2);
+			GSPGPU_FlushDataCache(s.front, (u32)TEX_W * TEX_H * 2);
+			GSPGPU_FlushDataCache(s.ready, (u32)TEX_W * TEX_H * 2);
 		}
-		s.readyW = w;
-		s.readyH = h;
 		LightLock_Unlock(&s.lock);
 		if (!s.front || !s.ready) {
+			Logger::log("[VideoRx] No linear memory for the picture buffers (%u KB free)", (unsigned)(linearSpaceFree() / 1024));
+			if (s.front) {
+				linearFree(s.front);
+			}
+			if (s.ready) {
+				linearFree(s.ready);
+			}
+			s.front = s.ready = nullptr;
 			return;
 		}
+		Logger::log("[VideoRx] Picture buffers ready (%u KB of linear memory left)", (unsigned)(linearSpaceFree() / 1024));
 	}
 	for (int y = 0; y < h; y++) {
 		const uint8_t *py = py0 + (size_t)(y * div) * strideY;
@@ -282,6 +310,8 @@ void VideoReceiver::convert(const uint8_t *py0, const uint8_t *pu0, const uint8_
 	}
 	LightLock_Lock(&s.lock);
 	std::swap(s.front, s.ready);
+	s.readyW = w;
+	s.readyH = h;
 	s.version++;
 	s.lastPicture = osGetTime();
 	LightLock_Unlock(&s.lock);

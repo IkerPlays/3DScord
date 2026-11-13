@@ -53,6 +53,8 @@ constexpr int OP_HEARTBEAT = 3;
 constexpr int OP_SESSION_DESCRIPTION = 4;
 constexpr int OP_SPEAKING = 5;
 constexpr int OP_VIDEO = 12;
+constexpr int OP_MEDIA_SINK_WANTS = 15;
+constexpr int VIDEO_QUALITY_WANTED = 40; // percent; the 3DS cannot decode a full quality stream in time
 constexpr int OP_HEARTBEAT_ACK = 6;
 constexpr int OP_HELLO = 8;
 constexpr int OP_CLIENTS_CONNECT = 11;
@@ -1536,6 +1538,23 @@ void VoiceClient::handlePayload(const std::string &message) {
 
 		logMemory("established");
 		setState(VoiceState::ESTABLISHED);
+		if (Config::getInstance().isVideoExperimental()) {
+			// Media sink wants: how good the pictures we want are (percent). Lower means a smaller picture and fewer frames,
+			// which is all a 3DS can decode.
+			rapidjson::StringBuffer sink;
+			rapidjson::Writer<rapidjson::StringBuffer> sinkWriter(sink);
+			sinkWriter.StartObject();
+			sinkWriter.Key("op");
+			sinkWriter.Int(OP_MEDIA_SINK_WANTS);
+			sinkWriter.Key("d");
+			sinkWriter.StartObject();
+			sinkWriter.Key("any");
+			sinkWriter.Int(VIDEO_QUALITY_WANTED);
+			sinkWriter.EndObject();
+			sinkWriter.EndObject();
+			ws.send(sink.GetString());
+			Logger::log("[Video] Asked Discord for video quality %d%%", VIDEO_QUALITY_WANTED);
+		}
 		break;
 	}
 	case OP_VIDEO: {
