@@ -187,6 +187,7 @@ class VoiceClient {
 	             size_t len, bool withExtension = false);
 	uint8_t videoPlainBuffer[1500];
 	void sendVideoSignal(bool on);
+	void sendSinkWants(int quality);
 	void sendSenderReport();
 	uint32_t videoPacketCount = 0;
 	uint32_t videoOctetCount = 0;

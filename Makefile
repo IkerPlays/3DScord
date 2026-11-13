@@ -43,7 +43,7 @@ SOURCES		:=	source source/core source/network source/discord source/ui source/ui
 			library/thorvg/src/common library/thorvg/src/renderer library/thorvg/src/renderer/cpu_engine \
 			library/thorvg/src/loaders/lottie library/thorvg/src/loaders/raw
 DATA		:=	data
-INCLUDES	:=	include include/core include/ui library library/stb_image library/qrcodegen library/minih264 library/openh264/decoder_core_inc library/openh264/decoder_plus_inc library/openh264/common_inc library/openh264/api \
+INCLUDES	:=	include include/core include/ui library library/stb_image library/qrcodegen library/minih264 library/minimp3 library/openh264/decoder_core_inc library/openh264/decoder_plus_inc library/openh264/common_inc library/openh264/api \
 			library/libdave/includes library/libdave/src \
 			library/mlspp/include library/mlspp/gen library/mlspp/hpke_src \
 			library/webrtc-aecm library/opus/include library/thorvg/inc

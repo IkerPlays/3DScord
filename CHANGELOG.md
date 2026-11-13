@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- **Audio files in the chat play:** MP3 and WAV attachments (besides Ogg) can be played from the message menu (Play, Play 1.5x, Queue), with a small
+  public-domain MP3 decoder (minimp3). The first three minutes are played; stereo is mixed to mono and a high sample rate is halved to save memory.
+- **Fix (the video of the others vanished while you sent yours):** the decoder had a lower priority than your encoder, and on the console a thread of lower priority only
+  runs when every higher one waits, so it got no processor time. Both have the same priority again, and while you send video the call asks Discord for
+  less quality (20 %) to decode less.
+- **Key frames asked for by the others are made at most once a second** (they could ask without end, and every key frame costs several ordinary frames, which
+  made your frame rate fall to 2).
+- **RTCP in the log:** the first RTCP messages from the call are logged with their type, format, sender and first bytes (`[VideoTx] RTCP type ...`).
 - **Fix (RTCP never recognised):** the check for RTCP packets used the type with the marker bit masked off (200-206 became 72-78), so no RTCP packet from the call
   was ever recognised: not the receiver reports, and not the key frame requests (PLI and FIR) of the others. It now looks at the whole byte. The `R` in your own
   tile counts them for real now.

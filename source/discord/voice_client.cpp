@@ -55,6 +55,7 @@ constexpr int OP_SESSION_DESCRIPTION = 4;
 constexpr int OP_SPEAKING = 5;
 constexpr int OP_VIDEO = 12;
 constexpr int OP_MEDIA_SINK_WANTS = 15;
+constexpr int VIDEO_QUALITY_WHILE_SENDING = 20; // less to decode while the encoder runs on the same core
 constexpr int VIDEO_QUALITY_WANTED = 40; // percent; the 3DS cannot decode a full quality stream in time
 constexpr int OP_HEARTBEAT_ACK = 6;
 constexpr int OP_HELLO = 8;
@@ -1132,14 +1133,11 @@ void VoiceClient::handleRtcp(const uint8_t *packet, size_t len) {
 	}
 	const int pt = packet[1];
 	const int fmt = packet[0] & 0x1F;
-	if (pt != 206 || (fmt != 1 && fmt != 4)) {
-		return;
-	}
 	uint8_t iv[12];
 	memset(iv, 0, sizeof(iv));
 	memcpy(iv, packet + len - NONCE_SUFFIX_SIZE, NONCE_SUFFIX_SIZE);
 	const size_t cipherLen = len - 8 - NONCE_SUFFIX_SIZE - GCM_TAG_SIZE;
-	uint8_t plain[64];
+	uint8_t plain[256];
 	if (cipherLen > sizeof(plain)) {
 		return;
 	}
@@ -1147,7 +1145,22 @@ void VoiceClient::handleRtcp(const uint8_t *packet, size_t len) {
 	                             plain) != 0) {
 		return;
 	}
-	Utils::VideoSender::getInstance().requestKeyFrame();
+	// What the call says to us, for the log: the type, the format, who sent it and the first bytes of the body.
+	static int logged = 0;
+	if (logged < 24) {
+		logged++;
+		char hex[40];
+		const size_t n = std::min<size_t>(cipherLen, 12);
+		for (size_t i = 0; i < n; i++) {
+			snprintf(hex + i * 2, 3, "%02x", plain[i]);
+		}
+		const uint32_t from = ((uint32_t)packet[4] << 24) | ((uint32_t)packet[5] << 16) | ((uint32_t)packet[6] << 8) | packet[7];
+		Logger::log("[VideoTx] RTCP type %d format %d from ssrc %u, body %s", pt, fmt, (unsigned)from, hex);
+	}
+	// A picture loss indication (or full intra request): someone could not show a picture and wants a new key frame.
+	if (pt == 206 && (fmt == 1 || fmt == 4)) {
+		Utils::VideoSender::getInstance().requestKeyFrame();
+	}
 }
 
 void VoiceClient::sendRtp(uint8_t payloadType, uint32_t ssrcOut, uint16_t seq, uint32_t timestamp, bool marker,
@@ -1347,6 +1360,24 @@ void VoiceClient::pumpVideoOut() {
 }
 
 // Voice gateway op 12: tells Discord that we send video, and with which ssrc (or that we stopped).
+// Media sink wants: how good the pictures we want are (percent). Lower means a smaller picture and fewer frames, which is all a 3DS can
+// decode, and less still while it also encodes its own video.
+void VoiceClient::sendSinkWants(int quality) {
+	rapidjson::StringBuffer sink;
+	rapidjson::Writer<rapidjson::StringBuffer> sinkWriter(sink);
+	sinkWriter.StartObject();
+	sinkWriter.Key("op");
+	sinkWriter.Int(OP_MEDIA_SINK_WANTS);
+	sinkWriter.Key("d");
+	sinkWriter.StartObject();
+	sinkWriter.Key("any");
+	sinkWriter.Int(quality);
+	sinkWriter.EndObject();
+	sinkWriter.EndObject();
+	ws.send(sink.GetString());
+	Logger::log("[Video] Asked Discord for video quality %d%%", quality);
+}
+
 void VoiceClient::sendVideoSignal(bool on) {
 	rapidjson::StringBuffer s;
 	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
@@ -1410,6 +1441,7 @@ bool VoiceClient::setVideoSource(int source) {
 	}
 	if (source == 0) {
 		publishVoiceState();
+		sendSinkWants(VIDEO_QUALITY_WANTED);
 		return true;
 	}
 	if (state != VoiceState::ESTABLISHED || !gcm || udpSocket < 0 || !Config::getInstance().isVideoExperimental()) {
@@ -1423,6 +1455,7 @@ bool VoiceClient::setVideoSource(int source) {
 	videoClockStart = osGetTime();
 	videoSendSequence = 0;
 	videoFramesSent = 0;
+	sendSinkWants(VIDEO_QUALITY_WHILE_SENDING);
 	rtcpSeenWhileVideo = 0;
 	videoEncryptFails = 0;
 	videoPacketCount = 0;
@@ -1922,21 +1955,7 @@ void VoiceClient::handlePayload(const std::string &message) {
 		logMemory("established");
 		setState(VoiceState::ESTABLISHED);
 		if (Config::getInstance().isVideoExperimental()) {
-			// Media sink wants: how good the pictures we want are (percent). Lower means a smaller picture and fewer frames,
-			// which is all a 3DS can decode.
-			rapidjson::StringBuffer sink;
-			rapidjson::Writer<rapidjson::StringBuffer> sinkWriter(sink);
-			sinkWriter.StartObject();
-			sinkWriter.Key("op");
-			sinkWriter.Int(OP_MEDIA_SINK_WANTS);
-			sinkWriter.Key("d");
-			sinkWriter.StartObject();
-			sinkWriter.Key("any");
-			sinkWriter.Int(VIDEO_QUALITY_WANTED);
-			sinkWriter.EndObject();
-			sinkWriter.EndObject();
-			ws.send(sink.GetString());
-			Logger::log("[Video] Asked Discord for video quality %d%%", VIDEO_QUALITY_WANTED);
+			sendSinkWants(VIDEO_QUALITY_WANTED);
 		}
 		break;
 	}

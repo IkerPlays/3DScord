@@ -136,9 +136,9 @@ void VideoReceiver::submit(const std::string &userId, const uint8_t *data, size_
 	}
 	LightLock_Unlock(&s.lock);
 	if (start) {
-		// A lower priority than the encoder of your own video (which has to keep up with the camera): when both run on the extra core the
-		// decoder gives way.
-		s.thread.start([this] { run(); }, 6, 96 * 1024, true);
+		// The same priority as the encoder of your own video: a thread of a lower priority only runs when every higher one waits, so a
+		// lower one here left the decoder without processor time while the camera was on (the video of the others vanished).
+		s.thread.start([this] { run(); }, 3, 96 * 1024, true);
 	}
 	LightEvent_Signal(&s.wake);
 }

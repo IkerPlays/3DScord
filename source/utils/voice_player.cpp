@@ -9,6 +9,12 @@
 #include <opus.h>
 #include <vector>
 
+// minimp3 (CC0, https://github.com/lieff/minimp3): an MP3 decoder in one header.
+#define MINIMP3_IMPLEMENTATION
+#define MINIMP3_ONLY_MP3
+#define MINIMP3_NO_SIMD
+#include "minimp3.h"
+
 namespace Utils {
 
 namespace {
@@ -70,6 +76,120 @@ bool decodeOgg(const std::string &file, std::vector<int16_t> &pcm) {
 	}
 	opus_decoder_destroy(dec);
 	return !pcm.empty();
+}
+// Turns what was decoded (any number of channels, any rate) into mono, half the rate when it is high, so a few minutes fit in memory.
+void appendMono(std::vector<int16_t> &pcm, const int16_t *samples, int perChannel, int channels, int rate, std::vector<int> &pending,
+                int &outRate) {
+	const bool halve = rate >= 32000;
+	outRate = halve ? rate / 2 : rate;
+	for (int i = 0; i < perChannel; i++) {
+		int sum = 0;
+		for (int c = 0; c < channels; c++) {
+			sum += samples[i * channels + c];
+		}
+		const int mono = sum / std::max(1, channels);
+		if (!halve) {
+			pcm.push_back((int16_t)mono);
+		} else {
+			pending.push_back(mono);
+			if (pending.size() == 2) {
+				pcm.push_back((int16_t)((pending[0] + pending[1]) / 2));
+				pending.clear();
+			}
+		}
+	}
+}
+
+// MP3: an ID3 tag may come first; then the frames.
+bool decodeMp3(const std::string &file, std::vector<int16_t> &pcm, int &rate) {
+	const unsigned char *d = (const unsigned char *)file.data();
+	size_t pos = 0;
+	if (file.size() > 10 && memcmp(d, "ID3", 3) == 0) {
+		pos = 10 + (((size_t)d[6] & 0x7F) << 21 | ((size_t)d[7] & 0x7F) << 14 | ((size_t)d[8] & 0x7F) << 7 | ((size_t)d[9] & 0x7F));
+	}
+	mp3dec_t *dec = (mp3dec_t *)malloc(sizeof(mp3dec_t));
+	if (!dec) {
+		return false;
+	}
+	mp3dec_init(dec);
+	std::vector<int16_t> frame(MINIMP3_MAX_SAMPLES_PER_FRAME);
+	std::vector<int> pending;
+	rate = 0;
+	while (pos < file.size() && pcm.size() < MAX_SAMPLES) {
+		mp3dec_frame_info_t info;
+		const int samples = mp3dec_decode_frame(dec, d + pos, (int)(file.size() - pos), frame.data(), &info);
+		if (info.frame_bytes <= 0) {
+			break;
+		}
+		pos += (size_t)info.frame_bytes;
+		if (samples > 0 && info.channels > 0) {
+			int outRate = 0;
+			appendMono(pcm, frame.data(), samples, info.channels, info.hz, pending, outRate);
+			rate = outRate;
+		}
+	}
+	free(dec);
+	return !pcm.empty() && rate > 0;
+}
+
+// WAV: PCM of 8 or 16 bits.
+bool decodeWav(const std::string &file, std::vector<int16_t> &pcm, int &rate) {
+	const unsigned char *d = (const unsigned char *)file.data();
+	const size_t size = file.size();
+	if (size < 44 || memcmp(d, "RIFF", 4) != 0 || memcmp(d + 8, "WAVE", 4) != 0) {
+		return false;
+	}
+	auto le16 = [&](size_t p) { return (int)(d[p] | (d[p + 1] << 8)); };
+	auto le32 = [&](size_t p) { return (size_t)(d[p] | (d[p + 1] << 8) | (d[p + 2] << 16) | ((size_t)d[p + 3] << 24)); };
+	int channels = 0;
+	int bits = 0;
+	int format = 0;
+	int fileRate = 0;
+	size_t pos = 12;
+	while (pos + 8 <= size) {
+		const size_t len = le32(pos + 4);
+		const size_t body = pos + 8;
+		if (memcmp(d + pos, "fmt ", 4) == 0 && body + 16 <= size) {
+			format = le16(body);
+			channels = le16(body + 2);
+			fileRate = (int)le32(body + 4);
+			bits = le16(body + 14);
+		} else if (memcmp(d + pos, "data", 4) == 0) {
+			if (format != 1 || channels < 1 || (bits != 8 && bits != 16) || fileRate <= 0) {
+				return false;
+			}
+			const size_t end = std::min(size, body + len);
+			const size_t bytesPerFrame = (size_t)channels * (bits / 8);
+			std::vector<int16_t> chunk((size_t)channels * 1024);
+			std::vector<int> pending;
+			size_t at = body;
+			while (at + bytesPerFrame <= end && pcm.size() < MAX_SAMPLES) {
+				const int frames = (int)std::min<size_t>(1024, (end - at) / bytesPerFrame);
+				for (int i = 0; i < frames * channels; i++) {
+					chunk[i] = bits == 16 ? (int16_t)le16(at + (size_t)i * 2) : (int16_t)(((int)d[at + i] - 128) << 8);
+				}
+				int outRate = 0;
+				appendMono(pcm, chunk.data(), frames, channels, fileRate, pending, outRate);
+				rate = outRate;
+				at += (size_t)frames * bytesPerFrame;
+			}
+			return !pcm.empty();
+		}
+		pos = body + len + (len & 1);
+	}
+	return false;
+}
+
+// Picks the decoder by what the file starts with.
+bool decodeAudio(const std::string &file, std::vector<int16_t> &pcm, int &rate) {
+	if (file.size() >= 4 && memcmp(file.data(), "OggS", 4) == 0) {
+		rate = RATE;
+		return decodeOgg(file, pcm);
+	}
+	if (file.size() >= 12 && memcmp(file.data(), "RIFF", 4) == 0) {
+		return decodeWav(file, pcm, rate);
+	}
+	return decodeMp3(file, pcm, rate);
 }
 } // namespace
 
@@ -142,7 +262,8 @@ bool VoicePlayer::playOne(const Item &item) {
 	}
 	std::vector<int16_t> pcm;
 	pcm.reserve(RATE * 30);
-	const bool decoded = decodeOgg(resp.body, pcm);
+	int rate = RATE;
+	const bool decoded = decodeAudio(resp.body, pcm, rate);
 	std::string().swap(resp.body);
 	if (!decoded) {
 		setError("decode");
@@ -163,7 +284,7 @@ bool VoicePlayer::playOne(const Item &item) {
 
 	ndspChnReset(NDSP_VOICE_CHANNEL);
 	ndspChnSetInterp(NDSP_VOICE_CHANNEL, NDSP_INTERP_LINEAR);
-	ndspChnSetRate(NDSP_VOICE_CHANNEL, (float)RATE * item.speed);
+	ndspChnSetRate(NDSP_VOICE_CHANNEL, (float)rate * item.speed);
 	ndspChnSetFormat(NDSP_VOICE_CHANNEL, NDSP_FORMAT_MONO_PCM16);
 	float mix[12] = {};
 	mix[0] = 1.0f;

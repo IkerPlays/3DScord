@@ -85,7 +85,7 @@ bool VideoSender::start(Source source) {
 	}
 	ready = false;
 	active = true;
-	worker.start([this] { run(); }, 2, 128 * 1024, true); // the encoder keeps some big arrays on the stack
+	worker.start([this] { run(); }, 3, 128 * 1024, true); // the encoder keeps some big arrays on the stack
 	if (!worker.joinable()) {
 		active = false;
 		current = Source::OFF;
@@ -283,6 +283,7 @@ void VideoSender::run() {
 	int judgeFrames = 0;
 	double judgeMs = 0;
 	u64 lastLevelChange = osGetTime();
+	u64 lastKeyAt = 0;
 	while (!quit) {
 		if (camera) {
 			// The request for a frame stays open until the camera fills it; it is never abandoned (a second request while the first
@@ -368,7 +369,16 @@ void VideoSender::run() {
 			}
 		}
 
-		const bool forceKey = first || keyRequested.exchange(false);
+		// A key frame asked for by the others is made at most once a second: they can ask without end (every picture they cannot show),
+		// and a key frame costs several ordinary frames.
+		bool asked = keyRequested.exchange(false);
+		if (asked && osGetTime() - lastKeyAt < 1000) {
+			asked = false;
+		}
+		const bool forceKey = first || asked;
+		if (forceKey) {
+			lastKeyAt = osGetTime();
+		}
 		first = false;
 		const u64 t0 = svcGetSystemTick();
 		const unsigned char *coded = nullptr;
