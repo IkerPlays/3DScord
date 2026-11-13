@@ -167,7 +167,8 @@ class VoiceClient {
 	std::unordered_map<uint32_t, std::string> videoSsrcToUser;
 	void handleVideoPayload(uint32_t ssrc, uint16_t seq, bool lastOfFrame, const uint8_t *payload, size_t len);
 	void closeVideoCapture();
-	void maybeRequestKeyFrame(uint32_t mediaSsrc);
+	void maybeRequestKeyFrame(uint32_t mediaSsrc, bool force = false);
+	std::atomic<uint32_t> videoKeyAskSsrc{0}; // set when someone starts sending video: the media thread asks for a key frame at once
 	uint64_t videoKeyRequestAt = 0;
 	uint32_t videoKeyRequests = 0;
 	uint8_t *videoAssembly = nullptr;  // the frame being joined (Annex B)

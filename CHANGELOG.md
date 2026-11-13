@@ -8,6 +8,8 @@
   need, which left the video black); when the decoder falls behind it drops the oldest frame nothing refers to instead of emptying the queue
   and waiting for a key frame; frames are only drawn when no other is waiting; the call asks Discord for a lower video quality (40 %,
   smaller pictures) that a 3DS can decode in time; the log tells how the picture buffers were made.
+- **Video in calls starts faster:** a key frame is asked for as soon as Discord says someone started sending video, and again every 1.5 s while
+  no picture has come yet (before, it waited for the first whole frame; Discord sends a key frame only every ~25 s on its own).
 - **Video Rotation** and **Flip Video** (Settings > Voice): turn the picture of cameras, shared screens and videos in quarter turns and flip it, in case it
   comes out turned or upside down on your console.
 - **Fix (video in calls):** after a lost packet the picture is no longer frozen until the next key frame (every ~25 s): the decoder keeps going

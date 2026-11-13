@@ -668,12 +668,15 @@ void VoiceClient::closeVideoCapture() {
 
 // RTCP picture loss indication (RFC 4585): asks the sender for a new key frame. The first 8 bytes stay in the clear and are
 // authenticated; the rest is encrypted like the media (the "rtpsize" modes).
-void VoiceClient::maybeRequestKeyFrame(uint32_t mediaSsrc) {
-	if (!gcm || udpSocket < 0 || !Utils::VideoReceiver::getInstance().wantsKeyFrame()) {
+void VoiceClient::maybeRequestKeyFrame(uint32_t mediaSsrc, bool force) {
+	// Also while nothing has been decrypted yet: the picture cannot start without a key frame, and Discord sends one only every
+	// 25 seconds or so.
+	if (!gcm || udpSocket < 0 ||
+	    !(force || videoFramesOk == 0 || Utils::VideoReceiver::getInstance().wantsKeyFrame())) {
 		return;
 	}
 	const uint64_t now = osGetTime();
-	if (now < videoKeyRequestAt) {
+	if (!force && now < videoKeyRequestAt) {
 		return;
 	}
 	videoKeyRequestAt = now + 1500;
@@ -713,6 +716,9 @@ void VoiceClient::maybeRequestKeyFrame(uint32_t mediaSsrc) {
 // Joins the RTP packets of an H.264 frame (single NAL units, STAP-A and FU-A) into one Annex B frame, decrypts it with DAVE
 // hands it to the video receiver (decoded and shown in the call view) and saves the first part to recordings/video_in_*.264.
 void VoiceClient::handleVideoPayload(uint32_t ssrc, uint16_t seq, bool lastOfFrame, const uint8_t *payload, size_t len) {
+	if (const uint32_t ask = videoKeyAskSsrc.exchange(0)) {
+		maybeRequestKeyFrame(ask, true); // someone just started sending video
+	}
 	std::string userId;
 	{
 		std::shared_lock<std::shared_mutex> lock(ssrcMutex);
@@ -1567,6 +1573,7 @@ void VoiceClient::handlePayload(const std::string &message) {
 		if (videoSsrc != 0 && !userId.empty()) {
 			std::unique_lock<std::shared_mutex> lock(ssrcMutex);
 			videoSsrcToUser[videoSsrc] = userId;
+			videoKeyAskSsrc = videoSsrc;
 		}
 		break;
 	}
