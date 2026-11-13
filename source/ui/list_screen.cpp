@@ -556,7 +556,6 @@ void ListScreen::loadLocal() {
 		        {"archive", channelId, TR("list.archive_thread"), TR("list.tools.archive")},
 		        {"follow", channelId, TR("follow.title"), TR("list.tools.follow")},
 		        {"recordcall", channelId, TR("record.title"), TR("list.tools.record")},
-		        {"callcam", channelId, TR("callcam.title"), TR("list.tools.callcam")},
 		        {"soundboard", channelId, TR("soundboard.title"), TR("list.tools.soundboard")},
 		        {"voicemsg", channelId, TR("voice_msg.title"), TR("list.tools.voicemsg")},
 		        {"mvdtest", channelId, TR("mvdtest.title"), TR("list.tools.mvdtest")},
@@ -1565,22 +1564,6 @@ void ListScreen::primaryAction(const Entry &entry) {
 				sm.returnToPreviousScreen();
 			} else {
 				sm.showToast(TR("record.failed"));
-			}
-		} else if (entry.id == "callcam") {
-			auto &voice = Discord::VoiceClient::getInstance();
-			if (voice.getState() != Discord::VoiceState::ESTABLISHED) {
-				sm.showToast(TR("soundboard.need_call"));
-			} else if (voice.isCameraOn()) {
-				voice.setCamera(false);
-				sm.showToast(TR("callcam.off"));
-				sm.returnToPreviousScreen();
-			} else if (!Config::getInstance().isVideoExperimental()) {
-				sm.showToast(TR("callcam.need_video"));
-			} else if (voice.setCamera(true)) {
-				sm.showToast(TR("callcam.on"));
-				sm.returnToPreviousScreen();
-			} else {
-				sm.showToast(TR("callcam.failed"));
 			}
 		} else if (entry.id == "soundboard") {
 			if (Discord::VoiceClient::getInstance().getState() != Discord::VoiceState::ESTABLISHED) {

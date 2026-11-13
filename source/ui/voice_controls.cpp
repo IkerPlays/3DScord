@@ -1,4 +1,5 @@
 #include "ui/voice_controls.h"
+#include "core/config.h"
 #include "core/i18n.h"
 #include "discord/avatar_cache.h"
 #include "discord/discord_client.h"
@@ -83,7 +84,17 @@ void draw(float x, float y) {
 	const float step = BUTTON_SIZE + BUTTON_GAP;
 	drawButton(x + step, y, micIcon, muted || serverMuted);
 	drawButton(x + step * 2.0f, y, deafIcon, deafened || serverDeafened);
-	drawButton(x + step * 3.0f, y, "romfs:/discord-icons/phone-hangup.png", false);
+	// Your camera in the call (experimental): a little camera, green while it is on.
+	{
+		const float cx = x + step * 3.0f;
+		drawRoundedRect(cx, y, 0.54f, BUTTON_SIZE, BUTTON_SIZE, 8.0f, ScreenManager::colorBackgroundLight());
+		const u32 color = voice.isCameraOn() ? ScreenManager::colorSuccess() : ScreenManager::colorText();
+		C2D_DrawRectSolid(cx + 6.0f, y + 9.0f, 0.55f, 14.0f, 12.0f, color);
+		C2D_DrawRectSolid(cx + 8.0f, y + 11.0f, 0.56f, 10.0f, 8.0f, ScreenManager::colorBackgroundLight());
+		C2D_DrawRectSolid(cx + 12.0f, y + 13.0f, 0.57f, 2.0f, 4.0f, color);
+		C2D_DrawTriangle(cx + 23.0f, y + 11.0f, color, cx + 23.0f, y + 19.0f, color, cx + 19.0f, y + 15.0f, color, 0.55f);
+	}
+	drawButton(x + step * 4.0f, y, "romfs:/discord-icons/phone-hangup.png", false);
 }
 
 bool handleTouch(const touchPosition &touch, float x, float y) {
@@ -115,6 +126,21 @@ bool handleTouch(const touchPosition &touch, float x, float y) {
 	}
 
 	if (inButton(touch, x + step * 3.0f, y)) {
+		auto &sm = ScreenManager::getInstance();
+		if (voice.isCameraOn()) {
+			voice.setCamera(false);
+			sm.showToast(TR("callcam.off"));
+		} else if (!Config::getInstance().isVideoExperimental()) {
+			sm.showToast(TR("callcam.need_video"));
+		} else if (voice.setCamera(true)) {
+			sm.showToast(TR("callcam.on"));
+		} else {
+			sm.showToast(TR("callcam.failed"));
+		}
+		return true;
+	}
+
+	if (inButton(touch, x + step * 4.0f, y)) {
 		voice.disconnect();
 		return true;
 	}

@@ -12,7 +12,7 @@ namespace VoiceControls {
 
 constexpr float BUTTON_SIZE = 30.0f;
 constexpr float BUTTON_GAP = 8.0f;
-constexpr float WIDTH = BUTTON_SIZE * 4.0f + BUTTON_GAP * 3.0f;
+constexpr float WIDTH = BUTTON_SIZE * 5.0f + BUTTON_GAP * 4.0f;
 
 bool visible();
 
