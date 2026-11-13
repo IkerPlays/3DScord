@@ -1,6 +1,7 @@
 #include "ui/camera_screen.h"
 #include "utils/video_receiver.h"
 #include "utils/video_sender.h"
+#include "utils/camera_probe.h"
 #include "core/config.h"
 #include "core/i18n.h"
 #include "discord/discord_client.h"
@@ -84,7 +85,7 @@ bool CameraScreen::startCamera() {
 		camExit();
 		return false;
 	}
-	const u32 select = inner ? SELECT_IN1 : SELECT_OUT1;
+	const u32 select = inner ? SELECT_IN1 : Utils::CameraProbe::outerCamera();
 	bool ok = R_SUCCEEDED(CAMU_SetSize(select, SIZE_CTR_TOP_LCD, CONTEXT_A));
 	ok = ok && R_SUCCEEDED(CAMU_SetOutputFormat(select, OUTPUT_RGB_565, CONTEXT_A));
 	ok = ok && R_SUCCEEDED(CAMU_SetNoiseFilter(select, true));

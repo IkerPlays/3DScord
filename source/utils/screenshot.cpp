@@ -1,4 +1,5 @@
 #include "utils/screenshot.h"
+#include "utils/camera_probe.h"
 #include "core/config.h"
 #include "core/i18n.h"
 #include "log.h"
@@ -200,19 +201,20 @@ std::string takePhoto() {
 		return "";
 	}
 	std::string result;
+	const u32 outer = CameraProbe::outerCamera();
 	u32 maxBytes = 0;
 	std::vector<uint8_t> frame;
 	u16 *buf = (u16 *)malloc((size_t)W * H * 2);
 	bool ok = buf != nullptr;
-	ok = ok && R_SUCCEEDED(CAMU_SetSize(SELECT_OUT1, SIZE_CTR_TOP_LCD, CONTEXT_A));
-	ok = ok && R_SUCCEEDED(CAMU_SetOutputFormat(SELECT_OUT1, OUTPUT_RGB_565, CONTEXT_A));
-	ok = ok && R_SUCCEEDED(CAMU_SetNoiseFilter(SELECT_OUT1, true));
-	ok = ok && R_SUCCEEDED(CAMU_SetAutoExposure(SELECT_OUT1, true));
-	ok = ok && R_SUCCEEDED(CAMU_SetAutoWhiteBalance(SELECT_OUT1, true));
+	ok = ok && R_SUCCEEDED(CAMU_SetSize(outer, SIZE_CTR_TOP_LCD, CONTEXT_A));
+	ok = ok && R_SUCCEEDED(CAMU_SetOutputFormat(outer, OUTPUT_RGB_565, CONTEXT_A));
+	ok = ok && R_SUCCEEDED(CAMU_SetNoiseFilter(outer, true));
+	ok = ok && R_SUCCEEDED(CAMU_SetAutoExposure(outer, true));
+	ok = ok && R_SUCCEEDED(CAMU_SetAutoWhiteBalance(outer, true));
 	ok = ok && R_SUCCEEDED(CAMU_SetTrimming(PORT_CAM1, false));
 	ok = ok && R_SUCCEEDED(CAMU_GetMaxBytes(&maxBytes, W, H));
 	ok = ok && R_SUCCEEDED(CAMU_SetTransferBytes(PORT_CAM1, maxBytes, W, H));
-	ok = ok && R_SUCCEEDED(CAMU_Activate(SELECT_OUT1));
+	ok = ok && R_SUCCEEDED(CAMU_Activate(outer));
 	if (ok) {
 		CAMU_ClearBuffer(PORT_CAM1);
 		CAMU_StartCapture(PORT_CAM1);

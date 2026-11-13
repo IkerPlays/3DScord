@@ -3,6 +3,7 @@
 #include "core/i18n.h"
 #include "log.h"
 #include "utils/redraw.h"
+#include "utils/camera_probe.h"
 #include <3ds.h>
 #include <cstdlib>
 #include <ctime>
@@ -50,16 +51,17 @@ bool VideoTestScreen::startCamera() {
 		camExit();
 		return false;
 	}
-	bool ok = R_SUCCEEDED(CAMU_SetSize(SELECT_OUT1, SIZE_QCIF, CONTEXT_A));
-	ok = ok && R_SUCCEEDED(CAMU_SetOutputFormat(SELECT_OUT1, OUTPUT_YUV_422, CONTEXT_A));
-	ok = ok && R_SUCCEEDED(CAMU_SetFrameRate(SELECT_OUT1, FRAME_RATE_15));
-	ok = ok && R_SUCCEEDED(CAMU_SetNoiseFilter(SELECT_OUT1, true));
-	ok = ok && R_SUCCEEDED(CAMU_SetAutoExposure(SELECT_OUT1, true));
-	ok = ok && R_SUCCEEDED(CAMU_SetAutoWhiteBalance(SELECT_OUT1, true));
+	const u32 outer = Utils::CameraProbe::outerCamera();
+	bool ok = R_SUCCEEDED(CAMU_SetSize(outer, SIZE_QCIF, CONTEXT_A));
+	ok = ok && R_SUCCEEDED(CAMU_SetOutputFormat(outer, OUTPUT_YUV_422, CONTEXT_A));
+	ok = ok && R_SUCCEEDED(CAMU_SetFrameRate(outer, FRAME_RATE_15));
+	ok = ok && R_SUCCEEDED(CAMU_SetNoiseFilter(outer, true));
+	ok = ok && R_SUCCEEDED(CAMU_SetAutoExposure(outer, true));
+	ok = ok && R_SUCCEEDED(CAMU_SetAutoWhiteBalance(outer, true));
 	ok = ok && R_SUCCEEDED(CAMU_SetTrimming(PORT_CAM1, false));
 	ok = ok && R_SUCCEEDED(CAMU_GetMaxBytes(&maxBytes, W, H));
 	ok = ok && R_SUCCEEDED(CAMU_SetTransferBytes(PORT_CAM1, maxBytes, W, H));
-	ok = ok && R_SUCCEEDED(CAMU_Activate(SELECT_OUT1));
+	ok = ok && R_SUCCEEDED(CAMU_Activate(outer));
 	if (!ok) {
 		CAMU_Activate(SELECT_NONE);
 		camExit();

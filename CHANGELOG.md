@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- **Fix (camera black, photos black):** the outer camera is picked by trying both selectors (right and left) and keeping the one that gives a picture. A
+  New 2DS XL has a single outer camera, and asking for the other selector gives black frames without an error. The log (`[Camera]`) tells which one
+  answered and how many pixels were lit.
 - **Video of the others always upright:** the picture comes out right without settings (it needed half a turn and a flip, i.e. a sideways mirror), so
   **Video Rotation** and **Flip Video** are gone from Settings > Voice.
 - **Share your screen** (experimental): the camera button next to the microphone now cycles nothing > camera > top screen > nothing. The top
