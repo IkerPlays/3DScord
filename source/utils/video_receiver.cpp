@@ -241,8 +241,16 @@ void VideoReceiver::convert(const uint8_t *py0, const uint8_t *pu0, const uint8_
 		if (s.ready) {
 			linearFree(s.ready);
 		}
-		s.front = (u16 *)linearAlloc((size_t)w * h * 2);
-		s.ready = (u16 *)linearAlloc((size_t)w * h * 2);
+		// Rows are as wide as the texture: the display transfer lays the 8x8 tiles out by the width of its input, so an input
+		// narrower than the texture would come out sheared.
+		s.front = (u16 *)linearAlloc((size_t)TEX_W * h * 2);
+		s.ready = (u16 *)linearAlloc((size_t)TEX_W * h * 2);
+		if (s.front) {
+			memset(s.front, 0, (size_t)TEX_W * h * 2);
+		}
+		if (s.ready) {
+			memset(s.ready, 0, (size_t)TEX_W * h * 2);
+		}
 		s.readyW = w;
 		s.readyH = h;
 		LightLock_Unlock(&s.lock);
@@ -254,7 +262,7 @@ void VideoReceiver::convert(const uint8_t *py0, const uint8_t *pu0, const uint8_
 		const uint8_t *py = py0 + (size_t)(y * div) * strideY;
 		const uint8_t *pu = pu0 + (size_t)(y * div / 2) * strideUV;
 		const uint8_t *pv = pv0 + (size_t)(y * div / 2) * strideUV;
-		u16 *dst = s.front + (size_t)y * w;
+		u16 *dst = s.front + (size_t)y * TEX_W;
 		for (int x = 0; x < w; x++) {
 			const int c = py[x * div] - 16;
 			const int d = pu[x * div / 2] - 128;
@@ -302,8 +310,8 @@ void VideoReceiver::update() {
 	if (textureReady) {
 		picW = s.readyW;
 		picH = s.readyH;
-		GSPGPU_FlushDataCache(s.ready, (u32)picW * picH * 2);
-		C3D_SyncDisplayTransfer((u32 *)s.ready, GX_BUFFER_DIM(picW, picH), (u32 *)texture.data, GX_BUFFER_DIM(TEX_W, TEX_H),
+		GSPGPU_FlushDataCache(s.ready, (u32)TEX_W * picH * 2);
+		C3D_SyncDisplayTransfer((u32 *)s.ready, GX_BUFFER_DIM(TEX_W, picH), (u32 *)texture.data, GX_BUFFER_DIM(TEX_W, TEX_H),
 		                        (GX_TRANSFER_FLIP_VERT(1) | GX_TRANSFER_OUT_TILED(1) | GX_TRANSFER_RAW_COPY(0) |
 		                         GX_TRANSFER_IN_FORMAT(GX_TRANSFER_FMT_RGB565) |
 		                         GX_TRANSFER_OUT_FORMAT(GX_TRANSFER_FMT_RGB565) |

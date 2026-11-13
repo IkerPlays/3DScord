@@ -75,9 +75,9 @@ void* WelsMalloc (const uint32_t kuiSize, const char* kpTag, const uint32_t kiAl
   const uint32_t kiActualRequestedSize   = kiTrialRequestedSize;
   const uint32_t kiPayloadSize          = kuiSize;
 
+  bool bLinear = false;
 #ifdef __3DS__
   // Big buffers (pictures) go to the linear heap while it has plenty of room left for textures; the rest uses the normal heap.
-  bool bLinear = false;
   uint8_t* pBuf = (kiActualRequestedSize >= 32768 && linearSpaceFree() > kiActualRequestedSize + 8u * 1024 * 1024) ?
                  (uint8_t*) linearAlloc (kiActualRequestedSize) : NULL;
   if (pBuf != NULL)

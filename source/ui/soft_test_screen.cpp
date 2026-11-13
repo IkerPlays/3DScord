@@ -137,7 +137,10 @@ void SoftTestScreen::show(const Utils::SoftDecoder::Picture &pic) {
 		if (picture) {
 			linearFree(picture);
 		}
-		picture = (u16 *)linearAlloc((size_t)w * h * 2);
+		picture = (u16 *)linearAlloc((size_t)TEX_W * h * 2);
+		if (picture) {
+			memset(picture, 0, (size_t)TEX_W * h * 2);
+		}
 		picW = w;
 		picH = h;
 		if (!picture) {
@@ -154,7 +157,7 @@ void SoftTestScreen::show(const Utils::SoftDecoder::Picture &pic) {
 		const uint8_t *py = pic.y + (size_t)(y * 2) * pic.strideY;
 		const uint8_t *pu = pic.u + (size_t)y * pic.strideUV;
 		const uint8_t *pv = pic.v + (size_t)y * pic.strideUV;
-		u16 *dst = picture + (size_t)y * w;
+		u16 *dst = picture + (size_t)y * TEX_W;
 		for (int x = 0; x < w; x++) {
 			const int c = py[x * 2] - 16;
 			const int d = pu[x] - 128;
@@ -166,8 +169,8 @@ void SoftTestScreen::show(const Utils::SoftDecoder::Picture &pic) {
 		}
 	}
 	if (textureReady) {
-		GSPGPU_FlushDataCache(picture, (u32)w * h * 2);
-		C3D_SyncDisplayTransfer((u32 *)picture, GX_BUFFER_DIM(w, h), (u32 *)texture.data, GX_BUFFER_DIM(TEX_W, TEX_H),
+		GSPGPU_FlushDataCache(picture, (u32)TEX_W * h * 2);
+		C3D_SyncDisplayTransfer((u32 *)picture, GX_BUFFER_DIM(TEX_W, h), (u32 *)texture.data, GX_BUFFER_DIM(TEX_W, TEX_H),
 		                        (GX_TRANSFER_FLIP_VERT(1) | GX_TRANSFER_OUT_TILED(1) | GX_TRANSFER_RAW_COPY(0) |
 		                         GX_TRANSFER_IN_FORMAT(GX_TRANSFER_FMT_RGB565) |
 		                         GX_TRANSFER_OUT_FORMAT(GX_TRANSFER_FMT_RGB565) |

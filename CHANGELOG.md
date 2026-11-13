@@ -4,6 +4,10 @@
 - **Full call view redesigned like Discord:** dark background, big rounded tiles with the avatar in the middle, a green border while someone
   speaks and the muted icons at the bottom; one person fills the screen, two sit side by side, more make a grid. When someone shares their
   screen it takes the left side and everyone else is stacked on the right. A camera shows inside its person's tile.
+- **Fix (video in calls, the noise):** the picture was uploaded to the texture with rows narrower than the texture, and the display transfer
+  lays its 8x8 tiles out by the width of its input, so the picture came out sheared into stripes. The rows are now as wide as the texture (this
+  also fixes the Software Decoder Test and the video player). The full call view and the video view now draw above the chat, which showed
+  through. Checked on a computer: the decoder compiled for ARM (armv6k, -O3) gives exactly the pictures of ffmpeg.
 - **Fix (video in calls):** the software decoder gave memory taken from the linear heap back to the wrong allocator when the picture size
   changed (Discord lowers the resolution during a call), which could corrupt memory and turn the picture into noise. Checked on a computer:
   the decoder gives exactly the same pictures as ffmpeg on a real call stream, including the size change.

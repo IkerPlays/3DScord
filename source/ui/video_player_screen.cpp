@@ -206,8 +206,15 @@ void VideoPlayerScreen::convert(const uint8_t *py0, const uint8_t *pu0, const ui
 		if (ready) {
 			linearFree(ready);
 		}
-		front = (u16 *)linearAlloc((size_t)w * h * 2);
-		ready = (u16 *)linearAlloc((size_t)w * h * 2);
+		// Rows as wide as the texture, or the display transfer shears the picture.
+		front = (u16 *)linearAlloc((size_t)TEX_W * h * 2);
+		ready = (u16 *)linearAlloc((size_t)TEX_W * h * 2);
+		if (front) {
+			memset(front, 0, (size_t)TEX_W * h * 2);
+		}
+		if (ready) {
+			memset(ready, 0, (size_t)TEX_W * h * 2);
+		}
 		readyW = w;
 		readyH = h;
 		LightLock_Unlock(&lock);
@@ -219,7 +226,7 @@ void VideoPlayerScreen::convert(const uint8_t *py0, const uint8_t *pu0, const ui
 		const uint8_t *py = py0 + (size_t)(y * div) * strideY;
 		const uint8_t *pu = pu0 + (size_t)(y * div / 2) * strideUV;
 		const uint8_t *pv = pv0 + (size_t)(y * div / 2) * strideUV;
-		u16 *dst = front + (size_t)y * w;
+		u16 *dst = front + (size_t)y * TEX_W;
 		for (int x = 0; x < w; x++) {
 			const int c = py[x * div] - 16;
 			const int d = pu[x * div / 2] - 128;
@@ -271,8 +278,8 @@ void VideoPlayerScreen::update() {
 		if (textureReady) {
 			picW = readyW;
 			picH = readyH;
-			GSPGPU_FlushDataCache(ready, (u32)picW * picH * 2);
-			C3D_SyncDisplayTransfer((u32 *)ready, GX_BUFFER_DIM(picW, picH), (u32 *)texture.data,
+			GSPGPU_FlushDataCache(ready, (u32)TEX_W * picH * 2);
+			C3D_SyncDisplayTransfer((u32 *)ready, GX_BUFFER_DIM(TEX_W, picH), (u32 *)texture.data,
 			                        GX_BUFFER_DIM(TEX_W, TEX_H),
 			                        (GX_TRANSFER_FLIP_VERT(1) | GX_TRANSFER_OUT_TILED(1) | GX_TRANSFER_RAW_COPY(0) |
 			                         GX_TRANSFER_IN_FORMAT(GX_TRANSFER_FMT_RGB565) |

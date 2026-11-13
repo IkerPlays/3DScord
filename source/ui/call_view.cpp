@@ -17,6 +17,8 @@ namespace CallView {
 namespace {
 
 Mode currentMode = Mode::COMPACT;
+// Added to every depth while the full view is drawn, so it covers whatever the chat drew (its items reach about 0.6).
+float zOff = 0.0f;
 std::string lastSpeaker;
 u64 lastSpokeAt = 0;
 
@@ -25,15 +27,15 @@ const u32 RED = C2D_Color32(237, 66, 69, 255);
 
 void drawAvatar(const Discord::VoiceParticipant &p, float x, float y, float size, bool speaking) {
 	if (speaking) {
-		drawCircle(x + size / 2.0f, y + size / 2.0f, 0.5f, size / 2.0f + 3.0f, GREEN);
+		drawCircle(x + size / 2.0f, y + size / 2.0f, 0.5f + zOff, size / 2.0f + 3.0f, GREEN);
 	}
 	C3D_Tex *avatar = Discord::AvatarCache::getInstance().getAvatar(p.userId, p.avatar, "0");
 	if (avatar) {
 		Tex3DS_SubTexture sub = {(u16)avatar->width, (u16)avatar->height, 0.0f, 1.0f, 1.0f, 0.0f};
 		C2D_Image img = {avatar, &sub};
-		C2D_DrawImageAt(img, x, y, 0.52f, nullptr, size / avatar->width, size / avatar->height);
+		C2D_DrawImageAt(img, x, y, 0.52f + zOff, nullptr, size / avatar->width, size / avatar->height);
 	} else {
-		drawRoundedRect(x, y, 0.52f, size, size, 6.0f, ScreenManager::colorBackgroundLight());
+		drawRoundedRect(x, y, 0.52f + zOff, size, size, 6.0f, ScreenManager::colorBackgroundLight());
 	}
 }
 
@@ -46,7 +48,7 @@ void drawStateIcon(const char *path, float x, float y, float size, u32 color) {
 	C2D_Image img = {tex, &sub};
 	C2D_ImageTint tint;
 	C2D_PlainImageTint(&tint, color, 1.0f);
-	C2D_DrawImageAt(img, x, y, 0.56f, &tint, size / tex->width, size / tex->height);
+	C2D_DrawImageAt(img, x, y, 0.56f + zOff, &tint, size / tex->width, size / tex->height);
 }
 
 std::string clock(int seconds) {
@@ -141,15 +143,15 @@ void drawTile(const Discord::VoiceParticipant &p, Discord::VoiceClient &voice, f
 	const bool speaking = voice.isSpeaking(p.userId);
 	const float border = speaking ? 3.0f : 0.0f;
 	if (speaking) {
-		drawRoundedRect(x, y, 0.5f, w, h, 10.0f, GREEN);
+		drawRoundedRect(x, y, 0.5f + zOff, w, h, 10.0f, GREEN);
 	}
-	drawRoundedRect(x + border, y + border, 0.51f, w - 2 * border, h - 2 * border, 8.0f, ScreenManager::colorBackground());
+	drawRoundedRect(x + border, y + border, 0.51f + zOff, w - 2 * border, h - 2 * border, 8.0f, ScreenManager::colorBackground());
 
 	Utils::VideoReceiver &rx = Utils::VideoReceiver::getInstance();
 	if (showCamera && rx.isLive() && rx.userId() == p.userId) {
-		C2D_DrawRectSolid(x + border + 2.0f, y + border + 2.0f, 0.515f, w - 2 * border - 4.0f, h - 2 * border - 4.0f,
+		C2D_DrawRectSolid(x + border + 2.0f, y + border + 2.0f, 0.515f + zOff, w - 2 * border - 4.0f, h - 2 * border - 4.0f,
 		                  C2D_Color32(0, 0, 0, 255));
-		rx.draw(x + border + 2.0f, y + border + 2.0f, 0.52f, w - 2 * border - 4.0f, h - 2 * border - 4.0f);
+		rx.draw(x + border + 2.0f, y + border + 2.0f, 0.52f + zOff, w - 2 * border - 4.0f, h - 2 * border - 4.0f);
 	} else {
 		const float size = std::max(22.0f, std::min(56.0f, std::min(w, h) * 0.42f));
 		drawAvatar(p, x + (w - size) / 2.0f, y + (h - size) / 2.0f - 6.0f, size, false);
@@ -157,8 +159,8 @@ void drawTile(const Discord::VoiceParticipant &p, Discord::VoiceClient &voice, f
 
 	// Name, bottom left, on a dark label.
 	const float labelW = std::min(w - 12.0f, 120.0f);
-	drawRoundedRect(x + 6.0f, y + h - 20.0f, 0.55f, labelW, 14.0f, 5.0f, C2D_Color32(0, 0, 0, 150));
-	drawRichText(x + 10.0f, y + h - 19.0f, 0.56f, 0.38f, 0.38f, ScreenManager::colorText(),
+	drawRoundedRect(x + 6.0f, y + h - 20.0f, 0.55f + zOff, labelW, 14.0f, 5.0f, C2D_Color32(0, 0, 0, 150));
+	drawRichText(x + 10.0f, y + h - 19.0f, 0.56f + zOff, 0.38f, 0.38f, ScreenManager::colorText(),
 	             getTruncatedRichText(p.name, labelW - 8.0f, 0.38f, 0.38f));
 
 	const bool muted = p.mute || p.selfMute;
@@ -178,7 +180,8 @@ void drawTile(const Discord::VoiceParticipant &p, Discord::VoiceClient &voice, f
 // Everyone as big tiles. Alone: one tile; two: side by side; more: a grid. When someone shares their screen it takes the left
 // side and everyone else is stacked on the right.
 void drawFull(const std::vector<Discord::VoiceParticipant> &people, Discord::VoiceClient &voice) {
-	C2D_DrawRectSolid(0, 0, 0.45f, 400, 240, ScreenManager::colorBackgroundDark());
+	zOff = 0.4f;
+	C2D_DrawRectSolid(0, 0, 0.45f + zOff, 400, 240, ScreenManager::colorBackgroundDark());
 
 	constexpr float margin = 6.0f;
 	constexpr float gap = 6.0f;
@@ -201,8 +204,8 @@ void drawFull(const std::vector<Discord::VoiceParticipant> &people, Discord::Voi
 	if (sharer) {
 		const float sideW = 104.0f;
 		const float mainW = areaW - sideW - gap;
-		C2D_DrawRectSolid(areaX, areaY, 0.5f, mainW, areaH, C2D_Color32(0, 0, 0, 255));
-		rx.draw(areaX, areaY, 0.52f, mainW, areaH);
+		C2D_DrawRectSolid(areaX, areaY, 0.5f + zOff, mainW, areaH, C2D_Color32(0, 0, 0, 255));
+		rx.draw(areaX, areaY, 0.52f + zOff, mainW, areaH);
 		shownCamera = true;
 		const int maxSide = 4;
 		const int count = std::min<int>((int)people.size(), maxSide);
@@ -211,7 +214,7 @@ void drawFull(const std::vector<Discord::VoiceParticipant> &people, Discord::Voi
 			drawTile(people[i], voice, areaX + mainW + gap, areaY + i * (tileH + gap), sideW, tileH, false);
 		}
 		if ((int)people.size() > maxSide) {
-			drawText(areaX + 4.0f, 226.0f, 0.56f, 0.36f, 0.36f, ScreenManager::colorTextMuted(),
+			drawText(areaX + 4.0f, 226.0f, 0.56f + zOff, 0.36f, 0.36f, ScreenManager::colorTextMuted(),
 			         "+" + std::to_string((int)people.size() - maxSide));
 		}
 	} else {
@@ -228,7 +231,7 @@ void drawFull(const std::vector<Discord::VoiceParticipant> &people, Discord::Voi
 			shownCamera = shownCamera || (rx.isLive() && rx.userId() == people[i].userId);
 		}
 		if (n > shown) {
-			drawText(areaX + 4.0f, 226.0f, 0.56f, 0.36f, 0.36f, ScreenManager::colorTextMuted(),
+			drawText(areaX + 4.0f, 226.0f, 0.56f + zOff, 0.36f, 0.36f, ScreenManager::colorTextMuted(),
 			         "+" + std::to_string(n - shown));
 		}
 	}
@@ -238,14 +241,15 @@ void drawFull(const std::vector<Discord::VoiceParticipant> &people, Discord::Voi
 	snprintf(stats, sizeof(stats), "%s   %s %u   %s %u   %s %u", clock(voice.connectedSeconds()).c_str(),
 	         TR("call.stat_received").c_str(), (unsigned)voice.statPacketsDecoded(), TR("call.stat_sent").c_str(),
 	         (unsigned)voice.statPacketsSent(), TR("call.stat_failed").c_str(), (unsigned)voice.statDecryptFailures());
-	drawText(margin + 24.0f, 226.0f, 0.56f, 0.34f, 0.34f, ScreenManager::colorTextMuted(), stats);
+	drawText(margin + 24.0f, 226.0f, 0.56f + zOff, 0.34f, 0.34f, ScreenManager::colorTextMuted(), stats);
 	(void)shownCamera;
+	zOff = 0.0f;
 }
 
 void drawVideo(Discord::VoiceClient &voice) {
-	C2D_DrawRectSolid(0, 0, 0.45f, 400, 240, C2D_Color32(0, 0, 0, 255));
-	Utils::VideoReceiver::getInstance().draw(0, 0, 0.5f, 400, 240);
-	drawText(6.0f, 4.0f, 0.56f, 0.4f, 0.4f, ScreenManager::colorText(), clock(voice.connectedSeconds()));
+	C2D_DrawRectSolid(0, 0, 0.85f, 400, 240, C2D_Color32(0, 0, 0, 255));
+	Utils::VideoReceiver::getInstance().draw(0, 0, 0.9f, 400, 240);
+	drawText(6.0f, 4.0f, 0.96f, 0.4f, 0.4f, ScreenManager::colorText(), clock(voice.connectedSeconds()));
 }
 
 } // namespace
