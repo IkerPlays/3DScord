@@ -58,6 +58,7 @@ struct VideoReceiver::Impl {
 	u64 lastPicture = 0;
 	uint32_t decoded = 0;
 	uint32_t dropped = 0;
+	u64 lastFrameAt = 0;
 	uint32_t lostFrames = 0;
 	uint32_t errors = 0;
 	double msTotal = 0;
@@ -78,10 +79,19 @@ void VideoReceiver::submit(const std::string &userId, const uint8_t *data, size_
 		s.owner = userId;
 		Logger::log("[VideoRx] Following the video of %s", userId.c_str());
 	}
+	const u64 now = osGetTime();
 	if (s.owner != userId) {
-		LightLock_Unlock(&s.lock);
-		return;
+		// The person followed stopped sending: follow this one instead.
+		if (now - s.lastFrameAt < 4000) {
+			LightLock_Unlock(&s.lock);
+			return;
+		}
+		Logger::log("[VideoRx] %s stopped; following %s", s.owner.c_str(), userId.c_str());
+		s.owner = userId;
+		s.count = 0;
+		s.needKey = true;
 	}
+	s.lastFrameAt = now;
 	if (s.count == SLOTS) {
 		// The decoder cannot keep up: start again at the next key frame.
 		s.count = 0;

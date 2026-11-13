@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- **Video in calls follows whoever is sending:** if the person shown stops their camera or screen for 4 seconds, the next one who sends is shown.
 
 ## 0.14.0
 Cameras and shared screens in calls, and videos in chats, now play: the console decodes H.264 in software (openh264). Both are experimental.
