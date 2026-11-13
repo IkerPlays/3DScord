@@ -27,8 +27,11 @@ class VideoSender {
 	void stop();
 	bool running() const { return active.load(); }
 	Source source() const { return current; }
-	int width() const { return current == Source::SCREEN ? 208 : 176; }
-	int height() const { return current == Source::SCREEN ? 128 : 144; }
+	// The size of the picture being sent (it goes down by itself when the encoder cannot keep up, and up again when it has room).
+	int width() const { return curW.load(); }
+	int height() const { return curH.load(); }
+	// True once after the size changed, so the call tells Discord.
+	bool takeResolutionChange() { return resChanged.exchange(false); }
 	int fps() const { return current == Source::SCREEN ? 8 : 10; }
 
 	// Media thread: the oldest coded frame (Annex B, with SPS and PPS when it is a key frame).
@@ -61,6 +64,9 @@ class VideoSender {
 	std::atomic<bool> active{false};
 	std::atomic<bool> quit{false};
 	std::atomic<bool> keyRequested{false};
+	std::atomic<int> curW{176};
+	std::atomic<int> curH{144};
+	std::atomic<bool> resChanged{false};
 	std::atomic<int> statFpsNow{0};
 	std::atomic<int> statMsNow{0};
 	std::atomic<int> keyAsks{0};

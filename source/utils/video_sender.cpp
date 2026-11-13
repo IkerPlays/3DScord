@@ -13,7 +13,7 @@ constexpr int TARGET_KBPS_SCREEN = 350;
 constexpr size_t MAX_QUEUED = 4;
 double ticksToMs(u64 ticks) { return (double)ticks * 1000.0 / (double)SYSCLOCK_ARM11; }
 
-// The top screen (400x240), reduced by half, as planar YUV 4:2:0 of W x H (the picture is clamped at the edges when W x H is bigger).
+// The top screen (400x240), reduced to W x H, as planar YUV 4:2:0 (each pixel is the average of 2x2 pixels of the screen).
 // The framebuffer is stored rotated: column by column, bottom to top, three bytes (B, G, R) per pixel.
 bool screenToYuv(int W, int H, std::vector<uint8_t> &yPlane, std::vector<uint8_t> &uPlane, std::vector<uint8_t> &vPlane) {
 	u16 fbW = 0, fbH = 0;
@@ -39,7 +39,7 @@ bool screenToYuv(int W, int H, std::vector<uint8_t> &yPlane, std::vector<uint8_t
 					int r = 0, g = 0, b = 0;
 					for (int k = 0; k < 4; k++) {
 						int pr, pg, pb;
-						pixel((x + dx) * 2 + (k & 1), (y + dy) * 2 + (k >> 1), pr, pg, pb);
+						pixel((x + dx) * 400 / W + (k & 1), (y + dy) * 240 / H + (k >> 1), pr, pg, pb);
 						r += pr;
 						g += pg;
 						b += pb;
@@ -70,6 +70,9 @@ bool VideoSender::start(Source source) {
 		return active.load();
 	}
 	current = source;
+	curW = source == Source::SCREEN ? 208 : 176;
+	curH = source == Source::SCREEN ? 128 : 144;
+	resChanged = false;
 	quit = false;
 	keyRequested = true;
 	statFpsNow = 0;
@@ -150,29 +153,67 @@ void VideoSender::releasePreview() {
 	shownVersion = 0;
 }
 
+namespace {
+struct Level {
+	int w;
+	int h;
+};
+// The sizes tried, from the best to the lightest (all multiples of 16 in width and height or at least of 16 for the encoder).
+const Level CAMERA_LEVELS[3] = {{176, 144}, {128, 96}, {96, 80}};
+const Level SCREEN_LEVELS[3] = {{208, 128}, {160, 96}, {112, 64}};
+constexpr int CAM_W = 176; // what the camera gives
+constexpr int CAM_H = 144;
+
+// Reduces planar YUV 4:2:0 (srcW x srcH) to dstW x dstH by taking the nearest pixel.
+void scalePlanes(const std::vector<uint8_t> &sy, const std::vector<uint8_t> &su, const std::vector<uint8_t> &sv, int srcW, int srcH,
+                 std::vector<uint8_t> &dy, std::vector<uint8_t> &du, std::vector<uint8_t> &dv, int dstW, int dstH) {
+	for (int y = 0; y < dstH; y++) {
+		const int syy = y * srcH / dstH;
+		for (int x = 0; x < dstW; x++) {
+			dy[(size_t)y * dstW + x] = sy[(size_t)syy * srcW + x * srcW / dstW];
+		}
+	}
+	for (int y = 0; y < dstH / 2; y++) {
+		const int syy = y * (srcH / 2) / (dstH / 2);
+		for (int x = 0; x < dstW / 2; x++) {
+			const size_t si = (size_t)syy * (srcW / 2) + x * (srcW / 2) / (dstW / 2);
+			du[(size_t)y * (dstW / 2) + x] = su[si];
+			dv[(size_t)y * (dstW / 2) + x] = sv[si];
+		}
+	}
+}
+} // namespace
+
 void VideoSender::run() {
 	const Source source = current;
-	const int W = width();
-	const int H = height();
-	const int FPS = fps();
 	const bool camera = source == Source::CAMERA;
+	const Level *levels = camera ? CAMERA_LEVELS : SCREEN_LEVELS;
+	int level = 0;
+	int W = levels[0].w;
+	int H = levels[0].h;
+	const int FPS = fps();
 	const int keyEvery = FPS * 2; // a key frame every two seconds
 	const int kbps = camera ? TARGET_KBPS_CAMERA : TARGET_KBPS_SCREEN;
 
 	H264Encoder encoder;
+	// What the encoder gets (W x H), and, for the camera, what the camera gave (CAM_W x CAM_H).
 	std::vector<uint8_t> yPlane((size_t)W * H), uPlane((size_t)W * H / 4), vPlane((size_t)W * H / 4);
+	std::vector<uint8_t> camY, camU, camV;
 	unsigned char *packed = nullptr;
 	u32 maxBytes = 0;
 	Handle event = 0;
 	bool ok = encoder.init(W, H, keyEvery, kbps * 1000 / 8 / FPS);
 	if (camera) {
+		camY.resize((size_t)CAM_W * CAM_H);
+		camU.resize((size_t)CAM_W * CAM_H / 4);
+		camV.resize((size_t)CAM_W * CAM_H / 4);
 		if (R_FAILED(camInit())) {
 			Logger::log("[VideoTx] camInit failed (is the Camera screen open?)");
 			active = false;
 			current = Source::OFF;
 			return;
 		}
-		packed = (unsigned char *)malloc((size_t)W * H * 2);
+		packed = (unsigned char *)malloc((size_t)CAM_W * CAM_H * 2);
 		// The inner camera, YUYV, 10 frames a second (15 left the encoder no room next to the audio and the decoder).
 		ok = ok && packed && R_SUCCEEDED(CAMU_SetSize(SELECT_IN1, SIZE_QCIF, CONTEXT_A));
 		ok = ok && R_SUCCEEDED(CAMU_SetOutputFormat(SELECT_IN1, OUTPUT_YUV_422, CONTEXT_A));
@@ -181,8 +222,8 @@ void VideoSender::run() {
 		ok = ok && R_SUCCEEDED(CAMU_SetAutoExposure(SELECT_IN1, true));
 		ok = ok && R_SUCCEEDED(CAMU_SetAutoWhiteBalance(SELECT_IN1, true));
 		ok = ok && R_SUCCEEDED(CAMU_SetTrimming(PORT_CAM1, false));
-		ok = ok && R_SUCCEEDED(CAMU_GetMaxBytes(&maxBytes, W, H));
-		ok = ok && R_SUCCEEDED(CAMU_SetTransferBytes(PORT_CAM1, maxBytes, W, H));
+		ok = ok && R_SUCCEEDED(CAMU_GetMaxBytes(&maxBytes, CAM_W, CAM_H));
+		ok = ok && R_SUCCEEDED(CAMU_SetTransferBytes(PORT_CAM1, maxBytes, CAM_W, CAM_H));
 		ok = ok && R_SUCCEEDED(CAMU_Activate(SELECT_IN1));
 	}
 	if (!ok) {
@@ -217,12 +258,17 @@ void VideoSender::run() {
 	u64 windowStart = osGetTime();
 	int windowFrames = 0;
 	double windowMs = 0;
+	// For choosing the size: the average over about two seconds.
+	u64 judgeStart = osGetTime();
+	int judgeFrames = 0;
+	double judgeMs = 0;
+	u64 lastLevelChange = osGetTime();
 	while (!quit) {
 		if (camera) {
 			// The request for a frame stays open until the camera fills it; it is never abandoned (a second request while the first
 			// is open fails, and then no frame would ever come again).
 			if (!receiving) {
-				if (R_SUCCEEDED(CAMU_SetReceiving(&event, packed, PORT_CAM1, (u32)W * H * 2, (s16)maxBytes))) {
+				if (R_SUCCEEDED(CAMU_SetReceiving(&event, packed, PORT_CAM1, (u32)CAM_W * CAM_H * 2, (s16)maxBytes))) {
 					receiving = true;
 					receivingSince = osGetTime();
 				} else {
@@ -248,15 +294,15 @@ void VideoSender::run() {
 			receiving = false;
 			// The camera writes the frame into memory by itself (DMA), behind the cache of the processor: without this the processor
 			// keeps reading the first frame and the picture freezes.
-			GSPGPU_InvalidateDataCache(packed, (u32)W * H * 2);
+			GSPGPU_InvalidateDataCache(packed, (u32)CAM_W * CAM_H * 2);
 
 			// The camera gives YUYV (a pair of pixels shares its colour); the encoder wants separate planes.
-			for (int row = 0; row < H; row++) {
-				const unsigned char *src = packed + (size_t)row * W * 2;
-				unsigned char *yd = &yPlane[(size_t)row * W];
-				unsigned char *ud = &uPlane[(size_t)(row / 2) * (W / 2)];
-				unsigned char *vd = &vPlane[(size_t)(row / 2) * (W / 2)];
-				for (int x = 0; x < W / 2; x++) {
+			for (int row = 0; row < CAM_H; row++) {
+				const unsigned char *src = packed + (size_t)row * CAM_W * 2;
+				unsigned char *yd = &camY[(size_t)row * CAM_W];
+				unsigned char *ud = &camU[(size_t)(row / 2) * (CAM_W / 2)];
+				unsigned char *vd = &camV[(size_t)(row / 2) * (CAM_W / 2)];
+				for (int x = 0; x < CAM_W / 2; x++) {
 					yd[x * 2] = src[x * 4];
 					yd[x * 2 + 1] = src[x * 4 + 2];
 					if ((row & 1) == 0) {
@@ -267,6 +313,13 @@ void VideoSender::run() {
 						vd[x] = (unsigned char)((vd[x] + src[x * 4 + 3] + 1) / 2);
 					}
 				}
+			}
+			if (W == CAM_W && H == CAM_H) {
+				yPlane = camY;
+				uPlane = camU;
+				vPlane = camV;
+			} else {
+				scalePlanes(camY, camU, camV, CAM_W, CAM_H, yPlane, uPlane, vPlane, W, H);
 			}
 		} else {
 			const u64 now = osGetTime();
@@ -282,11 +335,11 @@ void VideoSender::run() {
 		}
 
 		// A copy for the preview.
-		if (true) { // every frame: a preview at a few frames a second looks like the camera is stuck
+		{
 			std::vector<uint16_t> tiled((size_t)PREVIEW_W * PREVIEW_H, 0);
 			int pw = 0, ph = 0;
 			if (convertToTiledTexture(yPlane.data(), uPlane.data(), vPlane.data(), W, H, W, W / 2, tiled.data(), pw, ph, PREVIEW_W,
-			                       PREVIEW_H)) {
+			                          PREVIEW_H)) {
 				std::lock_guard<std::mutex> lock(mutex);
 				previewBuffer.swap(tiled);
 				previewW = pw;
@@ -306,6 +359,8 @@ void VideoSender::run() {
 			msTotal += frameMs;
 			windowMs += frameMs;
 			windowFrames++;
+			judgeMs += frameMs;
+			judgeFrames++;
 			frames++;
 			if (osGetTime() - windowStart >= 1000) {
 				statFpsNow = windowFrames;
@@ -315,19 +370,58 @@ void VideoSender::run() {
 				windowMs = 0;
 			}
 			if (frames <= 3 || frames % 150 == 0) {
-				Logger::log("[VideoTx] %u frames, %.1f ms each, last %d bytes%s", frames, msTotal / frames, codedBytes,
-				            forceKey ? " (key)" : "");
+				Logger::log("[VideoTx] %u frames, %.1f ms each, last %d bytes%s (%dx%d)", frames, msTotal / frames, codedBytes,
+				            forceKey ? " (key)" : "", W, H);
 			}
-			std::lock_guard<std::mutex> lock(mutex);
-			if (queue.size() >= MAX_QUEUED) {
-				queue.clear(); // the call cannot keep up: start again with a key frame
-				keyRequested = true;
-				drops++;
-			} else {
-				Frame frame;
-				frame.data.assign(coded, coded + codedBytes);
-				frame.key = forceKey;
-				queue.push_back(std::move(frame));
+			{
+				std::lock_guard<std::mutex> lock(mutex);
+				if (queue.size() >= MAX_QUEUED) {
+					queue.clear(); // the call cannot keep up: start again with a key frame
+					keyRequested = true;
+					drops++;
+				} else {
+					Frame frame;
+					frame.data.assign(coded, coded + codedBytes);
+					frame.key = forceKey;
+					queue.push_back(std::move(frame));
+				}
+			}
+
+			// Every two seconds: too slow (more than 90 ms a frame) goes to a lighter size; with lots of room (under 35 ms for
+			// eight seconds) goes back to a bigger one.
+			const u64 nowMs = osGetTime();
+			if (nowMs - judgeStart >= 2000 && judgeFrames >= 3) {
+				const double avg = judgeMs / judgeFrames;
+				int target = level;
+				if (avg > 90.0 && level < 2) {
+					target = level + 1;
+				} else if (avg < 35.0 && level > 0 && nowMs - lastLevelChange > 8000) {
+					target = level - 1;
+				}
+				if (target != level) {
+					level = target;
+					W = levels[level].w;
+					H = levels[level].h;
+					yPlane.assign((size_t)W * H, 0);
+					uPlane.assign((size_t)W * H / 4, 128);
+					vPlane.assign((size_t)W * H / 4, 128);
+					if (encoder.init(W, H, keyEvery, kbps * 1000 / 8 / FPS)) {
+						first = true;
+						curW = W;
+						curH = H;
+						resChanged = true;
+						lastLevelChange = nowMs;
+						std::lock_guard<std::mutex> lock(mutex);
+						queue.clear();
+						Logger::log("[VideoTx] %.0f ms a frame: the size is now %dx%d", avg, W, H);
+					} else {
+						Logger::log("[VideoTx] The encoder could not change to %dx%d", W, H);
+						quit = true;
+					}
+				}
+				judgeStart = nowMs;
+				judgeFrames = 0;
+				judgeMs = 0;
 			}
 		}
 	}

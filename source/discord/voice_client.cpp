@@ -1276,6 +1276,9 @@ void VoiceClient::pumpVideoOut() {
 	if (!cameraSending.load()) {
 		return;
 	}
+	if (Utils::VideoSender::getInstance().takeResolutionChange()) {
+		sendVideoSignal(true); // the size of the picture changed: tell Discord
+	}
 	bool key = false;
 	// Not more than a frame or two per pass: the audio comes first.
 	for (int i = 0; i < 2; i++) {

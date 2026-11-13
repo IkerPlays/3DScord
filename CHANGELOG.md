@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- **The size of the video you send adapts by itself:** if the encoder takes more than 90 ms a frame it goes down a size (camera 176x144, 128x96, 96x80; screen
+  208x128, 160x96, 112x64), and back up when it has room (under 35 ms for eight seconds). Discord is told each time.
 - **Camera and screen in the call, lighter** (the encoder ran at 1 to 4 frames a second at 320x240): the camera goes out at 176x144 and the screen at 208x128 (half
   size), the encoder uses its fastest settings, and your own preview is drawn from a smaller texture (256x128).
 - **Fix (every picture came out turned, cameras and shared screens alike):** citro2d reads a sub-texture whose `top` is below its `bottom` as one that is
