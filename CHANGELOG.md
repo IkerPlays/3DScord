@@ -1,36 +1,28 @@
 # Changelog
 
 ## Unreleased
+
+## 0.15.0
+The video of other people in calls now shows: stable on a New 2DS XL, upright, with the occasional hiccup. Experimental (Settings > Voice > Video).
+
+- **Cameras and shared screens in calls work:** small under the speaker, in the person's tile in the full view, or on the whole top screen (L+R
+  cycles the views). If the person stops, the next one who sends is shown.
 - **Full call view redesigned like Discord:** black background, big rounded tiles with the avatar in the middle, a green border while someone
   speaks and the muted icons at the bottom; one person fills the screen, two sit side by side, more make a grid. When someone shares their
-  screen it takes the left side and everyone else is stacked on the right. A camera shows inside its person's tile.
-- **Video picture fills the whole texture:** the picture is stretched to the 512x256 texture and drawn with its own proportions, so no part of the texture
-  is left empty (a picture that sat in a corner of the texture could be read from the empty corner and show black).
-- **Video picture written straight into the texture:** the display transfer of the console turns the picture a quarter turn when it writes a texture
-  (that was the picture that came out sideways, and then black). The picture is now converted straight into the GPU's tiled order, with no
-  transfer, in a 512x256 texture; the buffers use the normal heap. (The Software Decoder Test still uses the old way.)
-- **Video in calls, decoder reworked:** the pictures of the decoder stay in the normal heap (they took the linear memory that the picture buffers
-  need, which left the video black); when the decoder falls behind it drops the oldest frame nothing refers to instead of emptying the queue
-  and waiting for a key frame; frames are only drawn when no other is waiting; the call asks Discord for a lower video quality (40 %,
-  smaller pictures) that a 3DS can decode in time; the log tells how the picture buffers were made.
-- **Video in calls starts faster:** a key frame is asked for as soon as Discord says someone started sending video, and again every 1.5 s while
-  no picture has come yet (before, it waited for the first whole frame; Discord sends a key frame only every ~25 s on its own).
-- **Video Rotation** and **Flip Video** (Settings > Voice): turn the picture of cameras, shared screens and videos in quarter turns and flip it, in case it
-  comes out turned or upside down on your console.
-- **Fix (video in calls):** after a lost packet the picture is no longer frozen until the next key frame (every ~25 s): the decoder keeps going
-  (a stripe may show) while a new key frame is asked for. The picture is sent to the texture with the same size on both sides (512x512), which
-  should fix the 90 degree turn.
-- **Fix (video in calls):** the picture was upside down (now upright) and the reduction to half size takes the average of 2x2 pixels instead
-  of one pixel of every four, which left thin stripes.
-- **Fix (video in calls, the noise):** the picture was uploaded to the texture with rows narrower than the texture, and the display transfer
-  lays its 8x8 tiles out by the width of its input, so the picture came out sheared into stripes. The rows are now as wide as the texture (this
-  also fixes the Software Decoder Test and the video player). The full call view and the video view now draw above the chat, which showed
-  through. Checked on a computer: the decoder compiled for ARM (armv6k, -O3) gives exactly the pictures of ffmpeg.
-- **Fix (video in calls):** the software decoder gave memory taken from the linear heap back to the wrong allocator when the picture size
-  changed (Discord lowers the resolution during a call), which could corrupt memory and turn the picture into noise. Checked on a computer:
-  the decoder gives exactly the same pictures as ffmpeg on a real call stream, including the size change.
+  screen it takes the left side and everyone else is stacked on the right. It draws above the chat.
+- **Video Rotation** and **Flip Video** (Settings > Voice), in case the picture comes out turned or upside down on another console.
+- **Faster and smoother:** a key frame is asked for as soon as someone starts sending video (the camera appears in seconds, not up to ~25 s),
+  and again after a lost packet; the picture is no longer frozen until the next key frame. When the decoder falls behind it drops the oldest
+  frame nothing refers to. The call asks Discord for a lower video quality (40 %), which a 3DS can decode in time.
+- **Fixes in the picture (found with the help of tests on a computer):** the decoder gave memory from the linear heap back to the wrong
+  allocator when Discord changed the resolution (could turn the picture into noise); the console's display transfer sheared and turned
+  the picture, so it is now written straight into the texture in the GPU's order and stretched to fill it (drawn with its own
+  proportions); reducing to half size takes the average of 2x2 pixels (no stripes). Checked: the decoder gives exactly the same pictures
+  as ffmpeg on a real call stream, also compiled for ARM.
+- **Play Video (no sound)** (message menu, MP4 up to 16 MB, 1280x720) uses the same picture path.
 - **Network Test** (Settings > Updates): three small requests to Discord; shows the average and the worst time.
-- **Video in calls follows whoever is sending:** if the person shown stops their camera or screen for 4 seconds, the next one who sends is shown.
+- **Message menu:** Exact Time, Copy to Draft, Send Again; an @everyone or @here message needs a second send to confirm.
+- **Fix:** leaving a call no longer risks a crash while the video picture is being drawn.
 
 ## 0.14.0
 Cameras and shared screens in calls, and videos in chats, now play: the console decodes H.264 in software (openh264). Both are experimental.

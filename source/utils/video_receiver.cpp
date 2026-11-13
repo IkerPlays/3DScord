@@ -404,7 +404,8 @@ void drawVideoTexture(C3D_Tex *texture, int picW, int picH, float x, float y, fl
 	const float drawH = (float)picH * fit;
 	const float scaleX = drawW / (float)TEX_W;
 	const float scaleY = drawH / (float)TEX_H;
-	Tex3DS_SubTexture sub = {(u16)TEX_W, (u16)TEX_H, 0.0f, flip ? 0.0f : 1.0f, 1.0f, flip ? 1.0f : 0.0f};
+	// Upright by default (checked on a New 2DS XL: top 1 / bottom 0 came out upside down); "Flip Video" turns it over.
+	Tex3DS_SubTexture sub = {(u16)TEX_W, (u16)TEX_H, 0.0f, flip ? 1.0f : 0.0f, 1.0f, flip ? 0.0f : 1.0f};
 	C2D_Image img = {texture, &sub};
 	const float cx = x + w / 2.0f;
 	const float cy = y + h / 2.0f;
