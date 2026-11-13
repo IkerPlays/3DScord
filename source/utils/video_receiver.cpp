@@ -153,6 +153,17 @@ VideoReceiver::Impl &VideoReceiver::ensure() {
 	return *impl;
 }
 
+void VideoReceiver::setOrientation(int quarterTurns) {
+	if (!impl) {
+		return;
+	}
+	if (orientation != (quarterTurns & 7)) {
+		Logger::log("[VideoRx] The sender says the picture needs %d quarter turns%s", quarterTurns & 3,
+		            (quarterTurns & 4) ? " and a flip" : "");
+	}
+	orientation = quarterTurns & 7;
+}
+
 void VideoReceiver::lost() {
 	if (!impl) {
 		return;
@@ -408,11 +419,12 @@ std::string VideoReceiver::userId() const {
 	return id;
 }
 
-void drawVideoTexture(C3D_Tex *texture, int picW, int picH, float x, float y, float z, float w, float h) {
+void drawVideoTexture(C3D_Tex *texture, int picW, int picH, float x, float y, float z, float w, float h, int extraTurns) {
 	if (!texture || picW <= 0 || picH <= 0) {
 		return;
 	}
-	const int turns = Config::getInstance().getVideoRotation();
+	const int turns = (Config::getInstance().getVideoRotation() + (extraTurns & 3)) & 3;
+	const bool mirror = (extraTurns & 4) != 0;
 	const bool flip = Config::getInstance().isVideoFlipped();
 	// picW x picH are the proportions of the picture; the texture holds all of it, stretched to fill 512x256.
 	const float shownW = (turns & 1) ? (float)picH : (float)picW;
@@ -423,7 +435,7 @@ void drawVideoTexture(C3D_Tex *texture, int picW, int picH, float x, float y, fl
 	const float scaleX = drawW / (float)TEX_W;
 	const float scaleY = drawH / (float)TEX_H;
 	// Upright by default (checked on a New 2DS XL: top 1 / bottom 0 came out upside down); "Flip Video" turns it over.
-	Tex3DS_SubTexture sub = {(u16)TEX_W, (u16)TEX_H, 0.0f, flip ? 1.0f : 0.0f, 1.0f, flip ? 0.0f : 1.0f};
+	Tex3DS_SubTexture sub = {(u16)TEX_W, (u16)TEX_H, mirror ? 1.0f : 0.0f, flip ? 1.0f : 0.0f, mirror ? 0.0f : 1.0f, flip ? 0.0f : 1.0f};
 	C2D_Image img = {texture, &sub};
 	const float cx = x + w / 2.0f;
 	const float cy = y + h / 2.0f;
@@ -439,7 +451,7 @@ void VideoReceiver::draw(float x, float y, float z, float w, float h) const {
 	if (!hasPicture()) {
 		return;
 	}
-	drawVideoTexture(const_cast<C3D_Tex *>(&texture), picW, picH, x, y, z, w, h);
+	drawVideoTexture(const_cast<C3D_Tex *>(&texture), picW, picH, x, y, z, w, h, orientation);
 }
 
 void VideoReceiver::stop() {

@@ -34,6 +34,8 @@ class VideoReceiver {
 	void submit(const std::string &userId, const uint8_t *data, size_t size);
 	// Media thread: a frame was lost or could not be decrypted, so the next ones cannot be decoded until a key frame comes.
 	void lost();
+	// Media thread: the orientation the sender says the picture needs (RTP video orientation): bits 1-0 are quarter turns clockwise, bit 2 a sideways flip.
+	void setOrientation(int quarterTurns);
 	// Media thread: true while decoding waits for a key frame (so one should be asked for).
 	bool wantsKeyFrame();
 	// Leaves the call: stops the worker and frees everything.
@@ -61,13 +63,14 @@ class VideoReceiver {
 	bool gotPicture = false;
 	int picW = 0;
 	int picH = 0;
+	int orientation = 0; // quarter turns from the sender
 	uint32_t shownVersion = 0;
 	u64 lastUpdate = 0;
 };
 
 // Draws a picture that is in the top left of a 512x512 texture (the video textures) inside the box, keeping its proportions and
 // applying the rotation and flip of Settings > Voice.
-void drawVideoTexture(C3D_Tex *texture, int picW, int picH, float x, float y, float z, float w, float h);
+void drawVideoTexture(C3D_Tex *texture, int picW, int picH, float x, float y, float z, float w, float h, int extraTurns = 0);
 
 } // namespace Utils
 

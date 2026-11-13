@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- **Video of phones in calls:** the picture is turned (and flipped) as the sender asks through the RTP video orientation (a phone sends the picture as its
+  sensor sees it); the log shows the RTP extensions that arrive.
 - **Camera in the Call (experimental)** (a camera button next to the microphone and headphones in a call; needs Settings > Voice > Video on and joining the call again): sends your inner camera
   to the call at 320x240, 15 frames a second, coded as H.264 on the extra core, encrypted with DAVE and sent as RTP; Discord is told with the video
   signalling (op 12) and the voice state (`self_video`), and a picture loss message from the others makes a new key frame. Press it again to stop. Not

@@ -933,6 +933,32 @@ void VoiceClient::handleRtpPacket(uint8_t *packet, size_t len) {
 		if (extBytes > opusLen) {
 			return;
 		}
+		if (isVideo && packet[headerLen - 4] == 0xBE && packet[headerLen - 3] == 0xDE) {
+			// One-byte header extension elements: id and length in one byte, then the value. The video orientation (id 13, 3GPP
+			// "CVO") says how many quarter turns the picture needs (a phone sends the picture as the sensor sees it).
+			static uint32_t idsSeen = 0;
+			size_t i = 0;
+			while (i < extBytes) {
+				const uint8_t b = plain[i];
+				if (b == 0) {
+					i++;
+					continue;
+				}
+				const int id = b >> 4;
+				const size_t l = (size_t)(b & 15) + 1;
+				if (id == 15 || i + 1 + l > extBytes) {
+					break;
+				}
+				if (!(idsSeen & (1u << id))) {
+					idsSeen |= 1u << id;
+					Logger::log("[Video] RTP extension id %d, %zu bytes, first byte %02x", id, l, plain[i + 1]);
+				}
+				if (id == 13) {
+					Utils::VideoReceiver::getInstance().setOrientation(plain[i + 1] & 7); // bits 1-0: quarter turns; bit 2: flipped sideways
+				}
+				i += 1 + l;
+			}
+		}
 		opusData += extBytes;
 		opusLen -= extBytes;
 	}
