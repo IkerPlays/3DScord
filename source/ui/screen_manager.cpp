@@ -31,6 +31,7 @@
 #include "ui/mvd_test_screen.h"
 #include "ui/soft_test_screen.h"
 #include "ui/video_player_screen.h"
+#include "ui/video_orient_screen.h"
 #include "utils/voice_player.h"
 #include "utils/call_recorder.h"
 #include "utils/screenshot.h"
@@ -457,6 +458,9 @@ void ScreenManager::setScreen(ScreenType type) {
 		break;
 	case ScreenType::VIDEO_PLAYER:
 		currentScreen = std::make_unique<VideoPlayerScreen>();
+		break;
+	case ScreenType::VIDEO_ORIENT:
+		currentScreen = std::make_unique<VideoOrientScreen>();
 		break;
 	}
 

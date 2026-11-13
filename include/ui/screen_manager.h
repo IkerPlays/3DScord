@@ -37,7 +37,8 @@ enum class ScreenType {
 	VIDEO_TEST,
 	MVD_TEST,
 	SOFT_TEST,
-	VIDEO_PLAYER
+	VIDEO_PLAYER,
+	VIDEO_ORIENT
 };
 
 class Screen {

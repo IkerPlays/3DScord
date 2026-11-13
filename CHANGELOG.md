@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- **Camera in the call no longer freezes after one frame:** the request for a frame is kept open until the camera fills it (a second request while
+  the first was open failed, and then no frame came again); if nothing comes for three seconds the capture restarts.
+- **Video Orientation Test** (Settings > Updates): shows a test picture (an F with a red edge on top, blue at the bottom, green on the left,
+  yellow on the right and an orange square in the top left) the way pictures of calls are drawn; A cycles the 8 orientations to find which
+  one is right. The orientation the phones ask for (RTP video orientation) is only logged for now, not applied.
 - **Fix (camera black, photos black):** the outer camera is picked by trying both selectors (right and left) and keeping the one that gives a picture. A
   New 2DS XL has a single outer camera, and asking for the other selector gives black frames without an error. The log (`[Camera]`) tells which one
   answered and how many pixels were lit.

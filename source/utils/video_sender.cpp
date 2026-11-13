@@ -191,20 +191,38 @@ void VideoSender::run() {
 	double msTotal = 0;
 	bool first = true;
 	u64 nextFrameAt = osGetTime();
+	bool receiving = false;
+	u64 receivingSince = 0;
+	uint32_t restarts = 0;
 	while (!quit) {
 		if (camera) {
-			if (R_FAILED(CAMU_SetReceiving(&event, packed, PORT_CAM1, (u32)W * H * 2, (s16)maxBytes))) {
-				svcSleepThread(20 * 1000000LL);
-				continue;
+			// The request for a frame stays open until the camera fills it; it is never abandoned (a second request while the first
+			// is open fails, and then no frame would ever come again).
+			if (!receiving) {
+				if (R_SUCCEEDED(CAMU_SetReceiving(&event, packed, PORT_CAM1, (u32)W * H * 2, (s16)maxBytes))) {
+					receiving = true;
+					receivingSince = osGetTime();
+				} else {
+					svcSleepThread(20 * 1000000LL);
+					continue;
+				}
 			}
-			if (svcWaitSynchronization(event, 300 * 1000000LL) != 0) {
-				svcCloseHandle(event);
-				event = 0;
-				CAMU_ClearBuffer(PORT_CAM1);
+			if (svcWaitSynchronization(event, 100 * 1000000LL) != 0) {
+				if (osGetTime() - receivingSince > 3000) {
+					// Nothing for three seconds: start the capture again.
+					Logger::log("[VideoTx] The camera stopped giving frames, restarting it (%u)", ++restarts);
+					CAMU_StopCapture(PORT_CAM1);
+					svcCloseHandle(event);
+					event = 0;
+					receiving = false;
+					CAMU_ClearBuffer(PORT_CAM1);
+					CAMU_StartCapture(PORT_CAM1);
+				}
 				continue;
 			}
 			svcCloseHandle(event);
 			event = 0;
+			receiving = false;
 
 			// The camera gives YUYV (a pair of pixels shares its colour); the encoder wants separate planes.
 			for (int row = 0; row < H; row++) {
@@ -278,6 +296,13 @@ void VideoSender::run() {
 
 	if (camera) {
 		CAMU_StopCapture(PORT_CAM1);
+		if (receiving && event) {
+			svcWaitSynchronization(event, 300 * 1000000LL);
+		}
+		if (event) {
+			svcCloseHandle(event);
+			event = 0;
+		}
 		CAMU_Activate(SELECT_NONE);
 		camExit();
 		free(packed);

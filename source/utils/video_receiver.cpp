@@ -418,12 +418,12 @@ std::string VideoReceiver::userId() const {
 	return id;
 }
 
-void drawVideoTexture(C3D_Tex *texture, int picW, int picH, float x, float y, float z, float w, float h, int extraTurns) {
+void drawVideoTextureOriented(C3D_Tex *texture, int picW, int picH, float x, float y, float z, float w, float h, int turns,
+                              bool mirror) {
 	if (!texture || picW <= 0 || picH <= 0) {
 		return;
 	}
-	// extraTurns is the orientation the sender asked for (bits 1-0 quarter turns, bit 2 a sideways flip).
-	const int turns = extraTurns & 3;
+	turns &= 3;
 	// picW x picH are the proportions of the picture; the texture holds all of it, stretched to fill 512x256.
 	const float shownW = (turns & 1) ? (float)picH : (float)picW;
 	const float shownH = (turns & 1) ? (float)picW : (float)picH;
@@ -432,9 +432,6 @@ void drawVideoTexture(C3D_Tex *texture, int picW, int picH, float x, float y, fl
 	const float drawH = (float)picH * fit;
 	const float scaleX = drawW / (float)TEX_W;
 	const float scaleY = drawH / (float)TEX_H;
-	// The way the picture is written into the texture leaves it turned half a turn and flipped (checked on a New 2DS XL): this
-	// mirrors it sideways, which puts it upright.
-	const bool mirror = (extraTurns & 4) == 0;
 	Tex3DS_SubTexture sub = {(u16)TEX_W, (u16)TEX_H, mirror ? 1.0f : 0.0f, 0.0f, mirror ? 0.0f : 1.0f, 1.0f};
 	C2D_Image img = {texture, &sub};
 	const float cx = x + w / 2.0f;
@@ -445,6 +442,13 @@ void drawVideoTexture(C3D_Tex *texture, int picW, int picH, float x, float y, fl
 		// citro2d turns around the centre of the picture, and the position given is that centre.
 		C2D_DrawImageAtRotated(img, cx, cy, z, C3D_AngleFromDegrees((float)(turns * 90)), nullptr, scaleX, scaleY);
 	}
+}
+
+// extraTurns is what the sender asked for (RTP video orientation); it is not applied for now (it is only logged) until the orientation
+// of the console itself is settled.
+void drawVideoTexture(C3D_Tex *texture, int picW, int picH, float x, float y, float z, float w, float h, int extraTurns) {
+	(void)extraTurns;
+	drawVideoTextureOriented(texture, picW, picH, x, y, z, w, h, VIDEO_DEFAULT_TURNS, VIDEO_DEFAULT_MIRROR);
 }
 
 void VideoReceiver::draw(float x, float y, float z, float w, float h) const {

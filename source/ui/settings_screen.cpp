@@ -2,6 +2,7 @@
 #include "ui/image_manager.h"
 #include "ui/mvd_test_screen.h"
 #include "ui/soft_test_screen.h"
+#include "ui/video_orient_screen.h"
 #include "ui/video_test_screen.h"
 #include "core/config.h"
 #include "core/i18n.h"
@@ -941,6 +942,13 @@ void SettingsScreen::addUpdateItems() {
 	videoTest.type = SettingItemType::ACTION;
 	videoTest.action = []() { VideoTestScreen::open(); };
 	allItems.push_back(videoTest);
+
+	SettingItem videoOrient;
+	videoOrient.label = TR("videoorient.title");
+	videoOrient.description = TR("settings.desc.videoorient");
+	videoOrient.type = SettingItemType::ACTION;
+	videoOrient.action = []() { VideoOrientScreen::open(); };
+	allItems.push_back(videoOrient);
 
 	SettingItem netTest;
 	netTest.label = TR("nettest.title");

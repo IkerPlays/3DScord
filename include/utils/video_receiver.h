@@ -71,6 +71,13 @@ class VideoReceiver {
 // Draws a picture that is in the top left of a 512x512 texture (the video textures) inside the box, keeping its proportions and
 // applying the rotation and flip of Settings > Voice.
 void drawVideoTexture(C3D_Tex *texture, int picW, int picH, float x, float y, float z, float w, float h, int extraTurns = 0);
+// The same with the orientation given: quarter turns clockwise (0-3) and a sideways mirror, on top of how the texture was written. The
+// orientation test uses it to find out how the pictures come out on the console.
+void drawVideoTextureOriented(C3D_Tex *texture, int picW, int picH, float x, float y, float z, float w, float h, int turns,
+                              bool mirror);
+// What every picture needs, found with the orientation test (Settings > Updates).
+constexpr int VIDEO_DEFAULT_TURNS = 0;
+constexpr bool VIDEO_DEFAULT_MIRROR = true;
 
 } // namespace Utils
 
