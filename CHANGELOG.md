@@ -1,7 +1,6 @@
 # Changelog
 
 ## Unreleased
-- **Fix:** the camera view (Camera mode, Send a Photo) was black on some consoles because of the display transfer; the picture now goes straight into the texture.
 
 ## 0.15.0
 The video of other people in calls now shows: stable on a New 2DS XL, upright, with the occasional hiccup. Experimental (Settings > Voice > Video).
@@ -21,6 +20,7 @@ The video of other people in calls now shows: stable on a New 2DS XL, upright, w
   proportions); reducing to half size takes the average of 2x2 pixels (no stripes). Checked: the decoder gives exactly the same pictures
   as ffmpeg on a real call stream, also compiled for ARM.
 - **Play Video (no sound)** (message menu, MP4 up to 16 MB, 1280x720) uses the same picture path.
+- **Fix:** the camera view (Camera mode, Send a Photo) was black on some consoles because of the display transfer; the picture now goes straight into the texture.
 - **Network Test** (Settings > Updates): three small requests to Discord; shows the average and the worst time.
 - **Message menu:** Exact Time, Copy to Draft, Send Again; an @everyone or @here message needs a second send to confirm.
 - **Fix:** leaving a call no longer risks a crash while the video picture is being drawn.
