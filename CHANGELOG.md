@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- **Fix (every picture came out turned, cameras and shared screens alike):** citro2d reads a sub-texture whose `top` is below its `bottom` as one that is
+  turned a quarter (it swaps the axes); the flips tried before used exactly that, so the pictures came out turned and mirrored. The pictures are now
+  written with their top row first in the texture and drawn with the usual orientation (top above bottom), for the cameras and screens of others,
+  your own preview, the camera view and the video player. The Video Orientation Test (Settings > Updates) starts on the expected one (1/8).
 - **Camera in the call, steadier:** the camera now goes at 10 frames a second (15 left the encoder no room next to the audio and the decoder), and your own tile
   shows how the encoder is doing (`N fps  M ms  K  D`: frames a second, milliseconds a frame, key frames asked for by the others, times the call could not keep
   up), so a stutter can be read without a report.

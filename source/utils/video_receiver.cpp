@@ -287,8 +287,9 @@ bool convertToTiledTexture(const uint8_t *py0, const uint8_t *pu0, const uint8_t
 		const uint8_t *py = py0 + (size_t)sy * strideY;
 		const uint8_t *pu = pu0 + (size_t)(sy / 2) * strideUV;
 		const uint8_t *pv = pv0 + (size_t)(sy / 2) * strideUV;
-		// The top row of the picture goes to the last row of the texture.
-		const int row = TEX_H - 1 - y;
+		// The top row of the picture goes to the first row of the texture: that is what a texture loaded by the usual transfer (with its
+		// vertical flip) holds, and what citro2d draws upright with top 1 and bottom 0.
+		const int row = y;
 		uint16_t *rowBase = dst + (size_t)(row >> 3) * tilesPerRow * 64 + my[row & 7];
 		for (int x = 0; x < TEX_W; x++) {
 			const int sx = srcX[x];
@@ -316,7 +317,7 @@ void convertRgb565ToTiledTexture(const uint16_t *src, int width, int height, uin
 	}
 	for (int y = 0; y < TEX_H; y++) {
 		const uint16_t *line = src + (size_t)std::min(y * height / TEX_H, height - 1) * width;
-		const int row = TEX_H - 1 - y;
+		const int row = y; // as above: the picture's top row is the first row of the texture
 		uint16_t *rowBase = dst + (size_t)(row >> 3) * tilesPerRow * 64 + my[row & 7];
 		for (int x = 0; x < TEX_W; x++) {
 			rowBase[(size_t)(x >> 3) * 64 + mx[x & 7]] = line[srcX[x]];
@@ -432,7 +433,9 @@ void drawVideoTextureOriented(C3D_Tex *texture, int picW, int picH, float x, flo
 	const float drawH = (float)picH * fit;
 	const float scaleX = drawW / (float)TEX_W;
 	const float scaleY = drawH / (float)TEX_H;
-	Tex3DS_SubTexture sub = {(u16)TEX_W, (u16)TEX_H, mirror ? 1.0f : 0.0f, 0.0f, mirror ? 0.0f : 1.0f, 1.0f};
+	// top must stay above bottom: citro2d reads top < bottom as a sub-texture that is turned a quarter (it swaps the axes), which is what
+	// made every earlier attempt come out turned. A mirror swaps left and right.
+	Tex3DS_SubTexture sub = {(u16)TEX_W, (u16)TEX_H, mirror ? 1.0f : 0.0f, 1.0f, mirror ? 0.0f : 1.0f, 0.0f};
 	C2D_Image img = {texture, &sub};
 	const float cx = x + w / 2.0f;
 	const float cy = y + h / 2.0f;

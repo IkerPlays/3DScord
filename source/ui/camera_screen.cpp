@@ -250,7 +250,7 @@ void CameraScreen::renderTop(C3D_RenderTarget *target) {
 	C2D_TargetClear(target, C2D_Color32(0, 0, 0, 255));
 	C2D_SceneBegin(target);
 	if (cameraOn && haveFrame && textureReady) {
-		Tex3DS_SubTexture sub = {(u16)TEX_W, (u16)TEX_H, 0.0f, 0.0f, 1.0f, 1.0f};
+		Tex3DS_SubTexture sub = {(u16)TEX_W, (u16)TEX_H, 0.0f, 1.0f, 1.0f, 0.0f}; // top above bottom (see drawVideoTextureOriented)
 		C2D_Image img = {&texture, &sub};
 		C2D_DrawImageAt(img, 0.0f, 0.0f, 0.5f, nullptr, (float)CAM_W / TEX_W, (float)CAM_H / TEX_H);
 	} else {

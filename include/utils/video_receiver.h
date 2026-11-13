@@ -77,7 +77,7 @@ void drawVideoTextureOriented(C3D_Tex *texture, int picW, int picH, float x, flo
                               bool mirror);
 // What every picture needs, found with the orientation test (Settings > Updates).
 constexpr int VIDEO_DEFAULT_TURNS = 0;
-constexpr bool VIDEO_DEFAULT_MIRROR = true;
+constexpr bool VIDEO_DEFAULT_MIRROR = false;
 
 } // namespace Utils
 
