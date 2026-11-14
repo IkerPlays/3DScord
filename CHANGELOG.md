@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.26.0
 - **Forward a message:** the message menu has **Forward**: it lists your favorite channels and sends the message there as a quote with the name of its author.
 
 ## 0.25.0
