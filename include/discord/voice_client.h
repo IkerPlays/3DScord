@@ -190,6 +190,7 @@ class VoiceClient {
 	void sendSinkWants(int quality);
 	void sendSenderReport();
 	uint32_t videoPacketCount = 0;
+	uint32_t videoSendFails = 0; // video packets the socket refused (counted and retried; they used to be lost without a trace)
 	uint32_t videoOctetCount = 0;
 	uint64_t videoReportAt = 0;
 	void handleRtcp(const uint8_t *packet, size_t len);

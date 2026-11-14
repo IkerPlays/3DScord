@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- **Video packets that the socket refused were lost without a trace:** `send()` is now checked (retried up to 5 times on a full buffer, counted and logged with the error), the UDP send buffer is
+  asked for 64 KB, and the RTCP log line shows how many video packets we sent. Discord's reports said it had received nothing of our video (`maxseq 0`).
 - **Order and values like the community sender that works with DAVE:** voice state (`self_video`) first, then speaking, then the video signal and only then the packets (before,
   the first key frame could leave before Discord knew the stream); playout delay 0–100 ms and maximum bitrate 10 Mbps in the video signal; the "off" signal carries no streams.
 - **Self-check of the video encryption:** the first frames we send are decrypted again with our own key and the result goes to the log (`[DAVE] Video self-check ...`).

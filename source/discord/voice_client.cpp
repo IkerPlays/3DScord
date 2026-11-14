@@ -1,4 +1,6 @@
 #include "discord/voice_client.h"
+#include <cerrno>
+#include <cstring>
 #include "utils/video_receiver.h"
 #include "utils/video_sender.h"
 #include "core/config.h"
@@ -495,6 +497,15 @@ bool VoiceClient::openUdp() {
 	if (udpSocket < 0) {
 		Logger::log("[Voice] UDP socket() failed");
 		return false;
+	}
+	{
+		// A video key frame is a burst of several packets; the default send buffer is small.
+		int sndbuf = 64 * 1024;
+		const int rc = setsockopt(udpSocket, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(sndbuf));
+		int now = 0;
+		socklen_t nowLen = sizeof(now);
+		getsockopt(udpSocket, SOL_SOCKET, SO_SNDBUF, &now, &nowLen);
+		Logger::log("[Voice] UDP send buffer: asked 64 KB (rc %d), now %d bytes", rc, now);
 	}
 
 	sockaddr_in server{};
@@ -1194,7 +1205,7 @@ void VoiceClient::handleRtcp(const uint8_t *packet, size_t len) {
 			}
 			pos += size;
 		}
-		Logger::log("[VideoTx] RTCP compound (%zu bytes):%s", len, text.c_str());
+		Logger::log("[VideoTx] RTCP compound (%zu bytes):%s [we sent %u video packets, %u failed]", len, text.c_str(), (unsigned)videoPacketCount, (unsigned)videoSendFails);
 	}
 	// A picture loss indication (or full intra request): someone could not show a picture and wants a new key frame.
 	if (pt == 206 && (fmt == 1 || fmt == 4)) {
@@ -1252,8 +1263,30 @@ void VoiceClient::sendRtp(uint8_t payloadType, uint32_t ssrcOut, uint16_t seq, u
 		return;
 	}
 	memcpy(tag + GCM_TAG_SIZE, iv, NONCE_SUFFIX_SIZE);
-	send(udpSocket, packet, headerLen + extLen + len + GCM_TAG_SIZE + NONCE_SUFFIX_SIZE, 0);
+	// The result of send() was never looked at: a full socket buffer (the 3DS has little) lost packets silently, and the key frame is
+	// a burst of several. Retried a few times, and every failure is counted and logged.
+	const size_t total = headerLen + extLen + len + GCM_TAG_SIZE + NONCE_SUFFIX_SIZE;
+	ssize_t sent = -1;
+	int lastErrno = 0;
+	for (int attempt = 0; attempt < 5; attempt++) {
+		sent = send(udpSocket, packet, total, 0);
+		if (sent >= 0) {
+			break;
+		}
+		lastErrno = errno;
+		if (lastErrno != EAGAIN && lastErrno != ENOBUFS && lastErrno != ENOMEM) {
+			break;
+		}
+		svcSleepThread(1000000); // 1 ms
+	}
 	sendNonce++;
+	if (sent < 0) {
+		const uint32_t failed = ++videoSendFails;
+		if (failed <= 5 || failed % 100 == 0) {
+			Logger::log("[VideoTx] send() failed: errno %d (%s), %zu bytes, failure %u", lastErrno, strerror(lastErrno), total, failed);
+		}
+		return;
+	}
 	videoPacketCount++;
 	videoOctetCount += (uint32_t)len;
 }
@@ -1528,6 +1561,7 @@ bool VoiceClient::setVideoSource(int source) {
 	rtcpSeenWhileVideo = 0;
 	videoEncryptFails = 0;
 	videoPacketCount = 0;
+	videoSendFails = 0;
 	videoOctetCount = 0;
 	videoReportAt = 0;
 	DiscordClient::getInstance().selfVideoEcho = -1;
