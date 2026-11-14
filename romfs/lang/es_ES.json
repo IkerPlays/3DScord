@@ -481,6 +481,7 @@
     "call.view_video": "Llamada: vídeo",
     "message.confirm_everyone": "Esto avisa a todos. Envía el mismo texto otra vez para confirmar.",
     "message.menu.details": "Hora exacta",
+    "message.menu.who_reacted": "Quién reaccionó",
     "message.details.sent": "Enviado",
     "message.details.edited": "editado",
     "message.menu.copy_draft": "Copiar al borrador",

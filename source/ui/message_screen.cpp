@@ -31,6 +31,7 @@
 #include <3ds.h>
 #include <algorithm>
 #include <map>
+#include <memory>
 #include <citro2d.h>
 #include <cmath>
 #include <ctime>
@@ -1119,6 +1120,34 @@ void MessageScreen::update() {
 						    this->handleMessageSendResult(pendingId, sentMsg, success, errorCode);
 					    },
 					    optimisticMsg.nonce);
+				}
+			} else if (action == "WhoReacted") {
+				if (selectedIndex >= 0 && selectedIndex < (int)messages.size()) {
+					const Discord::Message &target = messages[selectedIndex];
+					// The first three reactions of the message; the names of each come back as one toast that grows.
+					auto shown = std::make_shared<std::vector<std::string>>(std::min<size_t>(3, target.reactions.size()));
+					for (size_t r = 0; r < shown->size(); r++) {
+						const Discord::Emoji emoji = target.reactions[r].emoji;
+						const std::string label = emoji.name.empty() ? "?" : emoji.name;
+						Discord::DiscordClient::getInstance().fetchReactionUsers(
+						    channelId, target.id, emoji, [shown, r, label](const std::vector<std::string> &names) {
+							    std::string line = label + ": ";
+							    for (size_t i = 0; i < names.size(); i++) {
+								    line += (i ? ", " : "") + names[i];
+							    }
+							    if (names.empty()) {
+								    line += "?";
+							    }
+							    (*shown)[r] = line;
+							    std::string all;
+							    for (const auto &l : *shown) {
+								    if (!l.empty()) {
+									    all += (all.empty() ? "" : "\n") + l;
+								    }
+							    }
+							    ScreenManager::getInstance().showToast(all);
+						    });
+					}
 				}
 			} else if (action == "Details") {
 				if (selectedIndex >= 0 && selectedIndex < (int)messages.size()) {
@@ -3900,6 +3929,9 @@ void MessageScreen::showMessageOptions() {
 			addOption("React", "message.menu.react");
 		}
 
+		if (!msg.reactions.empty() && msg.id.substr(0, 8) != "pending_") {
+			addOption("WhoReacted", "message.menu.who_reacted");
+		}
 		if (canSend) {
 			addOption("Reply", "message.menu.reply");
 			if (!isMine) {

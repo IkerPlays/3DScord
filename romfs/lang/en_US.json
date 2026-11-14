@@ -481,6 +481,7 @@
     "call.view_video": "Call: video",
     "message.confirm_everyone": "This pings everyone. Send the same text again to confirm.",
     "message.menu.details": "Exact Time",
+    "message.menu.who_reacted": "Who reacted",
     "message.details.sent": "Sent",
     "message.details.edited": "edited",
     "message.menu.copy_draft": "Copy to Draft",

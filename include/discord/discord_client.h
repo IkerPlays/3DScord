@@ -267,6 +267,8 @@ class DiscordClient {
 	// Shown through the reaction callbacks right away, and rolled back the same way if Discord rejects it.
 	void addReaction(const std::string &channelId, const std::string &messageId, const Emoji &emoji);
 	void removeReaction(const std::string &channelId, const std::string &messageId, const Emoji &emoji);
+	void fetchReactionUsers(const std::string &channelId, const std::string &messageId, const Emoji &emoji,
+	                        std::function<void(const std::vector<std::string> &)> cb);
 
 	void performLogin(const std::string &login, const std::string &password, bool undelete, LoginCallback cb);
 	void submitMFA(const std::string &method, const std::string &ticket, const std::string &loginInstanceId,

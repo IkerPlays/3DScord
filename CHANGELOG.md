@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- **Who reacted:** the message menu has a new **Who reacted** entry that shows the names behind the first three reactions of a message.
 - **Friends list:** under each friend it shows what they are playing or listening to, when Discord tells the app.
 - **Message variables:** type `{time}`, `{date}`, `{channel}` or `{server}` in a message and it is replaced when you send it (the time and date use the format chosen in Settings).
 

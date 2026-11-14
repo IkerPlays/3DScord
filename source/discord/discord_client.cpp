@@ -558,6 +558,39 @@ void DiscordClient::removeReaction(const std::string &channelId, const std::stri
 	queueReaction({channelId, messageId, emoji, false});
 }
 
+// Who reacted with an emoji: the first 10 names, in the order Discord gives them.
+void DiscordClient::fetchReactionUsers(const std::string &channelId, const std::string &messageId, const Emoji &emoji,
+                                       std::function<void(const std::vector<std::string> &)> cb) {
+	if (channelId.empty() || messageId.empty() || token.empty() || !cb) {
+		return;
+	}
+	const std::string url = "https://discord.com/api/v10/channels/" + channelId + "/messages/" + messageId + "/reactions/" +
+	                        urlEncode(emoji.id.empty() ? emoji.name : emoji.name + ":" + emoji.id) + "?limit=10";
+	Network::NetworkManager::getInstance().enqueue(
+	    url, "GET", "", Network::RequestPriority::INTERACTIVE,
+	    [cb](Network::HttpResponse &resp) {
+		    std::vector<std::string> names;
+		    if (resp.success && resp.statusCode == 200) {
+			    rapidjson::Document doc;
+			    doc.Parse(resp.body.c_str());
+			    if (!doc.HasParseError() && doc.IsArray()) {
+				    for (const auto &u : doc.GetArray()) {
+					    if (!u.IsObject()) {
+						    continue;
+					    }
+					    std::string name = Utils::Json::getString(u, "global_name");
+					    if (name.empty()) {
+						    name = Utils::Json::getString(u, "username");
+					    }
+					    names.push_back(name);
+				    }
+			    }
+		    }
+		    cb(names);
+	    },
+	    {{"Authorization", token}});
+}
+
 void DiscordClient::queueReaction(ReactionRequest request) {
 	if (request.channelId.empty() || request.messageId.empty() ||
 	    (request.emoji.id.empty() && request.emoji.name.empty())) {
