@@ -615,6 +615,7 @@
     "message.new_indicator_count": "New Messages ({0}) ↓",
     "message.no_messages": "No messages in this channel",
     "message.no_permission": "You do not have permission to send messages.",
+    "message.slowmode_wait": "Slow mode: wait {0} more seconds to send again.",
     "message.no_view_permission": "You do not have permission to view this channel.",
     "message.pin_failed": "Could not change the pin",
     "message.pinned": "Message pinned",

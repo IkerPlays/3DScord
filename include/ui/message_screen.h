@@ -106,6 +106,7 @@ class MessageScreen : public Screen {
 	int channelType;
 	std::string rulesChannelId;
 	std::string channelTopic;
+	int channelSlowmode = 0;
 	std::string guildId;
 	std::vector<Discord::Message> messages;
 	int selectedIndex;

@@ -615,6 +615,7 @@
     "message.new_indicator_count": "Mensajes nuevos ({0}) ↓",
     "message.no_messages": "No hay mensajes en este canal",
     "message.no_permission": "No tienes permiso para enviar mensajes aquí.",
+    "message.slowmode_wait": "Modo lento: espera {0} segundos más para volver a escribir.",
     "message.no_view_permission": "No tienes permiso para ver este canal.",
     "message.pin_failed": "No se pudo cambiar el fijado",
     "message.pinned": "Mensaje fijado",

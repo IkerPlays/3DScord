@@ -5241,6 +5241,7 @@ void DiscordClient::parseChannelObject(const rapidjson::Value &cObj, Channel &ch
 	channel.parent_id = Utils::Json::getString(cObj, "parent_id");
 	channel.position = Utils::Json::getInt(cObj, "position");
 	channel.topic = Utils::Json::getString(cObj, "topic");
+	channel.slowmodeSeconds = Utils::Json::getInt(cObj, "rate_limit_per_user");
 	channel.flags = Utils::Json::getInt(cObj, "flags");
 
 	if (cObj.HasMember("available_tags") && cObj["available_tags"].IsArray()) {

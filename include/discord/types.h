@@ -45,6 +45,7 @@ struct Channel {
 	int position = 0;
 	bool viewable = false;
 	std::string topic;
+	int slowmodeSeconds = 0; // rate_limit_per_user: seconds between two messages of the same person
 	int message_count = 0;
 	std::string last_message_id;
 	std::string owner_id;

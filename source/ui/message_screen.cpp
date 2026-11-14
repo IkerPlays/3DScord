@@ -30,6 +30,7 @@
 #include "utils/utf8_utils.h"
 #include <3ds.h>
 #include <algorithm>
+#include <map>
 #include <citro2d.h>
 #include <cmath>
 #include <ctime>
@@ -126,6 +127,7 @@ float bottomButtonY() {
 bool pollEnded(const Discord::Poll &poll);
 
 static std::unordered_map<std::string, std::string> channelDrafts;
+static std::map<std::string, uint64_t> lastSentAt; // channel id -> when this console last sent a message there (for the slow mode)
 static std::string everyoneConfirmed; // text with @everyone/@here that was already warned about
 
 constexpr float BLOCK_GAP = 4.0f;
@@ -440,6 +442,7 @@ void MessageScreen::onEnter() {
 	Discord::Channel channel = client.getChannel(channelId);
 	this->channelType = channel.type;
 	this->channelTopic = channel.topic;
+	this->channelSlowmode = channel.slowmodeSeconds;
 	this->guildId = client.getGuildIdFromChannel(channelId);
 	const Discord::Guild *guildInfo = client.getGuildPtr(guildId);
 	this->rulesChannelId = guildInfo ? guildInfo->rules_channel_id : "";
@@ -3709,6 +3712,19 @@ void MessageScreen::openKeyboard() {
 		return;
 	}
 
+	// Slow mode: tell how long is left before the next message instead of letting Discord refuse it.
+	if (channelSlowmode > 0 && !client.canManageMessages(channelId)) {
+		const auto it = lastSentAt.find(channelId);
+		if (it != lastSentAt.end()) {
+			const uint64_t elapsed = (osGetTime() - it->second) / 1000;
+			if (elapsed < static_cast<uint64_t>(channelSlowmode)) {
+				ScreenManager::getInstance().showToast(
+				    Core::I18n::getInstance().format(TR("message.slowmode_wait"), std::to_string(channelSlowmode - elapsed)));
+				return;
+			}
+		}
+	}
+
 	client.triggerTypingIndicator(channelId);
 
 	auto res = runKeyboard(TR("common.message_hint"), channelDrafts[channelId]);
@@ -3727,6 +3743,7 @@ void MessageScreen::openKeyboard() {
 		channelDrafts.erase(channelId);
 		// Discord takes 2000 characters per message: a longer text (the mentions get longer when they are converted) goes in several,
 		// cut at a line break or a space, never inside a character.
+		lastSentAt[channelId] = osGetTime();
 		std::string rest = resolveMentions(res.text);
 		while (!rest.empty()) {
 			std::string outgoing;
