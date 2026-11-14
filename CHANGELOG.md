@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.18.0
 - **New logo, icon and banner:** a chat bubble with "3D" on a blurple tile, drawn for the project (it does not use the logos of Discord or Nintendo). It is the HOME Menu icon, the HOME Menu banner,
   the spinning logo of the start screen and the About screen, and `resources/logo.png`. `tools/brand/brand.py` makes all the sizes.
 - **New sounds:** notification, join, leave, mic and headphones, outgoing and incoming call, and the HOME Menu banner jingle are now original bell-like tones, about as loud as before
