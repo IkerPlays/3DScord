@@ -1001,5 +1001,12 @@
     "settings.desc.sound_volume": "Lo fuertes que suenan los sonidos de la app (avisos, llamadas, micrófono).",
     "settings.low_battery": "Aviso de batería baja",
     "settings.desc.low_battery": "Muestra un mensaje cuando queda poca batería y la consola no está cargando.",
-    "battery.low": "Batería baja: conecta el cargador"
+    "battery.low": "Batería baja: conecta el cargador",
+    "settings.theme.sunset": "Atardecer",
+    "settings.theme.ocean": "Océano",
+    "settings.theme.forest": "Bosque",
+    "settings.theme.rose": "Rosa",
+    "settings.theme.high_contrast": "Alto contraste",
+    "settings.theme.colorblind": "Apto para daltonismo",
+    "settings.theme.paper": "Papel (claro cálido)"
 }

@@ -96,7 +96,7 @@ u32 rgb(int r, int g, int b) { return 0xFF000000u | ((u32)b << 16) | ((u32)g << 
 } // namespace
 
 Theme Config::getPreset(int type) {
-	Theme t = (type == 1 || type == 3) ? getLightPreset() : getDarkPreset();
+	Theme t = (type == 1 || type == 3 || type == 12) ? getLightPreset() : getDarkPreset();
 	t.author = "3DScord Team";
 	switch (type) {
 	case 2: // AMOLED: real black, so unlit pixels stay off
@@ -166,6 +166,131 @@ Theme Config::getPreset(int type) {
 		t.reaction_bg = rgb(34, 40, 78);
 		t.reaction_me_bg = rgb(60, 80, 160);
 		t.input_bg = rgb(10, 12, 28);
+		break;
+	case 6: // Sunset: warm dark purple with orange
+		t.name = "Sunset";
+		t.bg = rgb(36, 22, 40);
+		t.bg_dark = rgb(26, 15, 30);
+		t.bg_light = rgb(62, 36, 58);
+		t.accent = rgb(255, 140, 70);
+		t.selection = rgb(214, 96, 52);
+		t.separator = rgb(150, 110, 130);
+		t.text = rgb(255, 238, 230);
+		t.text_muted = rgb(205, 165, 160);
+		t.link = rgb(255, 190, 110);
+		t.embed_bg = rgb(26, 15, 30);
+		t.embed_media_bg = rgb(36, 22, 40);
+		t.reaction_bg = rgb(62, 36, 58);
+		t.reaction_me_bg = rgb(120, 62, 52);
+		t.input_bg = rgb(20, 11, 24);
+		break;
+	case 7: // Ocean: dark teal
+		t.name = "Ocean";
+		t.bg = rgb(14, 34, 44);
+		t.bg_dark = rgb(8, 24, 32);
+		t.bg_light = rgb(24, 56, 70);
+		t.accent = rgb(60, 205, 215);
+		t.selection = rgb(30, 140, 160);
+		t.separator = rgb(90, 140, 155);
+		t.text = rgb(228, 248, 252);
+		t.text_muted = rgb(140, 190, 200);
+		t.link = rgb(120, 220, 255);
+		t.embed_bg = rgb(8, 24, 32);
+		t.embed_media_bg = rgb(14, 34, 44);
+		t.reaction_bg = rgb(24, 56, 70);
+		t.reaction_me_bg = rgb(20, 100, 120);
+		t.input_bg = rgb(6, 18, 24);
+		break;
+	case 8: // Forest: dark green and earth
+		t.name = "Forest";
+		t.bg = rgb(26, 36, 28);
+		t.bg_dark = rgb(18, 26, 20);
+		t.bg_light = rgb(42, 58, 44);
+		t.accent = rgb(140, 210, 110);
+		t.selection = rgb(86, 150, 78);
+		t.separator = rgb(120, 150, 118);
+		t.text = rgb(236, 245, 230);
+		t.text_muted = rgb(165, 190, 160);
+		t.link = rgb(170, 225, 140);
+		t.embed_bg = rgb(18, 26, 20);
+		t.embed_media_bg = rgb(26, 36, 28);
+		t.reaction_bg = rgb(42, 58, 44);
+		t.reaction_me_bg = rgb(66, 110, 62);
+		t.input_bg = rgb(14, 20, 16);
+		break;
+	case 9: // Rose: dark with pink
+		t.name = "Rose";
+		t.bg = rgb(40, 24, 32);
+		t.bg_dark = rgb(30, 16, 24);
+		t.bg_light = rgb(66, 38, 52);
+		t.accent = rgb(255, 120, 170);
+		t.selection = rgb(210, 70, 120);
+		t.separator = rgb(160, 110, 135);
+		t.text = rgb(255, 238, 244);
+		t.text_muted = rgb(210, 165, 185);
+		t.link = rgb(255, 170, 210);
+		t.embed_bg = rgb(30, 16, 24);
+		t.embed_media_bg = rgb(40, 24, 32);
+		t.reaction_bg = rgb(66, 38, 52);
+		t.reaction_me_bg = rgb(130, 54, 90);
+		t.input_bg = rgb(24, 12, 18);
+		break;
+	case 10: // High contrast: black, white and yellow, for low vision
+		t.name = "High contrast";
+		t.bg = rgb(0, 0, 0);
+		t.bg_dark = rgb(0, 0, 0);
+		t.bg_light = rgb(40, 40, 40);
+		t.accent = rgb(255, 230, 0);
+		t.selection = rgb(255, 230, 0);
+		t.separator = rgb(255, 255, 255);
+		t.text = rgb(255, 255, 255);
+		t.text_muted = rgb(225, 225, 225);
+		t.link = rgb(90, 220, 255);
+		t.embed_bg = rgb(20, 20, 20);
+		t.embed_media_bg = rgb(0, 0, 0);
+		t.reaction_bg = rgb(50, 50, 50);
+		t.reaction_me_bg = rgb(90, 80, 0);
+		t.input_bg = rgb(25, 25, 25);
+		t.success = rgb(80, 255, 120);
+		t.error = rgb(255, 90, 90);
+		break;
+	case 11: // Colour-blind friendly: blue and orange, no red/green pairs
+		t.name = "Colour-blind friendly";
+		t.bg = rgb(24, 28, 36);
+		t.bg_dark = rgb(16, 20, 28);
+		t.bg_light = rgb(40, 46, 60);
+		t.accent = rgb(86, 180, 233);
+		t.selection = rgb(0, 114, 178);
+		t.separator = rgb(130, 140, 160);
+		t.text = rgb(240, 244, 250);
+		t.text_muted = rgb(170, 178, 195);
+		t.link = rgb(240, 228, 66);
+		t.embed_bg = rgb(16, 20, 28);
+		t.embed_media_bg = rgb(24, 28, 36);
+		t.reaction_bg = rgb(40, 46, 60);
+		t.reaction_me_bg = rgb(0, 90, 140);
+		t.input_bg = rgb(12, 15, 22);
+		t.success = rgb(86, 180, 233);
+		t.error = rgb(230, 159, 0);
+		break;
+	case 12: // Paper: warm light
+		t.name = "Paper";
+		t.bg = rgb(250, 244, 232);
+		t.bg_dark = rgb(238, 230, 214);
+		t.bg_light = rgb(226, 216, 196);
+		t.accent = rgb(176, 96, 40);
+		t.selection = rgb(176, 96, 40);
+		t.separator = rgb(160, 148, 128);
+		t.text = rgb(50, 42, 34);
+		t.text_muted = rgb(110, 98, 84);
+		t.link = rgb(30, 100, 170);
+		t.embed_bg = rgb(244, 236, 220);
+		t.embed_media_bg = rgb(250, 244, 232);
+		t.reaction_bg = rgb(232, 222, 202);
+		t.reaction_me_bg = rgb(240, 208, 170);
+		t.input_bg = rgb(238, 230, 214);
+		t.success = rgb(60, 140, 70);
+		t.error = rgb(190, 50, 40);
 		break;
 	default:
 		break;

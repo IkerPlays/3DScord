@@ -1001,5 +1001,12 @@
     "settings.desc.sound_volume": "How loud the sounds of the app are (notifications, calls, microphone).",
     "settings.low_battery": "Low Battery Warning",
     "settings.desc.low_battery": "Shows a message when the battery is low and the console is not charging.",
-    "battery.low": "Battery low: plug in the charger"
+    "battery.low": "Battery low: plug in the charger",
+    "settings.theme.sunset": "Sunset",
+    "settings.theme.ocean": "Ocean",
+    "settings.theme.forest": "Forest",
+    "settings.theme.rose": "Rose",
+    "settings.theme.high_contrast": "High contrast",
+    "settings.theme.colorblind": "Colour-blind friendly",
+    "settings.theme.paper": "Paper (warm light)"
 }

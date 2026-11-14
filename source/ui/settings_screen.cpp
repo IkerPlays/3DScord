@@ -182,7 +182,11 @@ void SettingsScreen::onEnter() {
 	theme.valueFormatter = [](int val) -> std::string {
 		static const char *names[Config::THEME_PRESET_COUNT] = {"settings.theme.dark",     "settings.theme.light",
 		                                                         "settings.theme.amoled",   "settings.theme.nintendo",
-		                                                         "settings.theme.retro",    "settings.theme.midnight"};
+		                                                         "settings.theme.retro",    "settings.theme.midnight",
+		                                                         "settings.theme.sunset",   "settings.theme.ocean",
+		                                                         "settings.theme.forest",   "settings.theme.rose",
+		                                                         "settings.theme.high_contrast", "settings.theme.colorblind",
+		                                                         "settings.theme.paper"};
 		return TR(names[std::clamp(val, 0, Config::THEME_PRESET_COUNT - 1)]);
 	};
 	theme.onUpdate = [](int val) { Config::getInstance().setThemeType(val); };
