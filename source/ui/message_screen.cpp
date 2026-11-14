@@ -878,7 +878,8 @@ void MessageScreen::update() {
 
 					if (res.button == SWKBD_BUTTON_RIGHT && !res.text.empty()) {
 						channelDrafts.erase(channelId);
-						Discord::Message replyMsg = createOptimisticMessage(res.text, 19, targetAuthorName);
+						const std::string outgoingReply = resolveMentions(res.text);
+						Discord::Message replyMsg = createOptimisticMessage(outgoingReply, 19, targetAuthorName);
 						{
 							std::lock_guard<std::recursive_mutex> lock(messageMutex);
 							this->messages.push_back(replyMsg);
@@ -887,7 +888,7 @@ void MessageScreen::update() {
 						}
 
 						client.sendReply(
-						    channelId, res.text, targetMsgId,
+						    channelId, outgoingReply, targetMsgId,
 						    [this, token = aliveToken, replyMsgId = replyMsg.id](const Discord::Message &sentMsg,
 						                                                         bool success, int errorCode) {
 							    if (!*token) {
@@ -3716,7 +3717,8 @@ void MessageScreen::openKeyboard() {
 	if (res.button == SWKBD_BUTTON_RIGHT && !res.text.empty()) {
 		everyoneConfirmed.clear();
 		channelDrafts.erase(channelId);
-		Discord::Message optimisticMsg = createOptimisticMessage(res.text);
+		const std::string outgoing = resolveMentions(res.text);
+		Discord::Message optimisticMsg = createOptimisticMessage(outgoing);
 		{
 			std::lock_guard<std::recursive_mutex> lock(messageMutex);
 			this->messages.push_back(optimisticMsg);
@@ -3725,7 +3727,7 @@ void MessageScreen::openKeyboard() {
 		}
 
 		client.sendMessage(
-		    channelId, res.text,
+		    channelId, outgoing,
 		    [this, token = aliveToken, pendingId = optimisticMsg.id](const Discord::Message &sentMsg, bool success,
 		                                                             int errorCode) {
 			    if (!*token) {
@@ -3997,12 +3999,94 @@ void MessageScreen::checkAndMarkChannelRead() {
 	Discord::DiscordClient::getInstance().markChannelReadLatest(channelId, latestRealId);
 }
 
+std::string MessageScreen::resolveMentions(const std::string &text) {
+	pendingMentions.clear();
+	if (text.find('@') == std::string::npos) {
+		return text;
+	}
+	auto &client = Discord::DiscordClient::getInstance();
+	struct Candidate {
+		std::string name; // lowercase
+		Discord::User user;
+	};
+	std::vector<Candidate> candidates;
+	auto lower = [](std::string v) {
+		for (char &c : v) {
+			c = (char)tolower((unsigned char)c);
+		}
+		return v;
+	};
+	auto add = [&](const Discord::User &u, const std::string &nick) {
+		if (u.id.empty()) {
+			return;
+		}
+		for (const std::string &n : {u.username, u.global_name, nick}) {
+			if (!n.empty()) {
+				candidates.push_back({lower(n), u});
+			}
+		}
+	};
+	// The people of a private conversation, and whoever wrote or was mentioned in the messages shown.
+	for (const auto &channel : client.getPrivateChannels()) {
+		if (channel.id == channelId) {
+			for (const auto &u : channel.recipients) {
+				add(u, "");
+			}
+		}
+	}
+	{
+		std::lock_guard<std::recursive_mutex> lock(messageMutex);
+		for (const auto &m : messages) {
+			add(m.author, m.member.nickname);
+			for (const auto &u : m.mentions) {
+				add(u, "");
+			}
+		}
+	}
+	// The longest name first, so "@Ana Maria" wins over "@Ana".
+	std::stable_sort(candidates.begin(), candidates.end(),
+	                 [](const Candidate &a, const Candidate &b) { return a.name.size() > b.name.size(); });
+	auto isNameChar = [](char c) { return isalnum((unsigned char)c) || c == '_' || c == '.'; };
+	std::string lowerText = lower(text);
+	std::string out;
+	size_t i = 0;
+	while (i < text.size()) {
+		if (text[i] == '@' && (i == 0 || text[i - 1] == ' ' || text[i - 1] == '\n') && i + 1 < text.size()) {
+			bool replaced = false;
+			for (const auto &c : candidates) {
+				const size_t n = c.name.size();
+				if (i + 1 + n <= text.size() && lowerText.compare(i + 1, n, c.name) == 0 &&
+				    (i + 1 + n == text.size() || !isNameChar(text[i + 1 + n]))) {
+					out += "<@" + c.user.id + ">";
+					bool known = false;
+					for (const auto &u : pendingMentions) {
+						known = known || u.id == c.user.id;
+					}
+					if (!known) {
+						pendingMentions.push_back(c.user);
+					}
+					i += 1 + n;
+					replaced = true;
+					break;
+				}
+			}
+			if (replaced) {
+				continue;
+			}
+		}
+		out += text[i++];
+	}
+	return out;
+}
+
 Discord::Message MessageScreen::createOptimisticMessage(const std::string &content, int type,
                                                         const std::string &referencedAuthor) {
 	Discord::Message msg;
 	msg.id = "pending_" + std::to_string(osGetTime());
 	msg.nonce = msg.id;
 	msg.content = content;
+	msg.mentions = pendingMentions;
+	pendingMentions.clear();
 	msg.displayContent = UI::MessageUtils::buildDisplayContent(msg);
 	msg.channelId = channelId;
 	msg.author = Discord::DiscordClient::getInstance().getCurrentUser();

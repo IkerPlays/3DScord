@@ -197,7 +197,7 @@ struct Attachment {
 	bool spoiler = false;
 	float durationSecs = 0.0f; // voice messages
 	bool isVoice() const { return durationSecs > 0.0f && content_type.rfind("audio/", 0) == 0; }
-	// Ogg, MP3 and WAV sound files (voice messages, music and short clips) can be played; other audio formats (AAC, M4A, FLAC) cannot.
+	// Ogg (Opus and Vorbis), MP3, WAV and FLAC sound files (voice messages, music and short clips) can be played; other audio formats (AAC, M4A) cannot.
 	bool isPlayableAudio() const {
 		if (isVoice()) {
 			return true;
@@ -207,8 +207,8 @@ struct Attachment {
 		for (char &c : ext) {
 			c = (char)tolower((unsigned char)c);
 		}
-		return ext == "ogg" || ext == "opus" || ext == "oga" || ext == "mp3" || ext == "wav" || content_type == "audio/mpeg" ||
-		       content_type == "audio/mp3" || content_type == "audio/wav" || content_type == "audio/x-wav";
+		return ext == "ogg" || ext == "opus" || ext == "oga" || ext == "mp3" || ext == "wav" || ext == "flac" || content_type == "audio/mpeg" ||
+		       content_type == "audio/mp3" || content_type == "audio/wav" || content_type == "audio/x-wav" || content_type == "audio/flac" || content_type == "audio/x-flac";
 	}
 	// MP4 videos (H.264) of up to 16 MB can be played, without sound.
 	bool isPlayableVideo() const {

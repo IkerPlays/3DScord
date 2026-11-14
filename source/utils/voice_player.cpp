@@ -15,6 +15,30 @@
 #define MINIMP3_NO_SIMD
 #include "minimp3.h"
 
+// dr_flac (public domain or MIT-0, https://github.com/mackron/dr_libs): a FLAC decoder in one header.
+#define DR_FLAC_IMPLEMENTATION
+#define DR_FLAC_NO_STDIO
+#define DR_FLAC_NO_SIMD
+#define DR_FLAC_NO_CRC
+#include "dr_flac/dr_flac.h"
+
+// stb_vorbis (public domain, https://github.com/nothings/stb): an Ogg Vorbis decoder (built in library/stb_vorbis).
+extern "C" {
+struct stb_vorbis;
+struct stb_vorbis_info {
+	unsigned int sample_rate;
+	int channels;
+	unsigned int setup_memory_required;
+	unsigned int setup_temp_memory_required;
+	unsigned int temp_memory_required;
+	int max_frame_size;
+};
+stb_vorbis *stb_vorbis_open_memory(const unsigned char *data, int len, int *error, void *alloc_buffer);
+stb_vorbis_info stb_vorbis_get_info(stb_vorbis *f);
+int stb_vorbis_get_samples_short_interleaved(stb_vorbis *f, int channels, short *buffer, int num_shorts);
+void stb_vorbis_close(stb_vorbis *f);
+}
+
 namespace Utils {
 
 namespace {
@@ -180,11 +204,67 @@ bool decodeWav(const std::string &file, std::vector<int16_t> &pcm, int &rate) {
 	return false;
 }
 
+// Ogg Vorbis (music files; the voice messages are Opus).
+bool decodeVorbis(const std::string &file, std::vector<int16_t> &pcm, int &rate) {
+	int err = 0;
+	stb_vorbis *v = stb_vorbis_open_memory((const unsigned char *)file.data(), (int)file.size(), &err, nullptr);
+	if (!v) {
+		return false;
+	}
+	const stb_vorbis_info info = stb_vorbis_get_info(v);
+	const int channels = std::max(1, info.channels);
+	std::vector<int16_t> chunk((size_t)channels * 1024);
+	std::vector<int> pending;
+	rate = 0;
+	while (pcm.size() < MAX_SAMPLES) {
+		const int frames = stb_vorbis_get_samples_short_interleaved(v, channels, chunk.data(), (int)chunk.size());
+		if (frames <= 0) {
+			break;
+		}
+		int outRate = 0;
+		appendMono(pcm, chunk.data(), frames, channels, (int)info.sample_rate, pending, outRate);
+		rate = outRate;
+	}
+	stb_vorbis_close(v);
+	return !pcm.empty() && rate > 0;
+}
+
+// FLAC.
+bool decodeFlac(const std::string &file, std::vector<int16_t> &pcm, int &rate) {
+	drflac *flac = drflac_open_memory(file.data(), file.size(), nullptr);
+	if (!flac) {
+		return false;
+	}
+	const int channels = (int)std::max<drflac_uint32>(1, flac->channels);
+	std::vector<int16_t> chunk((size_t)channels * 1024);
+	std::vector<int> pending;
+	rate = 0;
+	while (pcm.size() < MAX_SAMPLES) {
+		const drflac_uint64 frames = drflac_read_pcm_frames_s16(flac, 1024, chunk.data());
+		if (frames == 0) {
+			break;
+		}
+		int outRate = 0;
+		appendMono(pcm, chunk.data(), (int)frames, channels, (int)flac->sampleRate, pending, outRate);
+		rate = outRate;
+	}
+	drflac_close(flac);
+	return !pcm.empty() && rate > 0;
+}
+
 // Picks the decoder by what the file starts with.
 bool decodeAudio(const std::string &file, std::vector<int16_t> &pcm, int &rate) {
 	if (file.size() >= 4 && memcmp(file.data(), "OggS", 4) == 0) {
-		rate = RATE;
-		return decodeOgg(file, pcm);
+		// Opus (voice messages) or Vorbis (music): the first packet says which.
+		const size_t look = std::min<size_t>(file.size(), 128);
+		if (std::search(file.begin(), file.begin() + look, "OpusHead", "OpusHead" + 8) != file.begin() + look) {
+			rate = RATE;
+			return decodeOgg(file, pcm);
+		}
+		return decodeVorbis(file, pcm, rate);
+	}
+	if (file.size() >= 4 && memcmp(file.data(), "fLaC", 4) == 0) {
+		return decodeFlac(file, pcm, rate);
 	}
 	if (file.size() >= 12 && memcmp(file.data(), "RIFF", 4) == 0) {
 		return decodeWav(file, pcm, rate);

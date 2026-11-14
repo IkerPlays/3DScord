@@ -31,7 +31,7 @@ include $(DEVKITARM)/3ds_rules
 #---------------------------------------------------------------------------------
 TARGET		:=	3DScord
 BUILD		:=	build
-SOURCES		:=	source source/core source/network source/discord source/ui source/ui/forum source/utils library/qrcodegen library/minih264 library/openh264/src \
+SOURCES		:=	source source/core source/network source/discord source/ui source/ui/forum source/utils library/qrcodegen library/minih264 library/stb_vorbis library/openh264/src \
 			library/mlspp/src library/mlspp/hpke_src \
 			library/libdave/src library/libdave/src/mls library/libdave/src/utils \
 			library/webrtc-aecm/common_audio \

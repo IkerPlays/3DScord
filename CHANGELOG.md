@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- **You can mention people:** type `@name` (username, display name or nickname of someone in the conversation) and it is sent as a real mention; the longest name wins. It works in messages and replies.
+- **More sound formats can be played from the chat:** FLAC and Ogg Vorbis (music files) next to the Opus voice messages, MP3 and WAV (dr_flac and stb_vorbis, both public domain).
 - **Your camera and screen finally show to the others:** the video packets go without the playout-delay extension and with SPS and PPS as separate packets (the way that worked in the
   experiment that tried four ways), the order is voice state, speaking, video signal, packets, and the SPS of every key frame is rewritten for WebRTC receivers.
 - **Switching between the inner and the outer camera is faster** (the stream stays announced to Discord and only the capture restarts), and **sharing the screen is about four times

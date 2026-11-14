@@ -260,6 +260,10 @@ class MessageScreen : public Screen {
 	void checkAndMarkChannelRead();
 	void syncScrollAfterRebuild(bool wasAtBottom, bool updateSelection = false);
 
+	// Turns "@name" in the text you typed into a real mention (<@id>) for the people of this channel; the users found are kept for the
+	// message that is shown while it is sent.
+	std::string resolveMentions(const std::string &text);
+	std::vector<Discord::User> pendingMentions;
 	Discord::Message createOptimisticMessage(const std::string &content, int type = 0,
 	                                         const std::string &referencedAuthor = "");
 	void handleMessageSendResult(const std::string &pendingId, const Discord::Message &sentMsg, bool success,
