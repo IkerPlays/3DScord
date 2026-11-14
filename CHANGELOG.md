@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- **A tip on the start screen** (a different one each start) while the app looks for updates. The diagnostics report also says the state of the video connections and how many pictures of others were decrypted or not.
 - **Watch the Go Live of others** (EXPERIMENTAL, needs Settings > Voice > Video; Settings > Voice > **Watch Streams Automatically**): when someone in the call shares their screen, 3DScord asks Discord to watch the stream
   (STREAM_WATCH), opens a third voice connection for it (with its own DAVE group) and shows its picture like a camera (light quality). If the stream does not open in 25 seconds it gives up until the stream restarts.
 - **A sound of its own for mentions:** a message that mentions you in a server plays a brighter, three-note sound (direct messages and the rest keep the usual one, and a sound you chose for the channel still wins).

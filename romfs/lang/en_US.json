@@ -1016,5 +1016,13 @@
     "settings.auto_watch": "Watch Streams Automatically",
     "settings.desc.auto_watch": "When someone in the call shares their screen (Go Live), open the stream to see it. Needs Video (experimental). It uses more memory and processor.",
     "stream.opening": "Opening the live stream of the call...",
-    "diag.video": "Video"
+    "diag.video": "Video",
+    "tip.1": "Tip: press SELECT to open the side menu.",
+    "tip.2": "Tip: type @name to mention someone in a message.",
+    "tip.3": "Tip: Settings > Appearance has 13 themes, including high contrast.",
+    "tip.4": "Tip: in a call, the camera button goes through both cameras and the screens.",
+    "tip.5": "Tip: press Y inside Settings to search them.",
+    "tip.6": "Tip: turn on Notifications Outside the App in Settings (needs Luma3DS).",
+    "tip.7": "Tip: voice messages and music (MP3, FLAC, Ogg) play from the message menu.",
+    "tip.8": "Tip: Settings > Diagnostics saves a report you can send when something fails."
 }

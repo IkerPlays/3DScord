@@ -225,6 +225,12 @@ void UpdaterScreen::renderTop(C3D_RenderTarget *target) {
 	}
 	drawCenteredText(centerY + 60.0f, 0.5f, 0.5f, 0.5f, ScreenManager::colorText(), line, TOP_SCREEN_WIDTH);
 
+	// While it looks for a new version: a tip about the app (a different one each start).
+	if (updater.getState() == Updater::State::CHECKING) {
+		static const int tip = (int)(osGetTime() % 8) + 1;
+		drawCenteredText(centerY + 100.0f, 0.5f, 0.4f, 0.4f, ScreenManager::colorTextMuted(), TR("tip." + std::to_string(tip)), TOP_SCREEN_WIDTH);
+	}
+
 	const auto state = updater.getState();
 	if (state == Updater::State::DOWNLOADING || state == Updater::State::INSTALLING) {
 		const float w = 200.0f;

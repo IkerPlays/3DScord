@@ -1016,5 +1016,13 @@
     "settings.auto_watch": "Ver directos automáticamente",
     "settings.desc.auto_watch": "Cuando alguien de la llamada comparte su pantalla (Go Live), abre el directo para verlo. Necesita Vídeo (experimental). Gasta más memoria y procesador.",
     "stream.opening": "Abriendo el directo de la llamada...",
-    "diag.video": "Vídeo"
+    "diag.video": "Vídeo",
+    "tip.1": "Consejo: pulsa SELECT para abrir el menú lateral.",
+    "tip.2": "Consejo: escribe @nombre para mencionar a alguien en un mensaje.",
+    "tip.3": "Consejo: Ajustes > Apariencia tiene 13 temas, con alto contraste.",
+    "tip.4": "Consejo: en una llamada, el botón de la cámara recorre las dos cámaras y las pantallas.",
+    "tip.5": "Consejo: pulsa Y dentro de Ajustes para buscar.",
+    "tip.6": "Consejo: activa Notificaciones fuera de la app en Ajustes (necesita Luma3DS).",
+    "tip.7": "Consejo: los mensajes de voz y la música (MP3, FLAC, Ogg) suenan desde el menú del mensaje.",
+    "tip.8": "Consejo: Ajustes > Diagnóstico guarda un informe que puedes enviar si algo falla."
 }
