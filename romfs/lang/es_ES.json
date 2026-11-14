@@ -503,7 +503,7 @@
     "nettest.average": "Media",
     "nettest.worst": "peor",
     "callcam.title": "Cámara en la llamada",
-    "list.tools.callcam": "Envía tu cámara interior a la llamada (320x240, experimental). Pulsa otra vez para quitarla. Necesita Ajustes > Voz > Vídeo.",
+    "list.tools.callcam": "Envía tu cámara (delantera o trasera) a la llamada (experimental). Pulsa otra vez para cambiar o parar. Necesita Ajustes > Voz > Vídeo y una New 3DS / New 2DS XL.",
     "callcam.on": "Cámara activada. Los demás deberían verte en unos segundos.",
     "callcam.off": "Cámara desactivada.",
     "callcam.need_video": "Activa Ajustes > Voz > Vídeo (experimental) y entra otra vez en la llamada.",

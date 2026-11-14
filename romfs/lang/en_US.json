@@ -503,7 +503,7 @@
     "nettest.average": "Average",
     "nettest.worst": "worst",
     "callcam.title": "Camera in the Call",
-    "list.tools.callcam": "Sends your inner camera to the call (320x240, experimental). Press again to stop. Needs Settings > Voice > Video.",
+    "list.tools.callcam": "Sends your camera (inner or outer) to the call (experimental). Press again to change or stop. Needs Settings > Voice > Video and a New 3DS / New 2DS XL.",
     "callcam.on": "Camera on. Others should see you in a few seconds.",
     "callcam.off": "Camera off.",
     "callcam.need_video": "Turn on Settings > Voice > Video (experimental) and join the call again.",
