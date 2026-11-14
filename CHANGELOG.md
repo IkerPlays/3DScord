@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- **Save a chat to the SD card:** Channel Tools > **Save This Chat** writes the last 100 messages (time, author, text and the links of the files) to `sdmc:/3ds/3DScord/exports/` as a text file.
 - **More translated texts:** French, German, Italian, Portuguese (Brazil) and Polish get 100 more strings each (settings, voice, friends, themes, battery and the tips), and the descriptions of the Video setting and of the call camera tool (English and Spanish) no longer say that video is not shown.
 - **Notification LED in the app too** (Settings > Voice > Notification LED, on by default; needs Luma3DS): the light of the console pulses for a few seconds when a message that should notify you arrives, also while you use the app. In the background it goes on until you come back.
 - **Mention from the message menu:** press A on a message and choose **Mention** to add `@name` of its author to your draft (then write the rest and send).

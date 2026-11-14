@@ -1029,5 +1029,10 @@
     "message.menu.mention": "Mention",
     "message.mention_added": "Added to your message: write the rest and send",
     "settings.notification_led": "Notification LED",
-    "settings.desc.notification_led": "Pulses the light of the console when a message that should notify you arrives, also while you use the app."
+    "settings.desc.notification_led": "Pulses the light of the console when a message that should notify you arrives, also while you use the app.",
+    "list.export_chat": "Save This Chat",
+    "list.tools.export_chat": "Saves the last 100 messages of this chat as a text file on the SD card.",
+    "export.working": "Saving the chat...",
+    "export.saved": "Chat saved to {0}",
+    "export.failed": "The chat could not be saved"
 }

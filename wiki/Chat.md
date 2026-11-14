@@ -20,4 +20,4 @@ mention. If two names start the same, the longest wins (`@Ana Maria` before `@An
 
 ## Reactions, polls, pins and more
 
-Reactions, polls, spoilers, embeds, stickers and emoji work. **Channel Tools** has the gallery, threads, members, quick replies, drafts, formatting, sounds and mark as read.
+Reactions, polls, spoilers, embeds, stickers and emoji work. **Channel Tools** has **Save This Chat** (the last 100 messages as a text file in `sdmc:/3ds/3DScord/exports/`), the gallery, threads, members, quick replies, drafts, formatting, sounds and mark as read.

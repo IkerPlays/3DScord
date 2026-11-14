@@ -559,6 +559,7 @@ void ListScreen::loadLocal() {
 		        {"sound_guild", channelId, TR("list.sound_guild"), TR("list.tools.sound_guild")},
 		        {"quick", channelId, TR("list.quick_replies"), TR("list.tools.quick")},
 		        {"drafts", channelId, TR("list.drafts"), TR("list.tools.drafts")},
+		        {"export", channelId, TR("list.export_chat"), TR("list.tools.export_chat")},
 		        {"format", channelId, TR("list.format"), TR("list.tools.format")},
 		        {"read", channelId, TR("list.mark_read"), TR("list.tools.read")},
 		        {"readserver", channelId, TR("list.mark_server_read"), TR("list.tools.read_server")},
@@ -1561,6 +1562,40 @@ void ListScreen::primaryAction(const Entry &entry) {
 			} else {
 				sm.showToast(TR("follow.not_announcement"));
 			}
+		} else if (entry.id == "export") {
+			// The last 100 messages of this chat go to a text file on the SD card (sdmc:/3ds/3DScord/exports/).
+			sm.showToast(TR("export.working"));
+			const std::string label = channelLabel(channelId);
+			client.fetchMessagesAsync(channelId, 100, [label](const std::vector<Discord::Message> &fetched) {
+				std::vector<Discord::Message> list = fetched;
+				std::sort(list.begin(), list.end(), [](const Discord::Message &a, const Discord::Message &b) {
+					return UI::MessageUtils::isNewerSnowflake(b.id, a.id);
+				});
+				std::string text = "# " + label + "\n\n";
+				for (const auto &m : list) {
+					const std::string who = m.author.global_name.empty() ? m.author.username : m.author.global_name;
+					text += "[" + UI::MessageUtils::formatTimestamp(m.timestamp) + "] " + who + ": " + m.content + "\n";
+					for (const auto &a : m.attachments) {
+						text += "    [file] " + a.filename + " " + a.url + "\n";
+					}
+				}
+				std::string name = label;
+				for (char &c : name) {
+					if (!isalnum((unsigned char)c)) {
+						c = '_';
+					}
+				}
+				mkdir("sdmc:/3ds", 0777);
+				mkdir("sdmc:/3ds/3DScord", 0777);
+				mkdir("sdmc:/3ds/3DScord/exports", 0777);
+				const std::string path = "sdmc:/3ds/3DScord/exports/" + name.substr(0, 40) + "_" + std::to_string((long long)time(nullptr)) + ".txt";
+				auto &dc = Discord::DiscordClient::getInstance();
+				if (Utils::File::writeFile(path, text)) {
+					dc.pushAlert(Core::I18n::format(TR("export.saved"), path));
+				} else {
+					dc.pushAlert(TR("export.failed"));
+				}
+			});
 		} else if (entry.id == "recordcall") {
 			auto &recorder = Utils::CallRecorder::getInstance();
 			if (recorder.isRecording()) {
