@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- **README in Spanish** (`README.es.md`).
 - **The stream you watch fills the top screen** as soon as its first picture arrives (L + R changes the view). A stream connection that received nothing no longer stops the receiver used by the call.
 - **Releases come with `SHA256SUMS.txt` and a QR code** (`3DScord-cia-qr.png`: FBI > Remote Install > Scan QR Code installs the CIA from it).
 - **For contributors:** issue templates (bug report with the diagnostics report, and ideas), `CONTRIBUTING.md` with a translation guide, and a check of the language files in CI (`tools/check_lang.py`).

@@ -2,6 +2,8 @@
 
 # 3DScord
 
+[Leer en español](README.es.md)
+
 ![License](https://img.shields.io/badge/license-GPLv3-green)
 ![Platform](https://img.shields.io/badge/platform-Nintendo%203DS-red)
 [![Build](https://github.com/IkerPlays/3DScord/actions/workflows/build.yml/badge.svg)](https://github.com/IkerPlays/3DScord/actions/workflows/build.yml)
