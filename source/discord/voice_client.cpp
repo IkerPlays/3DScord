@@ -732,7 +732,10 @@ void VoiceClient::closeVideoCapture() {
 		fclose((FILE *)videoFile);
 		videoFile = nullptr;
 	}
-	Utils::VideoReceiver::getInstance().stop();
+	// A stream connection that never received a picture must not stop the receiver that the call itself may be using.
+	if (!streamMode || videoAssembly) {
+		Utils::VideoReceiver::getInstance().stop();
+	}
 	free(videoAssembly);
 	free(videoDecrypted);
 	videoAssembly = nullptr;
