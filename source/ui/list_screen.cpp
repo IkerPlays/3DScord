@@ -768,6 +768,13 @@ void ListScreen::fetch(const std::string &path) {
 				    std::sort(list.begin(), list.end(), [](const Entry &a, const Entry &b) {
 					    return strcasecmp(a.title.c_str(), b.title.c_str()) < 0;
 				    });
+				    // Pending requests: a first row accepts all the incoming ones at once.
+				    if (fetchMode == Mode::FRIENDS && filterNow == 1 &&
+				        std::any_of(list.begin(), list.end(), [](const Entry &e) { return e.kind == 3; })) {
+					    Entry all{"", "", TR("friends.accept_all"), TR("friends.accept_all_desc")};
+					    all.kind = 5;
+					    list.insert(list.begin(), all);
+				    }
 			    }
 		    } else if (fetchMode == Mode::EVENTS) {
 			    if (doc.IsArray()) {
@@ -1538,6 +1545,15 @@ void ListScreen::primaryAction(const Entry &entry) {
 			load();
 		} else if (entry.kind == 4) {
 			sm.showToast(TR("friends.waiting"));
+		} else if (entry.kind == 5) {
+			int accepted = 0;
+			for (const auto &row : entries) {
+				if (row.kind == 3 && Discord::Social::acceptRequest(row.id).ok) {
+					accepted++;
+				}
+			}
+			sm.showToast(Core::I18n::format(TR("friends.accepted_count"), std::to_string(accepted)));
+			load();
 		}
 		break;
 	case Mode::GROUP_PICK: {
