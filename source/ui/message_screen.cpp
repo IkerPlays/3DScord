@@ -26,6 +26,7 @@
 #include "ui/screen_manager.h"
 #include "ui/video_player_screen.h"
 #include "utils/message_utils.h"
+#include "utils/text_split.h"
 #include "utils/redraw.h"
 #include "utils/utf8_utils.h"
 #include <3ds.h>
@@ -3787,32 +3788,7 @@ void MessageScreen::openKeyboard() {
 			const Discord::Guild *guildNow = client.getGuildPtr(guildId);
 			replaceAll("{server}", guildNow ? guildNow->name : std::string());
 		}
-		std::string rest = resolveMentions(typed);
-		while (!rest.empty()) {
-			std::string outgoing;
-			constexpr size_t LIMIT = 1900;
-			if (rest.size() <= LIMIT) {
-				outgoing = rest;
-				rest.clear();
-			} else {
-				size_t cut = rest.find_last_of("\n", LIMIT);
-				if (cut == std::string::npos || cut < LIMIT / 2) {
-					cut = rest.find_last_of(' ', LIMIT);
-				}
-				if (cut == std::string::npos || cut < LIMIT / 2) {
-					cut = LIMIT;
-					while (cut > 0 && (static_cast<unsigned char>(rest[cut]) & 0xC0) == 0x80) {
-						cut--;
-					}
-				}
-				outgoing = rest.substr(0, cut);
-				rest.erase(0, cut);
-				const size_t first = rest.find_first_not_of(" \n");
-				rest.erase(0, first == std::string::npos ? rest.size() : first);
-			}
-			if (outgoing.empty()) {
-				continue;
-			}
+		for (const std::string &outgoing : Utils::splitText(resolveMentions(typed))) {
 			Discord::Message optimisticMsg = createOptimisticMessage(outgoing);
 			{
 				std::lock_guard<std::recursive_mutex> lock(messageMutex);

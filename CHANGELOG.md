@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- The splitting of long messages is its own function with a test that runs in CI.
+
 ## 0.23.0
 - **Server info:** the server tools start with a line that shows when the server was created, how many members it has and whether you own it.
 - **Who reacted:** the message menu has a new **Who reacted** entry that shows the names behind the first three reactions of a message.

@@ -45,3 +45,12 @@ jobs:
           grep -q "level=31" /tmp/probe.txt
           grep -q "has_b_frames=0" /tmp/probe.txt
           grep -q "width=192" /tmp/probe.txt
+
+  text:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Long messages are split well
+        run: |
+          g++ -std=c++17 -Wall -Iinclude tests/text_split_test.cpp -o /tmp/text_test
+          /tmp/text_test
