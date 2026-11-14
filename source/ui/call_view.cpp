@@ -165,21 +165,25 @@ void drawTile(const Discord::VoiceParticipant &p, Discord::VoiceClient &voice, f
 		C2D_DrawRectSolid(x + border + 2.0f, y + border + 2.0f, 0.515f + zOff, w - 2 * border - 4.0f, h - 2 * border - 4.0f,
 		                  C2D_Color32(0, 0, 0, 255));
 		tx.drawPreview(x + border + 2.0f, y + border + 2.0f, 0.52f + zOff, w - 2 * border - 4.0f, h - 2 * border - 4.0f);
-		// How the encoder is doing: frames a second, milliseconds a frame, key frames asked for, times it could not keep up.
-		char stat[64];
-		snprintf(stat, sizeof(stat), "%d fps  %d ms  K%d  D%d", tx.statFps(), tx.statMs(), tx.statKeyAsks(), tx.statDrops());
-		drawRoundedRect(x + border + 3.0f, y + border + 3.0f, 0.57f + zOff, 112.0f, 12.0f, 4.0f, C2D_Color32(0, 0, 0, 170));
-		drawText(x + border + 6.0f, y + border + 3.0f, 0.58f + zOff, 0.34f, 0.34f, ScreenManager::colorText(), stat);
-		// What Discord says: its confirmation of our video state (S) and the control messages that come back from the call (R). If
-		// someone receives the video, R goes up and K (key frames they ask for) too.
-		const int echo = Discord::DiscordClient::getInstance().selfVideoEcho.load();
-		char state[64];
-		auto &mainVc = Discord::VoiceClient::getInstance();
-		auto &vc = mainVc.isScreenSharing() ? Discord::VoiceClient::getStreamInstance() : mainVc; // the screen goes on its own stream
-		snprintf(state, sizeof(state), "S%s R%u T%u E%u V%d", echo < 0 ? "?" : echo ? "1" : "0", (unsigned)vc.rtcpWhileSending(),
-		         (unsigned)vc.videoFramesSentCount(), (unsigned)vc.videoEncryptFailures(), vc.videoVariantNow());
-		drawRoundedRect(x + border + 3.0f, y + border + 17.0f, 0.57f + zOff, 112.0f, 12.0f, 4.0f, C2D_Color32(0, 0, 0, 170));
-		drawText(x + border + 6.0f, y + border + 17.0f, 0.58f + zOff, 0.34f, 0.34f, ScreenManager::colorText(), state);
+		// How the encoder is doing and what Discord says (only with the debug overlay on, L + R): frames a second, milliseconds a frame, key
+		// frames asked for, times it could not keep up; Discord's confirmation (S), RTCP messages (R), frames sent (T), frames that could not be
+		// encrypted (E) and the packet mode (V).
+		if (ScreenManager::getInstance().isDebugOverlayEnabled()) {
+			char stat[64];
+			snprintf(stat, sizeof(stat), "%d fps  %d ms  K%d  D%d", tx.statFps(), tx.statMs(), tx.statKeyAsks(), tx.statDrops());
+			drawRoundedRect(x + border + 3.0f, y + border + 3.0f, 0.57f + zOff, 112.0f, 12.0f, 4.0f, C2D_Color32(0, 0, 0, 170));
+			drawText(x + border + 6.0f, y + border + 3.0f, 0.58f + zOff, 0.34f, 0.34f, ScreenManager::colorText(), stat);
+			// What Discord says: its confirmation of our video state (S) and the control messages that come back from the call (R). If
+			// someone receives the video, R goes up and K (key frames they ask for) too.
+			const int echo = Discord::DiscordClient::getInstance().selfVideoEcho.load();
+			char state[64];
+			auto &mainVc = Discord::VoiceClient::getInstance();
+			auto &vc = mainVc.isScreenSharing() ? Discord::VoiceClient::getStreamInstance() : mainVc; // the screen goes on its own stream
+			snprintf(state, sizeof(state), "S%s R%u T%u E%u V%d", echo < 0 ? "?" : echo ? "1" : "0", (unsigned)vc.rtcpWhileSending(),
+			         (unsigned)vc.videoFramesSentCount(), (unsigned)vc.videoEncryptFailures(), vc.videoVariantNow());
+			drawRoundedRect(x + border + 3.0f, y + border + 17.0f, 0.57f + zOff, 112.0f, 12.0f, 4.0f, C2D_Color32(0, 0, 0, 170));
+			drawText(x + border + 6.0f, y + border + 17.0f, 0.58f + zOff, 0.34f, 0.34f, ScreenManager::colorText(), state);
+		}
 	} else if (showCamera && rx.isLive() && rx.userId() == p.userId) {
 		C2D_DrawRectSolid(x + border + 2.0f, y + border + 2.0f, 0.515f + zOff, w - 2 * border - 4.0f, h - 2 * border - 4.0f,
 		                  C2D_Color32(0, 0, 0, 255));

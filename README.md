@@ -34,7 +34,7 @@ See the [wiki](https://github.com/IkerPlays/3DScord/wiki) for guides, [ROADMAP.m
   the SD card), status and custom status, message display options and privacy options.
 - **Auto-updater:** at startup, while the 3DScord logo spins, 3DScord looks for a new version. It shows the release
   notes, asks if you want to update, installs it and restarts. Devbuilds are optional.
-- **Themes and languages:** Dark, Light, AMOLED, Nintendo, Retro and Midnight themes, a theme editor on the console,
+- **Themes and languages:** 13 themes (Dark, Light, AMOLED, Nintendo, Retro, Midnight, Sunset, Ocean, Forest, Rose, High contrast, Colour-blind friendly and Paper), a theme editor on the console,
   custom [themes](THEME_FORMAT.md) and several languages. Left-handed mode and a battery saver.
 - Goes idle automatically when you close the lid.
 
