@@ -680,6 +680,17 @@ void SettingsScreen::onEnter() {
 	};
 	allItems.push_back(soundVol);
 
+	SettingItem led;
+	led.label = TR("settings.notification_led");
+	led.description = TR("settings.desc.notification_led");
+	led.type = SettingItemType::TOGGLE;
+	led.value = Config::getInstance().isNotificationLed() ? 1 : 0;
+	led.min = 0;
+	led.max = 1;
+	led.valueFormatter = [](int val) { return (val == 1) ? TR("common.enabled") : TR("common.disabled"); };
+	led.onUpdate = [](int val) { Config::getInstance().setNotificationLed(val == 1); };
+	allItems.push_back(led);
+
 	SettingItem lowBattery;
 	lowBattery.label = TR("settings.low_battery");
 	lowBattery.description = TR("settings.desc.low_battery");

@@ -170,6 +170,9 @@ class Config {
 	// Open the Go Live stream of someone in the call by itself (needs Video).
 	bool isAutoWatchStreams() const { return autoWatchStreams; }
 	void setAutoWatchStreams(bool enabled);
+	// Pulse the notification LED when a message that should notify you arrives (in the app too).
+	bool isNotificationLed() const { return notificationLed; }
+	void setNotificationLed(bool enabled);
 	bool isKeepCallsAwake() const { return keepCallsAwake; }
 	void setKeepCallsAwake(bool enabled);
 
@@ -262,6 +265,7 @@ class Config {
 	bool autoReconnect = true;
 	bool keepCallsAwake;
 	bool clock12h = false;
+	bool notificationLed = true;
 	bool autoWatchStreams = true;
 	bool showStatusBar = false;
 	int dateFormat = 0;

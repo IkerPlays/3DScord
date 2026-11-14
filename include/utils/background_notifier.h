@@ -18,6 +18,8 @@ class BackgroundNotifier {
 	// True when the app is in the Home menu (or the console sleeps) and has not been restored yet.
 	bool inBackground() const;
 	void notify(const std::string &title, const std::string &body);
+	// Called every frame: turns the LED pulse off a few seconds after it started when the app is in front.
+	void tick();
 	// Turns the LED off again (the app came back to the front).
 	void clearLed();
 

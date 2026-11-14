@@ -14,6 +14,7 @@ std::atomic<bool> background{false};
 std::atomic<bool> haveNews{false};
 std::atomic<bool> haveMcu{false};
 std::atomic<uint64_t> lastNotificationAt{0};
+std::atomic<uint64_t> ledClearAt{0};
 aptHookCookie hookCookie;
 bool hookInstalled = false;
 
@@ -101,8 +102,20 @@ void BackgroundNotifier::clearLed() {
 	writeLed(animation, zero, zero, zero);
 }
 
+void BackgroundNotifier::tick() {
+	// With the app in front the LED pulse stops by itself after a few seconds (in the background it goes on until you come back).
+	const uint64_t until = ledClearAt.load();
+	if (until != 0 && osGetTime() >= until) {
+		ledClearAt = 0;
+		clearLed();
+	}
+}
+
 void BackgroundNotifier::notify(const std::string &title, const std::string &body) {
-	if (!Config::getInstance().isBackgroundNotifications() || !background.load()) {
+	const bool inBg = background.load();
+	const bool wantNews = inBg && Config::getInstance().isBackgroundNotifications();
+	const bool wantLed = Config::getInstance().isNotificationLed();
+	if (!wantNews && !wantLed) {
 		return;
 	}
 	const uint64_t now = osGetTime();
@@ -111,13 +124,13 @@ void BackgroundNotifier::notify(const std::string &title, const std::string &bod
 	}
 	lastNotificationAt = now;
 
-	if (haveNews) {
+	if (wantNews && haveNews) {
 		const std::vector<u16> t = toUtf16(title.empty() ? "3DScord" : title, 31);
 		const std::vector<u16> m = toUtf16(body, 96);
 		const Result rc = NEWS_AddNotification(t.data(), (u32)t.size(), m.empty() ? nullptr : m.data(), (u32)m.size(), nullptr, 0, false);
 		Logger::log("[Notify] Home menu notification rc=%08lX", (unsigned long)rc);
 	}
-	if (haveMcu) {
+	if (wantLed && haveMcu && (inBg || Config::getInstance().isNotificationLed())) {
 		// A slow blue-violet pulse, three times.
 		const u8 animation[4] = {0x28, 0x28, 0, 0};
 		u8 red[32], green[32], blue[32];
@@ -133,6 +146,7 @@ void BackgroundNotifier::notify(const std::string &title, const std::string &bod
 		}
 		const Result rc = writeLed(animation, red, green, blue);
 		Logger::log("[Notify] LED rc=%08lX", (unsigned long)rc);
+		ledClearAt = inBg ? 0 : osGetTime() + 5000;
 	}
 }
 

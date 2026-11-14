@@ -1027,5 +1027,7 @@
     "tip.8": "Tip: Settings > Diagnostics saves a report you can send when something fails.",
     "memory.low": "Low memory: turn on Compatibility Mode in Settings",
     "message.menu.mention": "Mention",
-    "message.mention_added": "Added to your message: write the rest and send"
+    "message.mention_added": "Added to your message: write the rest and send",
+    "settings.notification_led": "Notification LED",
+    "settings.desc.notification_led": "Pulses the light of the console when a message that should notify you arrives, also while you use the app."
 }

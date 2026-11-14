@@ -1027,5 +1027,7 @@
     "tip.8": "Consejo: Ajustes > Diagnóstico guarda un informe que puedes enviar si algo falla.",
     "memory.low": "Poca memoria: activa el Modo de compatibilidad en Ajustes",
     "message.menu.mention": "Mencionar",
-    "message.mention_added": "Añadido a tu mensaje: escribe el resto y envía"
+    "message.mention_added": "Añadido a tu mensaje: escribe el resto y envía",
+    "settings.notification_led": "LED de notificaciones",
+    "settings.desc.notification_led": "Hace pulsar la luz de la consola cuando llega un mensaje que debe avisarte, también mientras usas la app."
 }

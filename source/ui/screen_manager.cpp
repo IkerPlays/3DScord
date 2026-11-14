@@ -25,6 +25,7 @@
 #include "ui/updater_screen.h"
 #include "ui/voice_recorder_screen.h"
 #include "utils/message_utils.h"
+#include "utils/background_notifier.h"
 #include "utils/redraw.h"
 #include "utils/system_utils.h"
 #include "ui/call_view.h"
@@ -505,6 +506,7 @@ void ScreenManager::update() {
 	Discord::VoiceClient::getInstance().update();
 
 	hamburgerMenu.update();
+	Utils::BackgroundNotifier::getInstance().tick();
 
 	{
 		const std::string alert = Discord::DiscordClient::getInstance().takeAlert();

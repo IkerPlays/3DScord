@@ -4,6 +4,10 @@
 
 New messages in unmuted channels and direct messages play a sound (you can pick a sound per channel or server) and add a badge. **Quiet hours** (Settings) silence the sound at night.
 
+## The LED
+
+With **Settings > Voice > Notification LED** on (needs Luma3DS) the light of the console also pulses for a few seconds when a message that should notify you arrives while you use the app.
+
 ## Outside the app
 
 With **Settings > Notifications Outside the App** on, a message that arrives while the app is in the HOME Menu adds an entry to the **Notifications** of the HOME Menu and pulses the
