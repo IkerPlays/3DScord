@@ -145,8 +145,9 @@ bool VideoSender::start(Source source) {
 	}
 	current = source;
 	mirrorPreview = source == Source::CAMERA;
-	curW = isScreenSource(source) ? 208 : 192;
-	curH = source == Source::BOTH ? 256 : isScreenSource(source) ? 128 : 144;
+	// The first size of each source (the real size is chosen in run() and goes up or down with the load).
+	curW = source == Source::BOTH ? 240 : isScreenSource(source) ? 320 : 192;
+	curH = source == Source::BOTH ? 288 : isScreenSource(source) ? 192 : 144;
 	resChanged = false;
 	quit = false;
 	keyRequested = true;
@@ -249,8 +250,10 @@ struct Level {
 };
 // The sizes tried, from the best to the lightest (all multiples of 16 in width and height or at least of 16 for the encoder).
 const Level CAMERA_LEVELS[4] = {{256, 192}, {192, 144}, {128, 96}, {96, 80}};
-const Level SCREEN_LEVELS[3] = {{208, 128}, {160, 96}, {112, 64}};
-const Level BOTH_LEVELS[3] = {{208, 256}, {160, 192}, {112, 128}};
+// A screen is sharp text and small things: it gets a bigger picture than a camera (the top screen is 400x240; all multiples of 16).
+const Level SCREEN_LEVELS[4] = {{400, 240}, {320, 192}, {240, 144}, {160, 96}};
+const Level BOTH_LEVELS[4] = {{320, 384}, {240, 288}, {160, 192}, {112, 128}};
+constexpr int SCREEN_START_LEVEL = 1;
 constexpr int CAM_START_LEVEL = 1; // the camera starts at 192x144 and goes up when the encoder has room
 constexpr int CAM_W = 256; // what the camera gives (its "DS LCD" size)
 constexpr int CAM_H = 192;
@@ -280,14 +283,14 @@ void VideoSender::run() {
 	const bool camera = source == Source::CAMERA || source == Source::OUTER;
 	const u32 select = source == Source::OUTER ? SELECT_OUT1 : SELECT_IN1;
 	const Level *levels = camera ? CAMERA_LEVELS : source == Source::BOTH ? BOTH_LEVELS : SCREEN_LEVELS;
-	const int levelCount = camera ? 4 : 3;
-	int level = camera ? CAM_START_LEVEL : 0;
+	const int levelCount = 4;
+	int level = camera ? CAM_START_LEVEL : SCREEN_START_LEVEL;
 	int W = levels[level].w;
 	int H = levels[level].h;
 	const int FPS = fps();
 	const int keyEvery = FPS * 2; // a key frame every two seconds
 	// A bigger picture gets more bits.
-	auto kbpsFor = [&](int lv) { return camera ? (lv == 0 ? 380 : lv == 1 ? 300 : lv == 2 ? 220 : 160) : TARGET_KBPS_SCREEN; };
+	auto kbpsFor = [&](int lv) { return camera ? (lv == 0 ? 380 : lv == 1 ? 300 : lv == 2 ? 220 : 160) : (lv == 0 ? 650 : lv == 1 ? 500 : lv == 2 ? 350 : TARGET_KBPS_SCREEN * 2 / 3); };
 	int kbps = kbpsFor(level);
 
 	H264Encoder encoder;
