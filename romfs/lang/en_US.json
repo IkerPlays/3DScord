@@ -751,6 +751,8 @@
     "profile.joined_server": "Joined this server",
     "profile.member_since": "Discord member since",
     "profile.note": "Note",
+    "profile.mutual": "In Common",
+    "profile.mutual_friends": "friends in common",
     "profile.roles": "Roles",
     "server.count": "Server Count: {0}",
     "server.description": "Server Overview",

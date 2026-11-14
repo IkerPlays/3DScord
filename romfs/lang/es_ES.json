@@ -751,6 +751,8 @@
     "profile.joined_server": "Se unió a este servidor",
     "profile.member_since": "Miembro desde {0}",
     "profile.note": "Nota",
+    "profile.mutual": "En común",
+    "profile.mutual_friends": "amigos en común",
     "profile.roles": "Roles",
     "server.count": "Contador del servidor: {0}",
     "server.description": "Resúmen del servidor",

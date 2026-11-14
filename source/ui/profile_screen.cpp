@@ -48,7 +48,7 @@ ProfileScreen::ProfileScreen()
 void ProfileScreen::onEnter() {
 	profile.id = userId;
 	const std::string token = Config::getInstance().getToken();
-	std::string url = "https://discord.com/api/v10/users/" + userId + "/profile?with_mutual_guilds=false";
+	std::string url = "https://discord.com/api/v10/users/" + userId + "/profile?with_mutual_guilds=true&with_mutual_friends_count=true";
 	if (!guildId.empty()) {
 		url += "&guild_id=" + guildId;
 	}
@@ -84,6 +84,17 @@ void ProfileScreen::onEnter() {
 			    if (doc.HasMember("user_profile") && doc["user_profile"].IsObject()) {
 				    p.bio = str(doc["user_profile"], "bio");
 				    p.pronouns = str(doc["user_profile"], "pronouns");
+			    }
+			    if (doc.HasMember("mutual_friends_count") && doc["mutual_friends_count"].IsInt()) {
+				    p.mutualFriends = doc["mutual_friends_count"].GetInt();
+			    }
+			    if (doc.HasMember("mutual_guilds") && doc["mutual_guilds"].IsArray()) {
+				    for (const auto &g : doc["mutual_guilds"].GetArray()) {
+					    if (!g.IsObject()) {
+						    continue;
+					    }
+					    p.mutualGuilds.push_back(str(g, "id")); // the names are looked up on the screen thread
+				    }
 			    }
 			    if (doc.HasMember("connected_accounts") && doc["connected_accounts"].IsArray()) {
 				    for (const auto &c : doc["connected_accounts"].GetArray()) {
@@ -181,6 +192,24 @@ void ProfileScreen::buildBodyLines() {
 		bodyLines.push_back("# " + TR("profile.connections"));
 		for (const auto &c : profile.connections) {
 			add(c);
+		}
+	}
+
+	if (profile.mutualFriends > 0 || !profile.mutualGuilds.empty()) {
+		bodyLines.push_back("");
+		bodyLines.push_back("# " + TR("profile.mutual"));
+		if (profile.mutualFriends > 0) {
+			add(std::to_string(profile.mutualFriends) + " " + TR("profile.mutual_friends"));
+		}
+		std::string servers;
+		for (const auto &id : profile.mutualGuilds) {
+			const Discord::Guild *known = Discord::DiscordClient::getInstance().getGuildPtr(id);
+			if (known && !known->name.empty()) {
+				servers += (servers.empty() ? "" : ", ") + known->name;
+			}
+		}
+		if (!servers.empty()) {
+			add(servers);
 		}
 	}
 

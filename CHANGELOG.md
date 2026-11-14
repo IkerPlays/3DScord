@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- **In common:** a profile shows how many friends you share with that person and the servers you are both in.
 - **Accept all friend requests:** the Pending list of the friends starts with a row that accepts every incoming request at once.
 - The splitting of long messages is its own function with a test that runs in CI.
 

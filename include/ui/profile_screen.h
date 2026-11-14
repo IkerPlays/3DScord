@@ -37,6 +37,8 @@ class ProfileScreen : public Screen {
 		std::string joinedAt;
 		std::vector<std::string> connections; // "Type: name" of each linked account
 		std::vector<std::string> roleIds;
+		std::vector<std::string> mutualGuilds; // ids of the servers you share
+		int mutualFriends = -1;                // friends you have in common (-1: not given)
 		int accentColor = -1;
 		bool bot = false;
 	};
