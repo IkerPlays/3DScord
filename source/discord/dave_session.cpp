@@ -25,6 +25,15 @@ void daveLogSink(discord::dave::LoggingSeverity severity, const char *file, int 
 		return;
 	}
 	const char *level = (severity >= discord::dave::LS_ERROR) ? "ERR" : "warn";
+	// A picture that cannot be decrypted says so every time (dozens a second): the log keeps the first ones and then one in a hundred, so the
+	// lines that matter are not pushed out of the report.
+	if (message.find("Decrypt failed") != std::string::npos) {
+		static unsigned decryptFailures = 0;
+		const unsigned n = ++decryptFailures;
+		if (n > 5 && n % 100 != 0) {
+			return;
+		}
+	}
 	Logger::log("[libdave/%s] %.400s", level, message.c_str());
 }
 } // namespace
