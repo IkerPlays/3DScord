@@ -510,6 +510,9 @@ void Config::loadSettings() {
 			if (doc.HasMember("show_status_bar") && doc["show_status_bar"].IsBool()) {
 				showStatusBar = doc["show_status_bar"].GetBool();
 			}
+			if (doc.HasMember("auto_watch_streams") && doc["auto_watch_streams"].IsBool()) {
+				autoWatchStreams = doc["auto_watch_streams"].GetBool();
+			}
 			if (doc.HasMember("clock_12h") && doc["clock_12h"].IsBool()) {
 				clock12h = doc["clock_12h"].GetBool();
 			}
@@ -631,6 +634,8 @@ void Config::saveSettings() {
 	writer.Bool(backgroundNotifications);
 	writer.Key("show_status_bar");
 	writer.Bool(showStatusBar);
+	writer.Key("auto_watch_streams");
+	writer.Bool(autoWatchStreams);
 	writer.Key("clock_12h");
 	writer.Bool(clock12h);
 	writer.Key("date_format");
@@ -877,6 +882,11 @@ void Config::setBackgroundNotifications(bool enabled) {
 
 void Config::setShowStatusBar(bool enabled) {
 	showStatusBar = enabled;
+	saveSettings();
+}
+
+void Config::setAutoWatchStreams(bool enabled) {
+	autoWatchStreams = enabled;
 	saveSettings();
 }
 

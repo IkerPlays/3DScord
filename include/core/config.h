@@ -167,6 +167,9 @@ class Config {
 	// A small clock and battery gauge in the corner of the top screen.
 	bool isShowStatusBar() const { return showStatusBar; }
 	void setShowStatusBar(bool enabled);
+	// Open the Go Live stream of someone in the call by itself (needs Video).
+	bool isAutoWatchStreams() const { return autoWatchStreams; }
+	void setAutoWatchStreams(bool enabled);
 	bool isKeepCallsAwake() const { return keepCallsAwake; }
 	void setKeepCallsAwake(bool enabled);
 
@@ -259,6 +262,7 @@ class Config {
 	bool autoReconnect = true;
 	bool keepCallsAwake;
 	bool clock12h = false;
+	bool autoWatchStreams = true;
 	bool showStatusBar = false;
 	int dateFormat = 0;
 	int soundVolume = 10;

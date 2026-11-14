@@ -5008,6 +5008,22 @@ void DiscordClient::sendStreamCreate(const std::string &guildId, const std::stri
 	Logger::log("[Stream] Sent Stream Create (Op 18) key=%s", streamKey.c_str());
 }
 
+void DiscordClient::sendStreamWatch(const std::string &streamKey) {
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+	writer.StartObject();
+	writer.Key("op");
+	writer.Int(20); // STREAM_WATCH
+	writer.Key("d");
+	writer.StartObject();
+	writer.Key("stream_key");
+	writer.String(streamKey.c_str());
+	writer.EndObject();
+	writer.EndObject();
+	queueSend(s.GetString());
+	Logger::log("[Stream] Sent Stream Watch (Op 20) key=%s", streamKey.c_str());
+}
+
 void DiscordClient::sendStreamDelete(const std::string &streamKey) {
 	rapidjson::StringBuffer s;
 	rapidjson::Writer<rapidjson::StringBuffer> writer(s);

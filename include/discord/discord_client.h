@@ -170,6 +170,7 @@ class DiscordClient {
 	// create) and its address and token (stream server update).
 	void sendStreamCreate(const std::string &guildId, const std::string &channelId, const std::string &streamKey);
 	void sendStreamDelete(const std::string &streamKey);
+	void sendStreamWatch(const std::string &streamKey);
 	// Short messages for the user that come from the gateway (a friend request, for example); the screen manager shows them as toasts.
 	std::string takeAlert() {
 		std::lock_guard<std::mutex> lock(alertMutex);

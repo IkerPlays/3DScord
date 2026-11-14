@@ -593,6 +593,17 @@ void SettingsScreen::onEnter() {
 	videoExp.onUpdate = [](int val) { Config::getInstance().setVideoExperimental(val == 1); };
 	if (Utils::System::isNew3DS()) {
 		allItems.push_back(videoExp); // the video is too heavy for the other 3DS / 2DS models
+
+		SettingItem autoWatch;
+		autoWatch.label = TR("settings.auto_watch");
+		autoWatch.description = TR("settings.desc.auto_watch");
+		autoWatch.type = SettingItemType::TOGGLE;
+		autoWatch.value = Config::getInstance().isAutoWatchStreams() ? 1 : 0;
+		autoWatch.min = 0;
+		autoWatch.max = 1;
+		autoWatch.valueFormatter = [](int val) { return (val == 1) ? TR("common.enabled") : TR("common.disabled"); };
+		autoWatch.onUpdate = [](int val) { Config::getInstance().setAutoWatchStreams(val == 1); };
+		allItems.push_back(autoWatch);
 	}
 
 	SettingItem busy;

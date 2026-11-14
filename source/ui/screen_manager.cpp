@@ -512,8 +512,11 @@ void ScreenManager::update() {
 		}
 	}
 
-	if (Discord::VoiceClient::getInstance().takeNotice() == 1) {
+	const int voiceNotice = Discord::VoiceClient::getInstance().takeNotice();
+	if (voiceNotice == 1) {
 		showToast(TR("callcam.stream_failed"));
+	} else if (voiceNotice == 2) {
+		showToast(TR("stream.opening"));
 	}
 
 	if (lockOnWake.exchange(false) && Config::getInstance().hasPin() && currentType != ScreenType::PIN_LOCK &&

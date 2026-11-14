@@ -89,6 +89,10 @@ void logMemory(const char *where) {
 }
 } // namespace
 
+namespace {
+void registerStreamRouting();
+} // namespace
+
 VoiceClient &VoiceClient::getInstance() {
 	static VoiceClient instance;
 	return instance;
@@ -97,6 +101,13 @@ VoiceClient &VoiceClient::getInstance() {
 VoiceClient &VoiceClient::getStreamInstance() {
 	static VoiceClient instance;
 	instance.streamMode = true;
+	return instance;
+}
+
+VoiceClient &VoiceClient::getWatchInstance() {
+	static VoiceClient instance;
+	instance.streamMode = true;
+	instance.watchRole = true;
 	return instance;
 }
 
@@ -275,6 +286,11 @@ void VoiceClient::stopOutgoingRing() {
 
 void VoiceClient::update() {
 	expireSpeaking();
+
+	if (!streamMode && osGetTime() >= nextWatchScan) {
+		nextWatchScan = osGetTime() + 1500;
+		scanStreams();
+	}
 
 	// The screen stream (Go Live) did not open in time or was lost: close it and tell the user.
 	if (!streamMode && getStreamInstance().shareWanted.load()) {
@@ -938,10 +954,13 @@ void VoiceClient::handleRtpPacket(uint8_t *packet, size_t len) {
 		}
 		return;
 	}
-	if (streamMode) {
-		return; // the stream connection sends only: whatever else arrives is not used
+	if (streamMode && !watchRole) {
+		return; // the stream connection of a screen share sends only: whatever else arrives is not used
 	}
 	const bool isVideo = payloadType == VIDEO_PAYLOAD_TYPE && Config::getInstance().isVideoExperimental();
+	if (watchRole && !isVideo) {
+		return; // watching a stream: only its picture is used (not its sound)
+	}
 	if (payloadType != OPUS_PAYLOAD_TYPE && !isVideo) {
 		// With the experiment on, the other kinds of packets are only counted and written to the log.
 		if (Config::getInstance().isVideoExperimental()) {
@@ -2151,8 +2170,11 @@ void VoiceClient::handlePayload(const std::string &message) {
 		logMemory(streamMode ? "stream established" : "established");
 		setState(VoiceState::ESTABLISHED);
 		if (streamMode) {
-			// The stream is open: send the top screen on it (DAVE may not be ready yet; the frames wait for it).
-			if (shareWanted.load()) {
+			if (watchRole) {
+				// Watching: ask for a light picture (the console decodes it in software).
+				sendSinkWants(VIDEO_QUALITY_WHILE_SENDING);
+			} else if (shareWanted.load()) {
+				// The stream is open: send the screen on it (DAVE may not be ready yet; the frames wait for it).
 				setVideoSource(shareSource.load());
 			}
 		} else if (Config::getInstance().isVideoExperimental()) {
@@ -2277,7 +2299,9 @@ void VoiceClient::handlePayload(const std::string &message) {
 
 void VoiceClient::disconnect() {
 	if (!streamMode) {
-		stopScreenShare(); // the stream is part of the call
+		stopScreenShare(); // the streams are part of the call
+		stopWatching();
+		DiscordClient::getInstance().setStreamCallbacks(nullptr, nullptr);
 		stopOutgoingRing();
 	}
 
@@ -2416,9 +2440,7 @@ bool VoiceClient::startScreenShare(int source) {
 	stream.lastSequence = -1;
 	stream.shareWanted = true;
 	stream.shareStartedAt = osGetTime();
-	client.setStreamCallbacks(
-	    [&stream](const std::string &k, const std::string &rtcServer) { stream.onStreamCreate(k, rtcServer); },
-	    [&stream](const std::string &k, const std::string &host, const std::string &t) { stream.onStreamServer(k, host, t); });
+	registerStreamRouting();
 	stream.setState(VoiceState::AWAITING_SERVER);
 	client.sendStreamCreate(call ? std::string() : guild, channel, key);
 	Logger::log("[Stream] Starting Go Live, key %s", key.c_str());
@@ -2440,7 +2462,6 @@ void VoiceClient::stopScreenShare() {
 	}
 	stream.disconnect();
 	DiscordClient &client = DiscordClient::getInstance();
-	client.setStreamCallbacks(nullptr, nullptr);
 	if (!key.empty()) {
 		client.sendStreamDelete(key);
 	}
@@ -2469,6 +2490,130 @@ void VoiceClient::onStreamServer(const std::string &key, const std::string &stre
 		haveServer = !streamToken.empty() && !streamEndpoint.empty();
 	}
 	tryStartSession();
+}
+
+namespace {
+// The gateway tells the two stream connections (the one that shares and the one that watches) what happens; each one looks at the key.
+void registerStreamRouting() {
+	DiscordClient::getInstance().setStreamCallbacks(
+	    [](const std::string &k, const std::string &rtcServer) {
+		    VoiceClient::getStreamInstance().onStreamCreate(k, rtcServer);
+		    VoiceClient::getWatchInstance().onStreamCreate(k, rtcServer);
+	    },
+	    [](const std::string &k, const std::string &host, const std::string &t) {
+		    VoiceClient::getStreamInstance().onStreamServer(k, host, t);
+		    VoiceClient::getWatchInstance().onStreamServer(k, host, t);
+	    });
+}
+} // namespace
+
+bool VoiceClient::isWatching() const {
+	if (streamMode) {
+		return !watchedUser.empty() && state != VoiceState::FAILED && state != VoiceState::DISCONNECTED;
+	}
+	return getWatchInstance().isWatching();
+}
+
+// Watching the Go Live of someone: STREAM_WATCH makes the gateway answer with the server of that stream, and the connection opens like the one
+// that shares does, but only the video of the stream is received.
+bool VoiceClient::startWatching(const std::string &userId) {
+	if (streamMode || state != VoiceState::ESTABLISHED || !Config::getInstance().isVideoExperimental() || userId.empty()) {
+		return false;
+	}
+	VoiceClient &watch = getWatchInstance();
+	if (watch.watchedUser == userId && watch.isWatching()) {
+		return true;
+	}
+	std::string guild, channel;
+	{
+		std::lock_guard<std::mutex> lock(mutex);
+		guild = guildId;
+		channel = channelId;
+	}
+	DiscordClient &client = DiscordClient::getInstance();
+	const bool call = guild.empty() || guild == "DM";
+	const std::string key = call ? "call:" + channel + ":" + userId : "guild:" + guild + ":" + channel + ":" + userId;
+
+	watch.disconnect();
+	svcGetThreadPriority(&watch.callerPriority, CUR_THREAD_HANDLE);
+	{
+		std::lock_guard<std::mutex> lock(watch.mutex);
+		watch.guildId = call ? std::string() : guild;
+		watch.channelId = channel;
+		watch.sessionId = client.getSessionId();
+		watch.token.clear();
+		watch.endpoint.clear();
+		watch.serverId.clear();
+		watch.haveState = true;
+		watch.haveServer = false;
+		watch.streamKey = key;
+	}
+	watch.lastSequence = -1;
+	watch.watchedUser = userId;
+	watch.watchStartedAt = osGetTime();
+	registerStreamRouting();
+	watch.setState(VoiceState::AWAITING_SERVER);
+	client.sendStreamWatch(key);
+	Logger::log("[Stream] Watching the stream of %s, key %s", userId.c_str(), key.c_str());
+	return true;
+}
+
+void VoiceClient::stopWatching() {
+	if (streamMode) {
+		return;
+	}
+	VoiceClient &watch = getWatchInstance();
+	if (watch.watchedUser.empty() && watch.state == VoiceState::DISCONNECTED) {
+		return;
+	}
+	watch.watchedUser.clear();
+	watch.disconnect();
+	Logger::log("[Stream] Stopped watching");
+}
+
+// Once a second and a half: who in the call is sharing a screen? Watch the first one (when Settings > Voice > Watch Streams is on), and let go
+// when the stream ends or does not open.
+void VoiceClient::scanStreams() {
+	VoiceClient &watch = getWatchInstance();
+	const bool allowed = Config::getInstance().isAutoWatchStreams() && Config::getInstance().isVideoExperimental() &&
+	                     state == VoiceState::ESTABLISHED && !isScreenSharing();
+	if (!allowed) {
+		if (!watch.watchedUser.empty()) {
+			stopWatching();
+		}
+		return;
+	}
+	DiscordClient &client = DiscordClient::getInstance();
+	const std::string me = client.getCurrentUser().id;
+	std::string found;
+	for (const auto &p : client.getVoiceParticipants(getChannelId())) {
+		if (p.selfStream && p.userId != me) {
+			found = p.userId;
+			break;
+		}
+	}
+	if (found.empty()) {
+		watch.watchGaveUp.clear();
+		if (!watch.watchedUser.empty()) {
+			stopWatching();
+		}
+		return;
+	}
+	if (watch.watchedUser == found) {
+		const VoiceState ws = watch.state;
+		if (ws == VoiceState::FAILED || (ws != VoiceState::ESTABLISHED && osGetTime() - watch.watchStartedAt > 25000)) {
+			Logger::log("[Stream] The stream of %s did not open (state %d)", found.c_str(), (int)ws);
+			stopWatching();
+			watch.watchGaveUp = found;
+		}
+		return;
+	}
+	if (watch.watchGaveUp == found) {
+		return; // it did not open: not again until the stream ends and starts anew
+	}
+	if (startWatching(found)) {
+		notice = 2;
+	}
 }
 
 } // namespace Discord

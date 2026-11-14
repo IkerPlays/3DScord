@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- **Watch the Go Live of others** (EXPERIMENTAL, needs Settings > Voice > Video; Settings > Voice > **Watch Streams Automatically**): when someone in the call shares their screen, 3DScord asks Discord to watch the stream
+  (STREAM_WATCH), opens a third voice connection for it (with its own DAVE group) and shows its picture like a camera (light quality). If the stream does not open in 25 seconds it gives up until the stream restarts.
 - **A sound of its own for mentions:** a message that mentions you in a server plays a brighter, three-note sound (direct messages and the rest keep the usual one, and a sound you chose for the channel still wins).
 - **Clock and Battery** (Settings > Appearance, off by default): a small time and battery gauge in the top right corner of the top screen, in the clock format you chose.
 - **Friend requests warn you:** a message (and the notification sound, or the Home menu notification if the app is in the background) when someone sends you a friend request.

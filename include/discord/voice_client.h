@@ -36,6 +36,8 @@ class VoiceClient {
 	static VoiceClient &getInstance();
 	// The second connection, to the stream (Go Live) that shares the screen: it sends video only (no audio, no microphone).
 	static VoiceClient &getStreamInstance();
+	// The third connection, to the stream (Go Live) of someone else that you are watching: it receives video only.
+	static VoiceClient &getWatchInstance();
 
 	void connect(const std::string &guildId, const std::string &channelId, bool ringRecipients = false);
 	void disconnect();
@@ -214,7 +216,13 @@ class VoiceClient {
 	uint32_t videoFramesDropped = 0;
 	void *videoFile = nullptr; // FILE *
 	size_t videoFileBytes = 0; // video experiment: packets and bytes per payload type
-	bool streamMode = false; // this object is the stream connection
+	bool streamMode = false; // this object is a stream connection (to share a screen, or to watch one)
+	bool watchRole = false;  // ...to watch one: video comes in, nothing goes out
+	std::string watchedUser;
+	std::string watchGaveUp;
+	uint64_t watchStartedAt = 0;
+	uint64_t nextWatchScan = 0;
+	void scanStreams();
 	std::atomic<int> notice{0};
 	uint64_t shareStartedAt = 0;
 	std::string streamKey;
@@ -233,6 +241,10 @@ class VoiceClient {
 	bool startScreenShare(int source = 3); // 3: top screen, 4: bottom screen, 5: both
 	void stopScreenShare();
 	bool isScreenSharing() const;
+	// Watching the Go Live stream of someone in the call (it opens by itself when Settings > Voice > Watch Streams is on).
+	bool startWatching(const std::string &userId);
+	void stopWatching();
+	bool isWatching() const;
 	// Something the user should be told (1: the stream could not be opened or was lost); the screen manager shows it.
 	int takeNotice() { return notice.exchange(0); }
 	// The stream connection (see getStreamInstance), called by the gateway.
