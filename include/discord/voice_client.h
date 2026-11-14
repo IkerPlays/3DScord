@@ -262,6 +262,10 @@ class VoiceClient {
 	// Video frames sent and frames DAVE could not encrypt (for the call view).
 	uint32_t videoFramesSentCount() const { return videoFramesSent; }
 	int videoVariantNow() const { return videoVariant.load(); }
+	// For the diagnostics report: pictures of others that were joined and decrypted, and those that were not; state of the connection.
+	uint32_t videoFramesOkCount() const { return videoFramesOk; }
+	uint32_t videoFramesBadCount() const { return videoFramesBad; }
+	int stateNumber() const { return (int)state.load(); }
 	uint32_t videoEncryptFailures() const { return videoEncryptFails.load(); }
 	void setDeafened(bool d);
 	bool isDeafened() const { return audio.isDeafened(); }

@@ -447,6 +447,15 @@ void ListScreen::loadLocal() {
 		if (statvfs("sdmc:/", &sd) == 0) {
 			add(TR("diag.sd"), std::to_string((unsigned long long)sd.f_bsize * sd.f_bavail / (1024 * 1024)) + " MB");
 		}
+		{
+			auto &voice = Discord::VoiceClient::getInstance();
+			auto &share = Discord::VoiceClient::getStreamInstance();
+			auto &watch = Discord::VoiceClient::getWatchInstance();
+			add(TR("diag.video"), std::string(Config::getInstance().isVideoExperimental() ? "on" : "off") + ", call " + std::to_string(voice.stateNumber()) +
+			                          ", share " + std::to_string(share.stateNumber()) + ", watch " + std::to_string(watch.stateNumber()) + ", pictures " +
+			                          std::to_string(voice.videoFramesOkCount() + watch.videoFramesOkCount()) + " ok, " +
+			                          std::to_string(voice.videoFramesBadCount() + watch.videoFramesBadCount()) + " bad");
+		}
 		add(TR("diag.latency"), diagLatencyMs < 0 ? TR("diag.press_x") : std::to_string(diagLatencyMs) + " ms");
 		add(TR("diag.report"), TR("diag.press_y"));
 		break;

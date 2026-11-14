@@ -1015,5 +1015,6 @@
     "settings.desc.status_bar": "Muestra la hora y la batería en la esquina de la pantalla de arriba.",
     "settings.auto_watch": "Ver directos automáticamente",
     "settings.desc.auto_watch": "Cuando alguien de la llamada comparte su pantalla (Go Live), abre el directo para verlo. Necesita Vídeo (experimental). Gasta más memoria y procesador.",
-    "stream.opening": "Abriendo el directo de la llamada..."
+    "stream.opening": "Abriendo el directo de la llamada...",
+    "diag.video": "Vídeo"
 }

@@ -1015,5 +1015,6 @@
     "settings.desc.status_bar": "Shows the time and the battery in the corner of the top screen.",
     "settings.auto_watch": "Watch Streams Automatically",
     "settings.desc.auto_watch": "When someone in the call shares their screen (Go Live), open the stream to see it. Needs Video (experimental). It uses more memory and processor.",
-    "stream.opening": "Opening the live stream of the call..."
+    "stream.opening": "Opening the live stream of the call...",
+    "diag.video": "Video"
 }
