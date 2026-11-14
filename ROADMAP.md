@@ -175,18 +175,18 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
 - [x] Sending your own camera (inner and outer) in a call, and sharing the top screen as a Go Live stream (version 0.17.0, experimental): H.264 encoding (minih264e), Discord's video signalling, DAVE frame encryption.
 - [x] Previews in the chat: play Ogg sounds and read small text files from the message menu
 
+## Phase 18 — Video, Go Live and polish (0.17 - 0.19)
+- [x] Your camera (inner and outer) and your screen in calls, with DAVE encryption (0.17.0)
+- [x] Go Live: the screen goes on a stream of its own (top, bottom or both) and keeps working from the HOME Menu and other apps (experimental)
+- [x] Notifications outside the app (Home menu entry and LED), friend request alerts, low battery warning
+- [x] New logo, icon, banner and sounds; @mentions; FLAC and Ogg Vorbis; wiki, Universal-DB text
+- [x] 13 themes (high contrast and colour-blind friendly), clock and date formats, sound volume
+- [ ] Not possible: notifications or sharing with the app closed (it needs a system module that runs all the time)
+
 ## Not possible on the 3DS
 
 - **HOME menu widget.** The HOME menu cannot show anything from a running or closed app; only the icon and banner
   stored in the CIA are drawn.
-- **Live screen sharing** (3DS to Discord or Discord to 3DS). Discord streams are encoded video (H.264/VP8) over WebRTC.
-  The 3DS cannot encode video, and decoding a stream is only possible in hardware on the New 3DS with a decoder service
-  the app cannot use for this. What is possible is sending screenshots (Phase 13).
-- **Video calls.** Discord video needs a VP8 or H.264 encoder and a full WebRTC video stack with end-to-end encryption.
-  The 3DS has no hardware video encoder (only a decoder, on the New 3DS), and encoding video with ffmpeg in software
-  cannot keep up on its processor, even at a tiny size. Voice calls and voice messages are fully supported.
-- Notifications while the app is closed or the console sleeps, the notification LED and a counter on the HOME icon: the
-  system does not let apps do these.
-- Playing videos or music attachments, WebP pictures: the app has no decoder for them; the preview shows the file
-  information instead.
-
+- **Live screen sharing and video calls were thought impossible, and they are done** (see Phase 18): the console encodes H.264 in software and
+  decodes it in software, on the New 3DS family only. The older 3DS / 2DS stay without video.- Notifications while the app is closed or the console sleeps: nothing runs then. With Luma3DS and the app in the HOME Menu they can work while the system keeps the app running (Phase 18).
+- WebP pictures: the app has no decoder for them; the preview shows the file information instead. (MP4 videos, and Opus, MP3, WAV, FLAC and Ogg Vorbis sounds do play.)
