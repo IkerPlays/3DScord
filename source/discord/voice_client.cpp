@@ -961,8 +961,8 @@ void VoiceClient::handleRtpPacket(uint8_t *packet, size_t len) {
 		return; // the stream connection of a screen share sends only: whatever else arrives is not used
 	}
 	const bool isVideo = payloadType == VIDEO_PAYLOAD_TYPE && Config::getInstance().isVideoExperimental();
-	if (watchRole && !isVideo) {
-		return; // watching a stream: only its picture is used (not its sound)
+	if (watchRole && !isVideo && payloadType != OPUS_PAYLOAD_TYPE) {
+		return; // watching a stream: its picture and its sound (Opus) are used
 	}
 	if (payloadType != OPUS_PAYLOAD_TYPE && !isVideo) {
 		// With the experiment on, the other kinds of packets are only counted and written to the log.
@@ -1104,7 +1104,7 @@ void VoiceClient::handleRtpPacket(uint8_t *packet, size_t len) {
 		opusLen = written;
 	}
 
-	if (userId) {
+	if (userId && !watchRole) {
 		if (isOpusSilence(opusData, opusLen)) {
 			clearSpeaking(*userId);
 		} else {
@@ -1112,6 +1112,15 @@ void VoiceClient::handleRtpPacket(uint8_t *packet, size_t len) {
 		}
 	}
 	lock.unlock();
+
+	if (watchRole) {
+		// The sound of a stream you watch plays through the call's speakers (nothing while you are deafened).
+		VoiceClient &call = VoiceClient::getInstance();
+		if (call.state == VoiceState::ESTABLISHED && !call.audio.isDeafened()) {
+			call.audio.pushOpus(ssrc, seq, opusData, opusLen, (float)Config::getInstance().getCallVolume() / 100.0f);
+		}
+		return;
+	}
 
 	float vol = 1.0f;
 	if (userId) {
