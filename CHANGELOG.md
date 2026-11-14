@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- The second picture to start (camera and screen together) begins one size smaller so the console keeps up.
 - **Slow mode:** when a channel has slow mode and you wrote there a moment ago, the app tells how many seconds are left instead of letting Discord refuse the message (people who manage messages are not limited).
 - **Long messages are split:** a text over the 2000-character limit of Discord (for example after the @mentions are converted) is sent in several messages, cut at a line break or a space.
 

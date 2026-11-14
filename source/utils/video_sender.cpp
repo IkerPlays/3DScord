@@ -287,6 +287,10 @@ void VideoSender::run() {
 	const Level *levels = camera ? CAMERA_LEVELS : source == Source::BOTH ? BOTH_LEVELS : SCREEN_LEVELS;
 	const int levelCount = 4;
 	int level = camera ? CAM_START_LEVEL : SCREEN_START_LEVEL;
+	// With the camera and the screen at once the console encodes two pictures: the second one to start begins smaller.
+	if (VideoSender &other = getInstance(camera); &other != this && other.running()) {
+		level = std::min(level + 1, 3);
+	}
 	int W = levels[level].w;
 	int H = levels[level].h;
 	const int FPS = fps();
