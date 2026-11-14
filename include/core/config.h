@@ -154,6 +154,16 @@ class Config {
 	void setNoiseGate(int level);
 	bool isBackgroundNotifications() const { return backgroundNotifications; }
 	void setBackgroundNotifications(bool enabled);
+	// Clock and date as shown in the chat: 24 h or 12 h (AM/PM); date as year/month/day, day/month/year or month/day/year.
+	bool isClock12h() const { return clock12h; }
+	void setClock12h(bool enabled);
+	int getDateFormat() const { return dateFormat; }
+	void setDateFormat(int format);
+	// Volume of the sounds of the app (notification, call, microphone...), 0 to 10 (x 10 %).
+	int getSoundVolume() const { return soundVolume; }
+	void setSoundVolume(int level);
+	bool isLowBatteryWarning() const { return lowBatteryWarning; }
+	void setLowBatteryWarning(bool enabled);
 	bool isKeepCallsAwake() const { return keepCallsAwake; }
 	void setKeepCallsAwake(bool enabled);
 
@@ -244,6 +254,10 @@ class Config {
 	bool busyMode = false;
 	bool autoReconnect = true;
 	bool keepCallsAwake;
+	bool clock12h = false;
+	int dateFormat = 0;
+	int soundVolume = 10;
+	bool lowBatteryWarning = true;
 	bool backgroundNotifications;
 	int quietStart;
 	int quietEnd;

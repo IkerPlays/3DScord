@@ -1,4 +1,5 @@
 #include "utils/sound_player.h"
+#include "core/config.h"
 #include "log.h"
 
 #include <cstdio>
@@ -161,6 +162,12 @@ void SoundPlayer::play(Sound sound) {
 		ndspChnWaveBufClear(NDSP_CHANNEL);
 		slot = 0;
 	}
+
+	// The volume chosen in Settings (0 to 10, in steps of 10 %).
+	float mix[12];
+	memset(mix, 0, sizeof(mix));
+	mix[0] = mix[1] = Config::getInstance().getSoundVolume() / 10.0f;
+	ndspChnSetMix(NDSP_CHANNEL, mix);
 
 	ndspWaveBuf &buf = waveBufs[slot];
 	memset(&buf, 0, sizeof(buf));

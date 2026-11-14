@@ -11,6 +11,7 @@
 #include "ui/screen_manager.h"
 #include "network/network_manager.h"
 #include "utils/message_utils.h"
+#include "utils/sound_player.h"
 #include "discord/account_settings.h"
 #include "discord/avatar_cache.h"
 #include "discord/discord_client.h"
@@ -228,6 +229,34 @@ void SettingsScreen::onEnter() {
 		Discord::AvatarCache::getInstance().clear();
 	};
 	allItems.push_back(showIcons);
+
+	SettingItem clock;
+	clock.label = TR("settings.clock_12h");
+	clock.description = TR("settings.desc.clock_12h");
+	clock.type = SettingItemType::TOGGLE;
+	clock.value = Config::getInstance().isClock12h() ? 1 : 0;
+	clock.min = 0;
+	clock.max = 1;
+	clock.valueFormatter = [](int val) { return val == 1 ? std::string("12 h (AM/PM)") : std::string("24 h"); };
+	clock.onUpdate = [](int val) {
+		Config::getInstance().setClock12h(val == 1);
+	};
+	allItems.push_back(clock);
+
+	SettingItem dateFmt;
+	dateFmt.label = TR("settings.date_format");
+	dateFmt.description = TR("settings.desc.date_format");
+	dateFmt.type = SettingItemType::STEPPER;
+	dateFmt.value = Config::getInstance().getDateFormat();
+	dateFmt.min = 0;
+	dateFmt.max = 2;
+	dateFmt.valueFormatter = [](int val) -> std::string {
+		return val == 1 ? "14/11/2026" : val == 2 ? "11/14/2026" : "2026/11/14";
+	};
+	dateFmt.onUpdate = [](int val) {
+		Config::getInstance().setDateFormat(val);
+	};
+	allItems.push_back(dateFmt);
 
 	SettingItem hiddenChannels;
 	hiddenChannels.label = TR("settings.show_hidden_channels");
@@ -610,6 +639,31 @@ void SettingsScreen::onEnter() {
 	bgNotify.valueFormatter = [](int val) { return (val == 1) ? TR("common.enabled") : TR("common.disabled"); };
 	bgNotify.onUpdate = [](int val) { Config::getInstance().setBackgroundNotifications(val == 1); };
 	allItems.push_back(bgNotify);
+
+	SettingItem soundVol;
+	soundVol.label = TR("settings.sound_volume");
+	soundVol.description = TR("settings.desc.sound_volume");
+	soundVol.type = SettingItemType::STEPPER;
+	soundVol.value = Config::getInstance().getSoundVolume();
+	soundVol.min = 0;
+	soundVol.max = 10;
+	soundVol.valueFormatter = [](int val) { return std::to_string(val * 10) + " %"; };
+	soundVol.onUpdate = [](int val) {
+		Config::getInstance().setSoundVolume(val);
+		Utils::SoundPlayer::getInstance().play(Utils::Sound::NOTIFICATION); // so you hear how loud it is
+	};
+	allItems.push_back(soundVol);
+
+	SettingItem lowBattery;
+	lowBattery.label = TR("settings.low_battery");
+	lowBattery.description = TR("settings.desc.low_battery");
+	lowBattery.type = SettingItemType::TOGGLE;
+	lowBattery.value = Config::getInstance().isLowBatteryWarning() ? 1 : 0;
+	lowBattery.min = 0;
+	lowBattery.max = 1;
+	lowBattery.valueFormatter = [](int val) { return (val == 1) ? TR("common.enabled") : TR("common.disabled"); };
+	lowBattery.onUpdate = [](int val) { Config::getInstance().setLowBatteryWarning(val == 1); };
+	allItems.push_back(lowBattery);
 
 	SettingItem ringtone;
 	ringtone.label = TR("settings.ringtone");

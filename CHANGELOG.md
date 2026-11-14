@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- **Clock and date formats:** Settings > Appearance has **Clock Format** (24 h or 12 h AM/PM) and **Date Format** (year/month/day, day/month/year or month/day/year) for the time of the messages.
+- **Sound Volume** (Settings > Voice, 0 to 100 %) for the sounds of the app, and a **Low Battery Warning** when the battery is low and the console is not charging.
 - **Fewer pictures lost in the video of the others:** RTP padding (the P bit) is now removed from the packets before the frame is joined; before, those bytes stayed in the frame and DAVE could not
   decrypt it (the log showed `DAVE could not decrypt a frame` for about one in four frames).
 

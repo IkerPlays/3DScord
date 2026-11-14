@@ -382,6 +382,18 @@ void Config::loadSettings() {
 			if (doc.HasMember("background_notifications") && doc["background_notifications"].IsBool()) {
 				backgroundNotifications = doc["background_notifications"].GetBool();
 			}
+			if (doc.HasMember("clock_12h") && doc["clock_12h"].IsBool()) {
+				clock12h = doc["clock_12h"].GetBool();
+			}
+			if (doc.HasMember("date_format") && doc["date_format"].IsInt()) {
+				dateFormat = std::clamp(doc["date_format"].GetInt(), 0, 2);
+			}
+			if (doc.HasMember("sound_volume") && doc["sound_volume"].IsInt()) {
+				soundVolume = std::clamp(doc["sound_volume"].GetInt(), 0, 10);
+			}
+			if (doc.HasMember("low_battery_warning") && doc["low_battery_warning"].IsBool()) {
+				lowBatteryWarning = doc["low_battery_warning"].GetBool();
+			}
 			if (doc.HasMember("keep_calls_awake") && doc["keep_calls_awake"].IsBool()) {
 				keepCallsAwake = doc["keep_calls_awake"].GetBool();
 			}
@@ -489,6 +501,14 @@ void Config::saveSettings() {
 	writer.Int(noiseGate);
 	writer.Key("background_notifications");
 	writer.Bool(backgroundNotifications);
+	writer.Key("clock_12h");
+	writer.Bool(clock12h);
+	writer.Key("date_format");
+	writer.Int(dateFormat);
+	writer.Key("sound_volume");
+	writer.Int(soundVolume);
+	writer.Key("low_battery_warning");
+	writer.Bool(lowBatteryWarning);
 	writer.Key("keep_calls_awake");
 	writer.Bool(keepCallsAwake);
 	writer.Key("quiet_hours");
@@ -722,6 +742,26 @@ bool Config::isVideoExperimental() const { return videoExperimental && Utils::Sy
 
 void Config::setBackgroundNotifications(bool enabled) {
 	backgroundNotifications = enabled;
+	saveSettings();
+}
+
+void Config::setClock12h(bool enabled) {
+	clock12h = enabled;
+	saveSettings();
+}
+
+void Config::setDateFormat(int format) {
+	dateFormat = std::clamp(format, 0, 2);
+	saveSettings();
+}
+
+void Config::setSoundVolume(int level) {
+	soundVolume = std::clamp(level, 0, 10);
+	saveSettings();
+}
+
+void Config::setLowBatteryWarning(bool enabled) {
+	lowBatteryWarning = enabled;
 	saveSettings();
 }
 

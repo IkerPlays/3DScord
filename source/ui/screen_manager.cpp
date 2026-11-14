@@ -505,6 +505,31 @@ void ScreenManager::update() {
 		pushScreen(ScreenType::PIN_LOCK);
 	}
 
+	// A warning when the battery is low and the console is not charging (looked at once a minute).
+	{
+		static u64 nextBatteryCheck = 0;
+		static bool batteryWarned = false;
+		const u64 nowMs = osGetTime();
+		if (Config::getInstance().isLowBatteryWarning() && nowMs >= nextBatteryCheck) {
+			nextBatteryCheck = nowMs + 60000;
+			u8 level = 5;
+			u8 charging = 0;
+			if (R_SUCCEEDED(ptmuInit())) {
+				PTMU_GetBatteryLevel(&level);
+				PTMU_GetBatteryChargeState(&charging);
+				ptmuExit();
+			}
+			if (!charging && level <= 1) {
+				if (!batteryWarned) {
+					batteryWarned = true;
+					showToast(TR("battery.low"));
+				}
+			} else if (charging || level >= 3) {
+				batteryWarned = false;
+			}
+		}
+	}
+
 	// Results of the background saves and uploads.
 	{
 		const std::string transferMessage = Utils::Transfers::getInstance().takeMessage();

@@ -992,5 +992,14 @@
     "voice_msg.ready": "Recorded. Ready to send.",
     "voice_msg.recording": "Recording...",
     "voice_msg.sent": "Voice message sent",
-    "voice_msg.too_short": "Too short: hold on a bit longer"
+    "voice_msg.too_short": "Too short: hold on a bit longer",
+    "settings.clock_12h": "Clock Format",
+    "settings.desc.clock_12h": "Show the time of the messages in 24 h or 12 h (AM/PM).",
+    "settings.date_format": "Date Format",
+    "settings.desc.date_format": "Order of the day, month and year of the older messages.",
+    "settings.sound_volume": "Sound Volume",
+    "settings.desc.sound_volume": "How loud the sounds of the app are (notifications, calls, microphone).",
+    "settings.low_battery": "Low Battery Warning",
+    "settings.desc.low_battery": "Shows a message when the battery is low and the console is not charging.",
+    "battery.low": "Battery low: plug in the charger"
 }

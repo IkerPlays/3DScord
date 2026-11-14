@@ -992,5 +992,14 @@
     "voice_msg.ready": "Grabado. Listo para enviar.",
     "voice_msg.recording": "Grabando...",
     "voice_msg.sent": "Mensaje de voz enviado",
-    "voice_msg.too_short": "Demasiado corto: mantén un poco más"
+    "voice_msg.too_short": "Demasiado corto: mantén un poco más",
+    "settings.clock_12h": "Formato de la hora",
+    "settings.desc.clock_12h": "Muestra la hora de los mensajes en 24 h o en 12 h (AM/PM).",
+    "settings.date_format": "Formato de la fecha",
+    "settings.desc.date_format": "Orden del día, mes y año de los mensajes antiguos.",
+    "settings.sound_volume": "Volumen de los sonidos",
+    "settings.desc.sound_volume": "Lo fuertes que suenan los sonidos de la app (avisos, llamadas, micrófono).",
+    "settings.low_battery": "Aviso de batería baja",
+    "settings.desc.low_battery": "Muestra un mensaje cuando queda poca batería y la consola no está cargando.",
+    "battery.low": "Batería baja: conecta el cargador"
 }

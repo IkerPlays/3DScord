@@ -136,6 +136,34 @@ static bool translatePendingStatus(const std::string &timestamp, std::string &ou
 	return false;
 }
 
+// The time and the date as the user chose in Settings (24 h or 12 h; year/month/day, day/month/year or month/day/year).
+std::string clockString(int hour, int minute) {
+	char buffer[24];
+	if (Config::getInstance().isClock12h()) {
+		const int h = hour % 12 == 0 ? 12 : hour % 12;
+		snprintf(buffer, sizeof(buffer), "%d:%02d %s", h, minute, hour >= 12 ? "PM" : "AM");
+	} else {
+		snprintf(buffer, sizeof(buffer), "%02d:%02d", hour, minute);
+	}
+	return std::string(buffer);
+}
+
+std::string dateString(int year, int month, int day) {
+	char buffer[24];
+	switch (Config::getInstance().getDateFormat()) {
+	case 1:
+		snprintf(buffer, sizeof(buffer), "%02d/%02d/%04d", day, month, year);
+		break;
+	case 2:
+		snprintf(buffer, sizeof(buffer), "%02d/%02d/%04d", month, day, year);
+		break;
+	default:
+		snprintf(buffer, sizeof(buffer), "%04d/%02d/%02d", year, month, day);
+		break;
+	}
+	return std::string(buffer);
+}
+
 std::string formatTimestamp(const std::string &timestamp) {
 	std::string pending;
 	if (translatePendingStatus(timestamp, pending)) {
@@ -160,10 +188,9 @@ std::string formatTimestamp(const std::string &timestamp) {
 
 	char buffer[64];
 	if (msg_tm.tm_year == now_tm.tm_year && msg_tm.tm_mon == now_tm.tm_mon && msg_tm.tm_mday == now_tm.tm_mday) {
-		snprintf(buffer, sizeof(buffer), "%02d:%02d", msg_tm.tm_hour, msg_tm.tm_min);
+		return clockString(msg_tm.tm_hour, msg_tm.tm_min);
 	} else if (msg_local >= (today_start_local - 86400) && msg_local < today_start_local) {
-		std::string timeStr = (msg_tm.tm_hour < 10 ? "0" : "") + std::to_string(msg_tm.tm_hour) + ":" +
-		                      (msg_tm.tm_min < 10 ? "0" : "") + std::to_string(msg_tm.tm_min);
+		std::string timeStr = clockString(msg_tm.tm_hour, msg_tm.tm_min);
 		std::string yesterday_at = TR("time.yesterday_at");
 		size_t pos = yesterday_at.find("{0}");
 		if (pos != std::string::npos) {
@@ -171,8 +198,7 @@ std::string formatTimestamp(const std::string &timestamp) {
 		}
 		return yesterday_at;
 	} else {
-		snprintf(buffer, sizeof(buffer), "%04d/%02d/%02d %02d:%02d", msg_tm.tm_year + 1900, msg_tm.tm_mon + 1,
-		         msg_tm.tm_mday, msg_tm.tm_hour, msg_tm.tm_min);
+		return dateString(msg_tm.tm_year + 1900, msg_tm.tm_mon + 1, msg_tm.tm_mday) + " " + clockString(msg_tm.tm_hour, msg_tm.tm_min);
 	}
 	return std::string(buffer);
 }
@@ -186,9 +212,7 @@ std::string formatTimeOnly(const std::string &timestamp) {
 	if (!getLocalTm(timestamp, msg_tm)) {
 		return timestamp.substr(11, 5);
 	}
-	char buffer[16];
-	snprintf(buffer, sizeof(buffer), "%02d:%02d", msg_tm.tm_hour, msg_tm.tm_min);
-	return std::string(buffer);
+	return clockString(msg_tm.tm_hour, msg_tm.tm_min);
 }
 
 std::vector<std::string> wrapText(const std::string &text, float maxWidth, float scale, bool unicodeOnly) {
@@ -428,10 +452,7 @@ std::string getRelativeTime(time_t targetEpoch) {
 		time_t local = targetEpoch + (time_t)offset;
 		struct tm tm_info;
 		gmtime_r(&local, &tm_info);
-		char buffer[128];
-		snprintf(buffer, sizeof(buffer), "%04d/%02d/%02d %02d:%02d", tm_info.tm_year + 1900, tm_info.tm_mon + 1,
-		         tm_info.tm_mday, tm_info.tm_hour, tm_info.tm_min);
-		return std::string(buffer);
+		return dateString(tm_info.tm_year + 1900, tm_info.tm_mon + 1, tm_info.tm_mday) + " " + clockString(tm_info.tm_hour, tm_info.tm_min);
 	}
 
 	if (diff < 3600) {
