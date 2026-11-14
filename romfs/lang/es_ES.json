@@ -1008,5 +1008,6 @@
     "settings.theme.rose": "Rosa",
     "settings.theme.high_contrast": "Alto contraste",
     "settings.theme.colorblind": "Apto para daltonismo",
-    "settings.theme.paper": "Papel (claro cálido)"
+    "settings.theme.paper": "Papel (claro cálido)",
+    "callcam.stream_failed": "No se pudo abrir el directo de la pantalla. Inténtalo otra vez."
 }

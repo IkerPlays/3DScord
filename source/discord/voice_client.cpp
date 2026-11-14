@@ -276,6 +276,18 @@ void VoiceClient::stopOutgoingRing() {
 void VoiceClient::update() {
 	expireSpeaking();
 
+	// The screen stream (Go Live) did not open in time or was lost: close it and tell the user.
+	if (!streamMode && getStreamInstance().shareWanted.load()) {
+		VoiceClient &stream = getStreamInstance();
+		const VoiceState ss = stream.state;
+		const bool opening = ss != VoiceState::ESTABLISHED;
+		if (ss == VoiceState::FAILED || (opening && osGetTime() - stream.shareStartedAt > 25000)) {
+			Logger::log("[Stream] The stream did not open or was lost (state %d)", (int)ss);
+			stopScreenShare();
+			notice = 1;
+		}
+	}
+
 	// With the lid closed the console would sleep and the call would stop: keep it awake while a call is on.
 	const bool wantAwake = state == VoiceState::ESTABLISHED && Config::getInstance().isKeepCallsAwake();
 	if (wantAwake != sleepBlocked) {
@@ -2403,6 +2415,7 @@ bool VoiceClient::startScreenShare(int source) {
 	}
 	stream.lastSequence = -1;
 	stream.shareWanted = true;
+	stream.shareStartedAt = osGetTime();
 	client.setStreamCallbacks(
 	    [&stream](const std::string &k, const std::string &rtcServer) { stream.onStreamCreate(k, rtcServer); },
 	    [&stream](const std::string &k, const std::string &host, const std::string &t) { stream.onStreamServer(k, host, t); });

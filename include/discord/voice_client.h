@@ -215,6 +215,8 @@ class VoiceClient {
 	void *videoFile = nullptr; // FILE *
 	size_t videoFileBytes = 0; // video experiment: packets and bytes per payload type
 	bool streamMode = false; // this object is the stream connection
+	std::atomic<int> notice{0};
+	uint64_t shareStartedAt = 0;
 	std::string streamKey;
 	std::atomic<int> shareSource{3};
 	std::atomic<bool> shareWanted{false}; // stream mode: start sending the screen when the connection is ready
@@ -231,6 +233,8 @@ class VoiceClient {
 	bool startScreenShare(int source = 3); // 3: top screen, 4: bottom screen, 5: both
 	void stopScreenShare();
 	bool isScreenSharing() const;
+	// Something the user should be told (1: the stream could not be opened or was lost); the screen manager shows it.
+	int takeNotice() { return notice.exchange(0); }
 	// The stream connection (see getStreamInstance), called by the gateway.
 	void onStreamCreate(const std::string &key, const std::string &rtcServerId);
 	void onStreamServer(const std::string &key, const std::string &streamEndpoint, const std::string &streamToken);

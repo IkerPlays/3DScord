@@ -499,6 +499,10 @@ void ScreenManager::update() {
 
 	hamburgerMenu.update();
 
+	if (Discord::VoiceClient::getInstance().takeNotice() == 1) {
+		showToast(TR("callcam.stream_failed"));
+	}
+
 	if (lockOnWake.exchange(false) && Config::getInstance().hasPin() && currentType != ScreenType::PIN_LOCK &&
 	    currentType != ScreenType::UPDATER && currentType != ScreenType::DISCLAIMER) {
 		PinLockScreen::atStartup = false;

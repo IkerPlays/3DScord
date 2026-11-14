@@ -1008,5 +1008,6 @@
     "settings.theme.rose": "Rose",
     "settings.theme.high_contrast": "High contrast",
     "settings.theme.colorblind": "Colour-blind friendly",
-    "settings.theme.paper": "Paper (warm light)"
+    "settings.theme.paper": "Paper (warm light)",
+    "callcam.stream_failed": "The screen stream could not be opened. Try again."
 }
