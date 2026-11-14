@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- **Clock and Battery** (Settings > Appearance, off by default): a small time and battery gauge in the top right corner of the top screen, in the clock format you chose.
 - **Friend requests warn you:** a message (and the notification sound, or the Home menu notification if the app is in the background) when someone sends you a friend request.
 - **The screen stream no longer hangs:** if the Go Live stream does not open within 25 seconds or is lost, it is closed and a message says so. The statistics of your own picture (`fps`, `S1 R5...`) only show with the debug overlay (L + R).
 - **Seven more themes** (Settings > Appearance > Theme): Sunset, Ocean, Forest, Rose, **High contrast** (black, white and yellow, for low vision), **Colour-blind friendly** (blue and orange, no red/green pairs) and Paper (warm light).

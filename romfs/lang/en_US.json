@@ -1010,5 +1010,7 @@
     "settings.theme.colorblind": "Colour-blind friendly",
     "settings.theme.paper": "Paper (warm light)",
     "callcam.stream_failed": "The screen stream could not be opened. Try again.",
-    "friends.request_from": "{0} sent you a friend request"
+    "friends.request_from": "{0} sent you a friend request",
+    "settings.status_bar": "Clock and Battery",
+    "settings.desc.status_bar": "Shows the time and the battery in the corner of the top screen."
 }

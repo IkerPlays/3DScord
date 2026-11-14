@@ -507,6 +507,9 @@ void Config::loadSettings() {
 			if (doc.HasMember("background_notifications") && doc["background_notifications"].IsBool()) {
 				backgroundNotifications = doc["background_notifications"].GetBool();
 			}
+			if (doc.HasMember("show_status_bar") && doc["show_status_bar"].IsBool()) {
+				showStatusBar = doc["show_status_bar"].GetBool();
+			}
 			if (doc.HasMember("clock_12h") && doc["clock_12h"].IsBool()) {
 				clock12h = doc["clock_12h"].GetBool();
 			}
@@ -626,6 +629,8 @@ void Config::saveSettings() {
 	writer.Int(noiseGate);
 	writer.Key("background_notifications");
 	writer.Bool(backgroundNotifications);
+	writer.Key("show_status_bar");
+	writer.Bool(showStatusBar);
 	writer.Key("clock_12h");
 	writer.Bool(clock12h);
 	writer.Key("date_format");
@@ -867,6 +872,11 @@ bool Config::isVideoExperimental() const { return videoExperimental && Utils::Sy
 
 void Config::setBackgroundNotifications(bool enabled) {
 	backgroundNotifications = enabled;
+	saveSettings();
+}
+
+void Config::setShowStatusBar(bool enabled) {
+	showStatusBar = enabled;
 	saveSettings();
 }
 

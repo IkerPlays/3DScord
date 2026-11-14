@@ -164,6 +164,9 @@ class Config {
 	void setSoundVolume(int level);
 	bool isLowBatteryWarning() const { return lowBatteryWarning; }
 	void setLowBatteryWarning(bool enabled);
+	// A small clock and battery gauge in the corner of the top screen.
+	bool isShowStatusBar() const { return showStatusBar; }
+	void setShowStatusBar(bool enabled);
 	bool isKeepCallsAwake() const { return keepCallsAwake; }
 	void setKeepCallsAwake(bool enabled);
 
@@ -256,6 +259,7 @@ class Config {
 	bool autoReconnect = true;
 	bool keepCallsAwake;
 	bool clock12h = false;
+	bool showStatusBar = false;
 	int dateFormat = 0;
 	int soundVolume = 10;
 	bool lowBatteryWarning = true;

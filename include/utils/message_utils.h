@@ -17,6 +17,8 @@ time_t parseISO8601(const std::string &timestamp);
 time_t snowflakeToTimestamp(const std::string &snowflake);
 bool isNewerSnowflake(const std::string &a, const std::string &b);
 std::string formatTimestamp(const std::string &timestamp);
+// The time of day now (local), in the format chosen in Settings.
+std::string currentClockText();
 std::string getLocalDateString(const std::string &timestamp);
 std::string formatTimeOnly(const std::string &timestamp);
 std::string getISOTimestamp(time_t epoch);

@@ -88,6 +88,7 @@ class ScreenManager {
 	bool shouldShowBackArrow() const;
 
 	void renderDebugOverlay();
+	void renderStatusBar();
 	bool isDebugOverlayEnabled() const { return debugOverlayEnabled; }
 	void toggleDebugOverlay();
 

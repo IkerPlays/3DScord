@@ -24,6 +24,7 @@
 #include "ui/theme_manager_screen.h"
 #include "ui/updater_screen.h"
 #include "ui/voice_recorder_screen.h"
+#include "utils/message_utils.h"
 #include "utils/redraw.h"
 #include "ui/call_view.h"
 #include "ui/camera_screen.h"
@@ -491,6 +492,11 @@ void ScreenManager::returnToPreviousScreen() {
 	setScreen(prev);
 }
 
+namespace {
+int batteryLevelNow = 5;
+bool batteryChargingNow = false;
+} // namespace
+
 void ScreenManager::update() {
 	ImageManager::getInstance().update();
 	EmojiManager::getInstance().update();
@@ -521,7 +527,7 @@ void ScreenManager::update() {
 		static u64 nextBatteryCheck = 0;
 		static bool batteryWarned = false;
 		const u64 nowMs = osGetTime();
-		if (Config::getInstance().isLowBatteryWarning() && nowMs >= nextBatteryCheck) {
+		if ((Config::getInstance().isLowBatteryWarning() || Config::getInstance().isShowStatusBar()) && nowMs >= nextBatteryCheck) {
 			nextBatteryCheck = nowMs + 60000;
 			u8 level = 5;
 			u8 charging = 0;
@@ -530,7 +536,11 @@ void ScreenManager::update() {
 				PTMU_GetBatteryChargeState(&charging);
 				ptmuExit();
 			}
-			if (!charging && level <= 1) {
+			batteryLevelNow = level;
+			batteryChargingNow = charging != 0;
+			if (!Config::getInstance().isLowBatteryWarning()) {
+				// only the gauge needs the reading
+			} else if (!charging && level <= 1) {
 				if (!batteryWarned) {
 					batteryWarned = true;
 					showToast(TR("battery.low"));
@@ -735,6 +745,10 @@ void ScreenManager::render() {
 		hamburgerMenu.render();
 	}
 
+	if (Config::getInstance().isShowStatusBar()) {
+		renderStatusBar();
+	}
+
 	if (debugOverlayEnabled) {
 		renderDebugOverlay();
 	}
@@ -761,6 +775,27 @@ void ScreenManager::render() {
 	incomingCall.render();
 
 	C3D_FrameEnd(0);
+}
+
+// A small clock and battery gauge in the top right corner of the top screen (Settings > Appearance > Clock and Battery).
+void ScreenManager::renderStatusBar() {
+	const std::string clock = UI::MessageUtils::currentClockText();
+	const float textW = measureText(clock, 0.4f, 0.4f);
+	const float w = textW + 38.0f;
+	const float x = 400.0f - w - 4.0f;
+	const float y = 3.0f;
+	drawRoundedRect(x, y, 0.93f, w, 14.0f, 5.0f, C2D_Color32(0, 0, 0, 150));
+	drawText(x + 6.0f, y + 1.0f, 0.94f, 0.4f, 0.4f, C2D_Color32(255, 255, 255, 255), clock);
+	// the battery: five bars in a small frame, green when charging, red when almost empty
+	const float bx = x + textW + 12.0f;
+	const u32 frame = C2D_Color32(235, 235, 235, 255);
+	C2D_DrawRectSolid(bx, y + 3.0f, 0.94f, 18.0f, 8.0f, frame);
+	C2D_DrawRectSolid(bx + 18.0f, y + 5.0f, 0.94f, 2.0f, 4.0f, frame);
+	C2D_DrawRectSolid(bx + 1.0f, y + 4.0f, 0.95f, 16.0f, 6.0f, C2D_Color32(20, 20, 24, 255));
+	const u32 fill = batteryChargingNow ? C2D_Color32(35, 165, 90, 255) : batteryLevelNow <= 1 ? C2D_Color32(242, 63, 67, 255) : C2D_Color32(255, 255, 255, 255);
+	for (int i = 0; i < std::clamp(batteryLevelNow, 0, 5); i++) {
+		C2D_DrawRectSolid(bx + 2.0f + i * 3.0f, y + 5.0f, 0.96f, 2.0f, 4.0f, fill);
+	}
 }
 
 void ScreenManager::toggleDebugOverlay() {

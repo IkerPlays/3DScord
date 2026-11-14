@@ -164,6 +164,13 @@ std::string dateString(int year, int month, int day) {
 	return std::string(buffer);
 }
 
+std::string currentClockText() {
+	const time_t local = getUtcNow() + (time_t)get3DSLocalTimeOffset();
+	struct tm tm_info;
+	gmtime_r(&local, &tm_info);
+	return clockString(tm_info.tm_hour, tm_info.tm_min);
+}
+
 std::string formatTimestamp(const std::string &timestamp) {
 	std::string pending;
 	if (translatePendingStatus(timestamp, pending)) {

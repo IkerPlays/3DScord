@@ -234,6 +234,17 @@ void SettingsScreen::onEnter() {
 	};
 	allItems.push_back(showIcons);
 
+	SettingItem statusBar;
+	statusBar.label = TR("settings.status_bar");
+	statusBar.description = TR("settings.desc.status_bar");
+	statusBar.type = SettingItemType::TOGGLE;
+	statusBar.value = Config::getInstance().isShowStatusBar() ? 1 : 0;
+	statusBar.min = 0;
+	statusBar.max = 1;
+	statusBar.valueFormatter = [](int val) { return (val == 1) ? TR("common.enabled") : TR("common.disabled"); };
+	statusBar.onUpdate = [](int val) { Config::getInstance().setShowStatusBar(val == 1); };
+	allItems.push_back(statusBar);
+
 	SettingItem clock;
 	clock.label = TR("settings.clock_12h");
 	clock.description = TR("settings.desc.clock_12h");

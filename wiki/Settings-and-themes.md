@@ -5,7 +5,7 @@ Open **Settings** from the menu (gear). **Y** searches inside the settings.
 | Section | What is in it |
 |---|---|
 | General | Language, startup, accounts |
-| Appearance | Theme, **clock format** (24 h / 12 h) and **date format**, server icons, left-handed mode |
+| Appearance | Theme, **clock format** (24 h / 12 h), **date format** and **Clock and Battery** (a small gauge in the corner of the top screen), server icons, left-handed mode |
 | Chat | Message display, images, GIFs |
 | Controls and Battery | Push to talk, battery saver, keep awake |
 | Voice | Microphone volume, **sound volume** (the sounds of the app), **low battery warning**, noise gate, keep calls with lid closed, **Video (experimental)** (New 3DS / New 2DS XL only), ringtone |
