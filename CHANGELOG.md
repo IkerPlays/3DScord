@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.23.0
 - **Server info:** the server tools start with a line that shows when the server was created, how many members it has and whether you own it.
 - **Who reacted:** the message menu has a new **Who reacted** entry that shows the names behind the first three reactions of a message.
 - **Friends list:** under each friend it shows what they are playing or listening to, when Discord tells the app.
