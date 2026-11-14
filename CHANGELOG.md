@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- **The Discord logo is back inside the app:** the loading screens, the login, the About screen and the direct messages icon use the Discord logo again; the new logo stays for the HOME Menu icon, the banner and the downloads.
+
 ## 0.20.0
 - **Save a chat to the SD card:** Channel Tools > **Save This Chat** writes the last 100 messages (time, author, text and the links of the files) to `sdmc:/3ds/3DScord/exports/` as a text file.
 - **More translated texts:** French, German, Italian, Portuguese (Brazil) and Polish get 100 more strings each (settings, voice, friends, themes, battery and the tips), and the descriptions of the Video setting and of the call camera tool (English and Spanish) no longer say that video is not shown.
