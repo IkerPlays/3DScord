@@ -1024,5 +1024,6 @@
     "tip.5": "Tip: press Y inside Settings to search them.",
     "tip.6": "Tip: turn on Notifications Outside the App in Settings (needs Luma3DS).",
     "tip.7": "Tip: voice messages and music (MP3, FLAC, Ogg) play from the message menu.",
-    "tip.8": "Tip: Settings > Diagnostics saves a report you can send when something fails."
+    "tip.8": "Tip: Settings > Diagnostics saves a report you can send when something fails.",
+    "memory.low": "Low memory: turn on Compatibility Mode in Settings"
 }

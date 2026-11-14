@@ -26,6 +26,7 @@
 #include "ui/voice_recorder_screen.h"
 #include "utils/message_utils.h"
 #include "utils/redraw.h"
+#include "utils/system_utils.h"
 #include "ui/call_view.h"
 #include "ui/camera_screen.h"
 #include "ui/video_test_screen.h"
@@ -550,6 +551,20 @@ void ScreenManager::update() {
 				}
 			} else if (charging || level >= 3) {
 				batteryWarned = false;
+			}
+		}
+	}
+
+	// Little memory left: once per session, suggest the Compatibility Mode (checked every 30 seconds).
+	{
+		static u64 nextMemoryCheck = 0;
+		static bool memoryWarned = false;
+		const u64 nowMs = osGetTime();
+		if (!memoryWarned && nowMs >= nextMemoryCheck) {
+			nextMemoryCheck = nowMs + 30000;
+			if (Utils::System::heapFreeBytes() < 3u * 1024 * 1024 && !Config::getInstance().isLightMode()) {
+				memoryWarned = true;
+				showToast(TR("memory.low"));
 			}
 		}
 	}

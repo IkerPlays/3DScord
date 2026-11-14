@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- **Low memory warning:** once per session, if less than 3 MB of memory is left, a message suggests the Compatibility Mode in Settings.
 - **A tip on the start screen** (a different one each start) while the app looks for updates. The diagnostics report also says the state of the video connections and how many pictures of others were decrypted or not.
 - **Watch the Go Live of others** (EXPERIMENTAL, needs Settings > Voice > Video; Settings > Voice > **Watch Streams Automatically**): when someone in the call shares their screen, 3DScord asks Discord to watch the stream
   (STREAM_WATCH), opens a third voice connection for it (with its own DAVE group) and shows its picture like a camera (light quality). If the stream does not open in 25 seconds it gives up until the stream restarts.
