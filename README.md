@@ -118,10 +118,11 @@ embedded in the `.3dsx` and `.cia`.
 
 ## Resumen en español
 
-3DScord es un cliente de Discord para la Nintendo 3DS, basado en TriCord. Incluye chat, voz, ajustes de tu cuenta de
-Discord (perfil, avatar, banner, estado), actualizaciones dentro de la app con notas de la versión, y un
-[plan de desarrollo](ROADMAP.md) por fases. Instálalo con el `.cia` (FBI) o el `.3dsx` (Homebrew Launcher) desde
-[Releases](https://github.com/IkerPlays/3DScord/releases).
+3DScord es un cliente de Discord para la Nintendo 3DS, basado en TriCord. Incluye chat con menciones `@usuario`, llamadas de voz con cifrado de extremo a
+extremo, tu cámara (delantera y trasera) y compartir pantalla (Go Live, también desde el menú HOME) en las New 3DS / New 2DS XL, notificaciones, 13 temas
+(con alto contraste y apto para daltonismo), ajustes de tu cuenta de Discord, actualizaciones dentro de la app con notas de la versión y un
+[plan de desarrollo](ROADMAP.md) por fases. Hay una [wiki](https://github.com/IkerPlays/3DScord/wiki) con guías. Instálalo con el `.cia` (FBI) o el
+`.3dsx` (Homebrew Launcher) desde [Releases](https://github.com/IkerPlays/3DScord/releases). Funciona en 3DS y 2DS (sin vídeo) y en New 3DS / New 2DS XL; no en la Nintendo DS.
 
 ## Credits and license
 
