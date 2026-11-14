@@ -597,6 +597,17 @@ void SettingsScreen::onEnter() {
 	awake.onUpdate = [](int val) { Config::getInstance().setKeepCallsAwake(val == 1); };
 	allItems.push_back(awake);
 
+	SettingItem bgNotify;
+	bgNotify.label = TR("settings.background_notifications");
+	bgNotify.description = TR("settings.desc.background_notifications");
+	bgNotify.type = SettingItemType::TOGGLE;
+	bgNotify.value = Config::getInstance().isBackgroundNotifications() ? 1 : 0;
+	bgNotify.min = 0;
+	bgNotify.max = 1;
+	bgNotify.valueFormatter = [](int val) { return (val == 1) ? TR("common.enabled") : TR("common.disabled"); };
+	bgNotify.onUpdate = [](int val) { Config::getInstance().setBackgroundNotifications(val == 1); };
+	allItems.push_back(bgNotify);
+
 	SettingItem ringtone;
 	ringtone.label = TR("settings.ringtone");
 	ringtone.description = TR("settings.desc.ringtone");

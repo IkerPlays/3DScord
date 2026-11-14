@@ -1,5 +1,6 @@
 #include "utils/video_sender.h"
 #include "log.h"
+#include "utils/background_notifier.h"
 #include "utils/h264_sps.h"
 #include "utils/video_receiver.h"
 #include <algorithm>
@@ -15,7 +16,87 @@ double ticksToMs(u64 ticks) { return (double)ticks * 1000.0 / (double)SYSCLOCK_A
 
 // The top screen (400x240), reduced to W x H, as planar YUV 4:2:0 (each pixel is the average of 2x2 pixels of the screen).
 // The framebuffer is stored rotated: column by column, bottom to top, three bytes (B, G, R) per pixel.
+// The top screen as it is on the LCD when the app is not in front (the Home menu or another application): the system tells where the
+// picture is (GSPGPU_ImportDisplayCaptureInfo) and, if that memory is readable from here (VRAM is), it is read like our own screen.
+bool screenOutsideToYuv(int W, int H, std::vector<uint8_t> &yPlane, std::vector<uint8_t> &uPlane, std::vector<uint8_t> &vPlane) {
+	static int logged = 0;
+	GSPGPU_CaptureInfo info;
+	if (R_FAILED(GSPGPU_ImportDisplayCaptureInfo(&info))) {
+		if (logged++ < 3) {
+			Logger::log("[VideoTx] The system did not give the screen capture info");
+		}
+		return false;
+	}
+	const GSPGPU_CaptureInfoEntry &e = info.screencapture[0];
+	u32 addr = (u32)e.framebuf0_vaddr;
+	const u32 format = e.format & 7;
+	const u32 pitch = e.framebuf_widthbytesize;
+	// VRAM is at 0x18000000 in physical terms and mapped at 0x1F000000 for applications.
+	if (addr >= 0x18000000 && addr < 0x18600000) {
+		addr = 0x1F000000 + (addr - 0x18000000);
+	}
+	const int bpp = format == 0 ? 4 : format == 1 ? 3 : 2;
+	if (logged++ < 3) {
+		Logger::log("[VideoTx] Screen outside the app: address %08lX, format %lu, pitch %lu", (unsigned long)addr, (unsigned long)format,
+		            (unsigned long)pitch);
+	}
+	if (format > 4 || pitch < 240u * bpp || pitch > 240u * 4) {
+		return false;
+	}
+	// Is it memory this process can read?
+	MemInfo mi;
+	PageInfo pi;
+	if (R_FAILED(svcQueryMemory(&mi, &pi, addr)) || mi.state == MEMSTATE_FREE || !(mi.perm & MEMPERM_READ) ||
+	    (u64)addr + (u64)pitch * 400 > (u64)mi.base_addr + mi.size) {
+		if (logged++ < 6) {
+			Logger::log("[VideoTx] That screen memory cannot be read from the app (state %lu)", (unsigned long)mi.state);
+		}
+		return false;
+	}
+	const u8 *fb = (const u8 *)addr;
+	for (int x = 0; x < W; x++) {
+		const u8 *column = fb + (size_t)(x * 400 / W) * pitch;
+		for (int y = 0; y < H; y++) {
+			const u8 *p = column + (size_t)(239 - (y * 240 / H)) * bpp;
+			int r, g, b;
+			if (format == 0) { // RGBA8: A B G R in memory
+				r = p[3];
+				g = p[2];
+				b = p[1];
+			} else if (format == 1) { // RGB8: B G R
+				b = p[0];
+				g = p[1];
+				r = p[2];
+			} else {
+				const unsigned v = p[0] | (p[1] << 8);
+				if (format == 2) { // RGB565
+					r = ((v >> 11) & 31) * 255 / 31;
+					g = ((v >> 5) & 63) * 255 / 63;
+					b = (v & 31) * 255 / 31;
+				} else if (format == 3) { // RGB5A1
+					r = ((v >> 11) & 31) * 255 / 31;
+					g = ((v >> 6) & 31) * 255 / 31;
+					b = ((v >> 1) & 31) * 255 / 31;
+				} else { // RGBA4
+					r = ((v >> 12) & 15) * 17;
+					g = ((v >> 8) & 15) * 17;
+					b = ((v >> 4) & 15) * 17;
+				}
+			}
+			yPlane[(size_t)y * W + x] = (uint8_t)(((66 * r + 129 * g + 25 * b + 128) >> 8) + 16);
+			if (((x | y) & 1) == 0) {
+				uPlane[(size_t)(y / 2) * (W / 2) + x / 2] = (uint8_t)std::clamp(((-38 * r - 74 * g + 112 * b + 128) >> 8) + 128, 0, 255);
+				vPlane[(size_t)(y / 2) * (W / 2) + x / 2] = (uint8_t)std::clamp(((112 * r - 94 * g - 18 * b + 128) >> 8) + 128, 0, 255);
+			}
+		}
+	}
+	return true;
+}
+
 bool screenToYuv(int W, int H, std::vector<uint8_t> &yPlane, std::vector<uint8_t> &uPlane, std::vector<uint8_t> &vPlane) {
+	if (Utils::BackgroundNotifier::getInstance().inBackground()) {
+		return screenOutsideToYuv(W, H, yPlane, uPlane, vPlane);
+	}
 	u16 fbW = 0, fbH = 0;
 	const u8 *fb = gfxGetFramebuffer(GFX_TOP, GFX_LEFT, &fbW, &fbH);
 	if (!fb || fbW < 240) {

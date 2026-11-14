@@ -27,7 +27,7 @@
 Config::Config()
     : currentAccountIndex(-1), timezoneOffset(0), language("en_US"), themeType(0), typingIndicatorEnabled(true),
       notificationSound(true), fileLoggingEnabled(false), disclaimerAccepted(false), showAvatars(true),
-      showServerIcons(true), showHiddenChannels(false), autoUpdate(true), replyPing(true), quietHours(false), leftHanded(false), batterySaver(false), imageCache(1), pushToTalk(0), noiseGate(5), keepCallsAwake(true), quietStart(22), quietEnd(7), dmUnreadFirst(false), devBuildUpdates(false), micVolume(100), customThemeEnabled(false),
+      showServerIcons(true), showHiddenChannels(false), autoUpdate(true), replyPing(true), quietHours(false), leftHanded(false), batterySaver(false), imageCache(1), pushToTalk(0), noiseGate(5), keepCallsAwake(true), backgroundNotifications(true), quietStart(22), quietEnd(7), dmUnreadFirst(false), devBuildUpdates(false), micVolume(100), customThemeEnabled(false),
       selectedThemeName("") {
 	customTheme = getDarkPreset();
 	customTheme.name = "Custom Theme";
@@ -379,6 +379,9 @@ void Config::loadSettings() {
 			if (doc.HasMember("noise_gate") && doc["noise_gate"].IsInt()) {
 				noiseGate = std::clamp(doc["noise_gate"].GetInt(), 0, 10);
 			}
+			if (doc.HasMember("background_notifications") && doc["background_notifications"].IsBool()) {
+				backgroundNotifications = doc["background_notifications"].GetBool();
+			}
 			if (doc.HasMember("keep_calls_awake") && doc["keep_calls_awake"].IsBool()) {
 				keepCallsAwake = doc["keep_calls_awake"].GetBool();
 			}
@@ -484,6 +487,8 @@ void Config::saveSettings() {
 	writer.Bool(autoReconnect);
 	writer.Key("noise_gate");
 	writer.Int(noiseGate);
+	writer.Key("background_notifications");
+	writer.Bool(backgroundNotifications);
 	writer.Key("keep_calls_awake");
 	writer.Bool(keepCallsAwake);
 	writer.Key("quiet_hours");
@@ -710,6 +715,11 @@ void Config::setAutoReconnect(bool enabled) {
 
 void Config::setNoiseGate(int level) {
 	noiseGate = std::clamp(level, 0, 10);
+	saveSettings();
+}
+
+void Config::setBackgroundNotifications(bool enabled) {
+	backgroundNotifications = enabled;
 	saveSettings();
 }
 

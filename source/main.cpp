@@ -1,4 +1,5 @@
 #include "core/config.h"
+#include "utils/background_notifier.h"
 #include "discord/discord_client.h"
 #include "discord/voice_client.h"
 #include "log.h"
@@ -134,6 +135,7 @@ int main(int argc, char **argv) {
 	}
 
 	UI::ImageManager::getInstance().init();
+	Utils::BackgroundNotifier::getInstance().init();
 	Discord::DiscordClient::getInstance().init();
 	UI::ScreenManager::getInstance().init();
 
@@ -153,6 +155,8 @@ int main(int argc, char **argv) {
 			gspWaitForVBlank();
 		}
 	}
+
+	Utils::BackgroundNotifier::getInstance().shutdown();
 
 	// Its destructor would otherwise run after socExit and ndspExit.
 	Discord::VoiceClient::getInstance().disconnect();

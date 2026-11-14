@@ -696,6 +696,7 @@ namespace {
 constexpr size_t VIDEO_FRAME_MAX = 256 * 1024;      // the biggest frame that is kept
 constexpr size_t VIDEO_FILE_MAX = 3 * 1024 * 1024; // the file of the experiment stops growing here
 const uint8_t START_CODE[4] = {0, 0, 0, 1};
+constexpr bool kSaveIncomingVideo = false;
 } // namespace
 
 void VoiceClient::closeVideoCapture() {
@@ -877,7 +878,8 @@ void VoiceClient::handleVideoPayload(uint32_t ssrc, uint16_t seq, bool lastOfFra
 	maybeRequestKeyFrame(ssrc);
 
 	// The decrypted frames go to the SD card so the stream can be checked on a computer (VLC, ffprobe).
-	if (videoFileBytes < VIDEO_FILE_MAX) {
+	// (Off since the video works: it wrote up to 3 MB to the SD card in every call.)
+	if (kSaveIncomingVideo && videoFileBytes < VIDEO_FILE_MAX) {
 		if (!videoFile) {
 			mkdir("sdmc:/3ds", 0777);
 			mkdir(CONFIG_DIR_PATH, 0777);

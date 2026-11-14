@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- **Notifications outside the app** (Settings > Notifications Outside the App, on by default): when a message arrives while the app is in the Home menu, it adds an entry to the Home menu Notifications and
+  pulses the notification LED. It needs Luma3DS, and it only works if the system keeps the app's network running in the background (it may not).
+- **Sharing the screen outside the app (EXPERIMENTAL):** when you go to the Home menu or another application while sharing, the stream tries to capture what is on the top screen of the console
+  (not only the app's own screen). It depends on the system letting the app keep running and read that memory; the log says what happened (`[VideoTx] Screen outside the app`).
+- The incoming video is no longer saved to the SD card in every call.
 - **Sharing the screen is now a real "Go Live" stream** (EXPERIMENTAL, needs Settings > Voice > Video): the button asks Discord for a stream (STREAM_CREATE), opens a second voice connection
   for it (with its own DAVE group) and sends the top screen on it, instead of sending it as a camera. The others see a live stream they can watch. The call and the camera keep working on the main connection.
 - **You can mention people:** type `@name` (username, display name or nickname of someone in the conversation) and it is sent as a real mention; the longest name wins. It works in messages and replies.

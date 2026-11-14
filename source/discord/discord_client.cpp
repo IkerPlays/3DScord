@@ -1,4 +1,5 @@
 #include "discord/discord_client.h"
+#include "utils/background_notifier.h"
 #include "core/config.h"
 #include "discord/avatar_cache.h"
 #include "core/i18n.h"
@@ -2279,6 +2280,12 @@ void DiscordClient::handleMessageCreate(const rapidjson::Value &d) {
 		} else if (choice > 0 && choice <= (int)Utils::Sound::NOTIFICATION + 1) {
 			Utils::SoundPlayer::getInstance().play((Utils::Sound)(choice - 1));
 		}
+	}
+
+	if (playSound && !inQuietHours()) {
+		// With the app in the background: an entry in the Home menu and the LED.
+		std::string who = msg.member.nickname.empty() ? (msg.author.global_name.empty() ? msg.author.username : msg.author.global_name) : msg.member.nickname;
+		Utils::BackgroundNotifier::getInstance().notify(who, msg.content.empty() ? std::string("[...]") : msg.content);
 	}
 
 	// Any message in an unmuted private channel counts towards the badge.

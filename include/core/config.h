@@ -150,6 +150,8 @@ class Config {
 	void setAutoReconnect(bool enabled);
 	int getNoiseGate() const { return noiseGate; }
 	void setNoiseGate(int level);
+	bool isBackgroundNotifications() const { return backgroundNotifications; }
+	void setBackgroundNotifications(bool enabled);
 	bool isKeepCallsAwake() const { return keepCallsAwake; }
 	void setKeepCallsAwake(bool enabled);
 
@@ -240,6 +242,7 @@ class Config {
 	bool busyMode = false;
 	bool autoReconnect = true;
 	bool keepCallsAwake;
+	bool backgroundNotifications;
 	int quietStart;
 	int quietEnd;
 	bool dmUnreadFirst;
