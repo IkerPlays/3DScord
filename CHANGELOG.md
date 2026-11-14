@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- **More translated texts:** French, German, Italian, Portuguese (Brazil) and Polish get 100 more strings each (settings, voice, friends, themes, battery and the tips), and the descriptions of the Video setting and of the call camera tool (English and Spanish) no longer say that video is not shown.
 - **Notification LED in the app too** (Settings > Voice > Notification LED, on by default; needs Luma3DS): the light of the console pulses for a few seconds when a message that should notify you arrives, also while you use the app. In the background it goes on until you come back.
 - **Mention from the message menu:** press A on a message and choose **Mention** to add `@name` of its author to your draft (then write the rest and send).
 - **A test of the video the console sends runs in CI** (`tests/`, `.github/workflows/tests.yml`): the encoder and the SPS rewrite are built on a computer and ffmpeg must read the streams without errors, as constrained baseline level 3.1 without reordering.
