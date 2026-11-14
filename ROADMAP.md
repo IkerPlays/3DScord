@@ -161,7 +161,7 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
 - [x] Move someone to another voice channel; record the call; Voice Tone (simple equalizer)
 - [ ] Not done: stronger noise cancelling, mute or pause when the lid closes (the app cannot tell when the lid closes)
 - [x] Cameras and shared screens of others in calls (experimental): software H.264 decoding (openh264) on the extra core, shown
-      small, in the tile, or on the whole top screen. Sending your own camera is still not possible.
+      small, in the tile, or on the whole top screen. Sending your own camera and screen came in version 0.17.0.
 
 ## Phase 17 — Images, files and camera (ideas 116-145)
 - [x] Turn a picture in the viewer; file size shown on attachments
@@ -172,7 +172,7 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
       (checked on a computer). The H.264 encoder (minih264e) works and a Video Test measures it on the console.
 - [x] Other people's cameras and shared screens in calls: not possible with the hardware decoder (it blocks in `mvdstdInit` with
       every work buffer size tried) but possible in software with openh264: about 20 ms per picture on a New 2DS XL (see 0.14.0).
-- [ ] Sending your own camera in a call is not done (it also needs Discord's video signalling and frame encryption).
+- [x] Sending your own camera (inner and outer) in a call, and sharing the top screen as a Go Live stream (version 0.17.0, experimental): H.264 encoding (minih264e), Discord's video signalling, DAVE frame encryption.
 - [x] Previews in the chat: play Ogg sounds and read small text files from the message menu
 
 ## Not possible on the 3DS
