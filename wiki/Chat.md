@@ -25,3 +25,10 @@ Reactions, polls, spoilers, embeds, stickers and emoji work. **Channel Tools** h
 ## Message variables
 
 Type `{time}`, `{date}`, `{channel}` or `{server}` in a message and it is replaced when you send it (for example `Be there at {time}`). The time and the date use the formats chosen in Settings.
+
+## Other handy things
+
+- **Slow mode:** if the channel has one and you wrote a moment ago, the app tells you how many seconds are left.
+- **Long messages** (over 2000 characters) are sent in several messages, cut at a line break or a space.
+- **Who reacted:** in the message menu, shows the names behind the first three reactions.
+- **Friends:** under each friend you see what they play or listen to; in the Pending list, the first row accepts all the requests.

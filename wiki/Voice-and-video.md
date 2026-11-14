@@ -11,15 +11,12 @@
 
 Needs a **New 3DS / New 2DS XL** and **Settings > Voice > Video (experimental)** turned on. See [[Compatibility]].
 
-The camera button in the call controls goes through:
+The call controls have two buttons for video, and they work at the same time:
 
-1. nothing
-2. the **inner** camera (the one facing you; your own preview is mirrored)
-3. the **outer** camera (the one on the back)
-4. the **top screen** (Go Live)
-5. the **bottom screen** (Go Live)
-6. **both screens** (top above bottom, Go Live)
-7. nothing
+- **Camera:** nothing, the **inner** camera (the one facing you; your own preview is mirrored), the **outer** camera (the one on the back), nothing...
+- **Screen (Go Live):** nothing, the **top screen**, the **bottom screen**, **both screens** (top above bottom), nothing...
+
+So you can show your face and share your screen together. Each one has its own encoder; the second one to start begins smaller so the console keeps up. The console has no way to record the sound of other apps, so a screen share carries no console sound.
 
 Changing between the two cameras is quick: the stream stays announced and only the capture restarts.
 
