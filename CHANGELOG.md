@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- **Favorite channels:** Channel Tools has **Add to Favorites** (or remove) for the channel or chat you are in, and Quick Access has a new **Favorite Channels** list that opens any of them (X removes one). It is saved on the SD card.
+
 ## 0.24.0
 - **More translated texts:** French, German, Italian, Portuguese (Brazil) and Polish get the message menu, the chat buttons, the main menu, profiles, direct messages and call view texts (78 strings each), and the updater, the server settings and the voice message screen (78 more), and the descriptions of the settings (42 more).
 - **In common:** a profile shows how many friends you share with that person and the servers you are both in.

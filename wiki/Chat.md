@@ -32,3 +32,4 @@ Type `{time}`, `{date}`, `{channel}` or `{server}` in a message and it is replac
 - **Long messages** (over 2000 characters) are sent in several messages, cut at a line break or a space.
 - **Who reacted:** in the message menu, shows the names behind the first three reactions.
 - **Friends:** under each friend you see what they play or listen to; in the Pending list, the first row accepts all the requests.
+- **Favorite channels:** Channel Tools > Add to Favorites; the list is in Quick Access > Favorite Channels.

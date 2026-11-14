@@ -39,6 +39,10 @@ class LocalStore {
 	bool toggleGuildPinned(const std::string &guildId); // returns the new state
 	bool isDmPinned(const std::string &channelId);
 	bool toggleDmPinned(const std::string &channelId); // returns the new state
+	// Favourite channels (any channel or direct message), listed in Quick Access.
+	bool isFavoriteChannel(const std::string &channelId);
+	bool toggleFavoriteChannel(const std::string &channelId); // returns the new state
+	const std::vector<std::string> &favoriteChannels();
 
 	// Notification sound of a server or channel: -1 = the default, 0 = silent, otherwise Utils::Sound + 1.
 	int getSoundOverride(const std::string &id);
@@ -59,6 +63,7 @@ class LocalStore {
 	std::vector<std::string> replies;
 	std::vector<std::string> pinnedDms;
 	std::vector<std::string> pinnedGuilds;
+	std::vector<std::string> favorites;
 	std::map<std::string, int> soundOverrides;
 };
 

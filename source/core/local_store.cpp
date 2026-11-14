@@ -76,6 +76,13 @@ void LocalStore::ensureLoaded() {
 					}
 				}
 			}
+			if (doc.HasMember("favorite_channels") && doc["favorite_channels"].IsArray()) {
+				for (const auto &r : doc["favorite_channels"].GetArray()) {
+					if (r.IsString()) {
+						favorites.push_back(r.GetString());
+					}
+				}
+			}
 			if (doc.HasMember("sound_overrides") && doc["sound_overrides"].IsObject()) {
 				for (auto it = doc["sound_overrides"].MemberBegin(); it != doc["sound_overrides"].MemberEnd(); ++it) {
 					if (it->value.IsInt()) {
@@ -133,6 +140,12 @@ void LocalStore::save() {
 	w.Key("pinned_guilds");
 	w.StartArray();
 	for (const auto &id : pinnedGuilds) {
+		w.String(id.c_str());
+	}
+	w.EndArray();
+	w.Key("favorite_channels");
+	w.StartArray();
+	for (const auto &id : favorites) {
 		w.String(id.c_str());
 	}
 	w.EndArray();
@@ -233,6 +246,32 @@ bool LocalStore::toggleGuildPinned(const std::string &guildId) {
 bool LocalStore::isDmPinned(const std::string &channelId) {
 	ensureLoaded();
 	return std::find(pinnedDms.begin(), pinnedDms.end(), channelId) != pinnedDms.end();
+}
+
+bool LocalStore::isFavoriteChannel(const std::string &channelId) {
+	ensureLoaded();
+	return std::find(favorites.begin(), favorites.end(), channelId) != favorites.end();
+}
+
+const std::vector<std::string> &LocalStore::favoriteChannels() {
+	ensureLoaded();
+	return favorites;
+}
+
+bool LocalStore::toggleFavoriteChannel(const std::string &channelId) {
+	ensureLoaded();
+	auto it = std::find(favorites.begin(), favorites.end(), channelId);
+	const bool nowFavorite = (it == favorites.end());
+	if (nowFavorite) {
+		if (favorites.size() >= 50) {
+			favorites.erase(favorites.begin());
+		}
+		favorites.push_back(channelId);
+	} else {
+		favorites.erase(it);
+	}
+	save();
+	return nowFavorite;
 }
 
 bool LocalStore::toggleDmPinned(const std::string &channelId) {

@@ -345,6 +345,11 @@ void ListScreen::loadLocal() {
 			                m.content});
 		}
 		break;
+	case Mode::FAVORITES:
+		for (const auto &id : store.favoriteChannels()) {
+			list.push_back({id, id, channelLabel(id), ""});
+		}
+		break;
 	case Mode::DRAFTS:
 		for (const auto &d : store.drafts()) {
 			list.push_back({"", d.channelId, channelLabel(d.channelId), d.text});
@@ -562,6 +567,7 @@ void ListScreen::loadLocal() {
 		        {"voice", channelId, TR("list.voice_channels"), TR("list.hub.voice")},
 		        {"people", channelId, TR("list.voice_people"), TR("list.hub.people")},
 		        {"saved", channelId, TR("list.saved"), TR("list.hub.saved")},
+		        {"favorites", channelId, TR("list.favorites"), TR("list.hub.favorites")},
 		        {"mentions", channelId, TR("list.mentions"), TR("list.hub.mentions")}};
 		break;
 	case Mode::TOOLS:
@@ -574,6 +580,7 @@ void ListScreen::loadLocal() {
 		        {"quick", channelId, TR("list.quick_replies"), TR("list.tools.quick")},
 		        {"drafts", channelId, TR("list.drafts"), TR("list.tools.drafts")},
 		        {"export", channelId, TR("list.export_chat"), TR("list.tools.export_chat")},
+		        {"favorite", channelId, TR(Core::LocalStore::getInstance().isFavoriteChannel(channelId) ? "list.unfavorite" : "list.favorite"), TR("list.tools.favorite")},
 		        {"format", channelId, TR("list.format"), TR("list.tools.format")},
 		        {"read", channelId, TR("list.mark_read"), TR("list.tools.read")},
 		        {"readserver", channelId, TR("list.mark_server_read"), TR("list.tools.read_server")},
@@ -1180,6 +1187,8 @@ std::string ListScreen::headerTitle() const {
 		return TR("list.mentions");
 	case Mode::SAVED:
 		return TR("list.saved");
+	case Mode::FAVORITES:
+		return TR("list.favorites");
 	case Mode::DRAFTS:
 		return TR("list.drafts");
 	case Mode::QUICK_REPLIES:
@@ -1238,6 +1247,8 @@ std::string ListScreen::hintLine() const {
 		return TR("list.hint.group");
 	case Mode::SEARCH:
 		return TR("list.hint.search");
+	case Mode::FAVORITES:
+		return TR("list.hint.favorites");
 	case Mode::MENTIONS:
 	case Mode::SAVED:
 		return TR(mode == Mode::SAVED ? "list.hint.saved" : "list.hint.mentions");
@@ -1526,6 +1537,8 @@ void ListScreen::primaryAction(const Entry &entry) {
 			openReplacing(Mode::VOICE_PEOPLE);
 		} else if (entry.id == "saved") {
 			openReplacing(Mode::SAVED);
+		} else if (entry.id == "favorites") {
+			openReplacing(Mode::FAVORITES);
 		} else if (entry.id == "mentions") {
 			openReplacing(Mode::MENTIONS);
 		}
@@ -1599,6 +1612,10 @@ void ListScreen::primaryAction(const Entry &entry) {
 			} else {
 				sm.showToast(TR("follow.not_announcement"));
 			}
+		} else if (entry.id == "favorite") {
+			const bool now = Core::LocalStore::getInstance().toggleFavoriteChannel(channelId);
+			sm.showToast(TR(now ? "list.favorite_added" : "list.favorite_removed"));
+			load();
 		} else if (entry.id == "export") {
 			// The last 100 messages of this chat go to a text file on the SD card (sdmc:/3ds/3DScord/exports/).
 			sm.showToast(TR("export.working"));
@@ -1832,6 +1849,7 @@ void ListScreen::primaryAction(const Entry &entry) {
 		break;
 	case Mode::MENTIONS:
 	case Mode::SAVED:
+	case Mode::FAVORITES:
 		if (!entry.channelId.empty()) {
 			client.setSelectedChannelId(entry.channelId);
 			sm.setScreen(ScreenType::MESSAGES);
@@ -1902,6 +1920,10 @@ void ListScreen::secondaryAction(const Entry &entry) {
 	switch (mode) {
 	case Mode::SAVED:
 		store.removeSaved(entry.id);
+		load();
+		break;
+	case Mode::FAVORITES:
+		store.toggleFavoriteChannel(entry.id);
 		load();
 		break;
 	case Mode::DRAFTS:
