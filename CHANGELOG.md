@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- **New logo, icon and banner:** a chat bubble with "3D" on a blurple tile, drawn for the project (it does not use the logos of Discord or Nintendo). It is the HOME Menu icon, the HOME Menu banner,
+  the spinning logo of the start screen and the About screen, and `resources/logo.png`. `tools/brand/brand.py` makes all the sizes.
+- **New sounds:** notification, join, leave, mic and headphones, outgoing and incoming call, and the HOME Menu banner jingle are now original bell-like tones, about as loud as before
+  (`tools/brand/sounds.py`).
+- **Older consoles:** the Video setting is hidden and the video features stay off on the Nintendo 3DS / 2DS (not New): the video is encoded and decoded in software and needs the New models.
+- **Wiki:** the pages are in `wiki/` and `.github/workflows/wiki.yml` publishes them to the GitHub wiki. A Universal-DB description is in `docs/universal-db.md`, and the README has a table of compatible consoles.
 - **Share the bottom screen too:** the button now goes nothing > inner camera > outer camera > top screen > bottom screen > both screens (top above bottom) > nothing. Changing between them does not close
   the stream. It also works outside the app.
 

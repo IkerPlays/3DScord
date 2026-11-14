@@ -1,3 +1,5 @@
+<p align="center"><img src="resources/logo.png" width="128" alt="3DScord logo"></p>
+
 # 3DScord
 
 ![License](https://img.shields.io/badge/license-GPLv3-green)
@@ -8,7 +10,7 @@
 **A Discord client for the Nintendo 3DS.** Chat, voice calls, your profile and your servers, on both screens.
 
 3DScord is a fork of [TriCord](https://github.com/2b-zipper/TriCord) by 2b-zipper (GPLv3), maintained by IkerPlays.
-See [ROADMAP.md](ROADMAP.md) for what is planned and [CHANGELOG.md](CHANGELOG.md) for what changed.
+See the [wiki](https://github.com/IkerPlays/3DScord/wiki) for guides, [ROADMAP.md](ROADMAP.md) for what is planned and [CHANGELOG.md](CHANGELOG.md) for what changed.
 
 > **Disclaimer.** This is an unofficial client made for educational purposes. It is not affiliated with or endorsed by
 > Discord Inc. You use it at your own risk: the authors are not responsible for data loss, account problems or
@@ -30,11 +32,21 @@ See [ROADMAP.md](ROADMAP.md) for what is planned and [CHANGELOG.md](CHANGELOG.md
 - **Videos:** MP4 attachments (H.264, up to 1280x720 and 16 MB) play without sound from the message menu (experimental).
 - **Your Discord account (Settings):** display name, About Me, pronouns, profile color, avatar and banner (from files on
   the SD card), status and custom status, message display options and privacy options.
-- **Auto-updater:** at startup, while the Discord logo spins, 3DScord looks for a new version. It shows the release
+- **Auto-updater:** at startup, while the 3DScord logo spins, 3DScord looks for a new version. It shows the release
   notes, asks if you want to update, installs it and restarts. Devbuilds are optional.
 - **Themes and languages:** Dark, Light, AMOLED, Nintendo, Retro and Midnight themes, a theme editor on the console,
   custom [themes](THEME_FORMAT.md) and several languages. Left-handed mode and a battery saver.
 - Goes idle automatically when you close the lid.
+
+## Compatible consoles
+
+| Console | Chat and voice | Camera, screen sharing and other people's video |
+| --- | --- | --- |
+| New Nintendo 3DS / 3DS XL, New 2DS XL | Yes | Yes |
+| Nintendo 3DS / 3DS XL, 2DS | Yes | No (too slow: the setting is hidden) |
+| Nintendo DS, DS Lite, DSi | No (they cannot run 3DS apps) | No |
+
+It needs custom firmware (Luma3DS is the tested one).
 
 ## Installation
 

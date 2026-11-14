@@ -138,7 +138,9 @@ class Config {
 	// How loud the microphone has to be to count as speaking: 0 (very sensitive) .. 10 (strict).
 	int getVoiceTone() const { return voiceTone; }
 	void setVoiceTone(int level);
-	bool isVideoExperimental() const { return videoExperimental; }
+	// Video (cameras, screen sharing, seeing the cameras of others) is encoded and decoded in software and needs the faster processor and the
+	// extra core of the New 3DS / New 2DS XL: on the other consoles it stays off.
+	bool isVideoExperimental() const;
 	void setVideoExperimental(bool enabled);
 	int getUploadQuality() const { return uploadQuality; }
 	void setUploadQuality(int level);

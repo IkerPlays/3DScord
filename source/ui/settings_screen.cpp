@@ -5,6 +5,7 @@
 #include "ui/video_orient_screen.h"
 #include "ui/video_test_screen.h"
 #include "core/config.h"
+#include "utils/system_utils.h"
 #include "core/i18n.h"
 #include "log.h"
 #include "ui/screen_manager.h"
@@ -546,7 +547,9 @@ void SettingsScreen::onEnter() {
 	videoExp.max = 1;
 	videoExp.valueFormatter = [](int val) { return (val == 1) ? TR("common.enabled") : TR("common.disabled"); };
 	videoExp.onUpdate = [](int val) { Config::getInstance().setVideoExperimental(val == 1); };
-	allItems.push_back(videoExp);
+	if (Utils::System::isNew3DS()) {
+		allItems.push_back(videoExp); // the video is too heavy for the other 3DS / 2DS models
+	}
 
 	SettingItem busy;
 	busy.label = TR("settings.busy_mode");

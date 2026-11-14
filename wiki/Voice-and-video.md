@@ -1,0 +1,42 @@
+# Voice and video
+
+## Voice
+
+- Join a voice channel or start a call from a direct message.
+- Calls are end-to-end encrypted with Discord's DAVE protocol.
+- You can change each person's volume, use push to talk, mute and deafen. Echo cancellation is on.
+- With the lid closed the call keeps going if **Settings > Voice > Keep calls with lid closed** is on (it uses more battery).
+
+## Video (experimental)
+
+Needs a **New 3DS / New 2DS XL** and **Settings > Voice > Video (experimental)** turned on. See [[Compatibility]].
+
+The camera button in the call controls goes through:
+
+1. nothing
+2. the **inner** camera (the one facing you; your own preview is mirrored)
+3. the **outer** camera (the one on the back)
+4. the **top screen** (Go Live)
+5. the **bottom screen** (Go Live)
+6. **both screens** (top above bottom, Go Live)
+7. nothing
+
+Changing between the two cameras is quick: the stream stays announced and only the capture restarts.
+
+### What others see
+
+- The cameras appear in your tile in the call, in the Discord apps. They are small on purpose (the console encodes in software): the picture size goes up and down with the load.
+- Your own tile shows `N fps  M ms  K  D` and `S1 R5 T120 E0 V2`: frames per second, milliseconds per frame, key frames asked for, drops; and Discord's confirmation, RTCP messages, frames sent,
+  frames that could not be encrypted and the packet mode. They help when something does not show.
+
+## Go Live (sharing your screen)
+
+The screen options use a real **Go Live** stream: 3DScord asks Discord for a stream, opens a second voice connection for it (with its own encryption group) and sends the screen there.
+The others touch **Watch** to see it. The call and the camera keep working on the main connection.
+
+- It works from the HOME Menu and other apps too (experimental: the system has to let 3DScord keep running and read the screen).
+- Leaving the call stops the stream.
+
+## Seeing other people's video
+
+The camera or screen of someone in the call is decoded in software and shown in their tile or on the whole top screen. If a picture does not show, check [[Troubleshooting]].

@@ -1,0 +1,45 @@
+name: Sync wiki
+
+# Publishes the pages of the wiki/ folder to the GitHub wiki of the repository (Wiki tab) every time they change on main.
+# The wiki must exist once: on GitHub open the Wiki tab > "Create the first page" > Save. After that this workflow keeps it in sync
+# (edits made in the web editor of the wiki are overwritten: change the files in wiki/ instead).
+on:
+  push:
+    branches: [main]
+    paths:
+      - "wiki/**"
+      - ".github/workflows/wiki.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wiki-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publish wiki/ to the GitHub wiki
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          if ! git clone "https://x-access-token:${TOKEN}@github.com/${REPO}.wiki.git" /tmp/wiki; then
+            echo "::error::The wiki does not exist yet. On GitHub open the Wiki tab, choose 'Create the first page' and save it once; then run this workflow again."
+            exit 1
+          fi
+          rsync -a --delete --exclude=.git wiki/ /tmp/wiki/
+          cd /tmp/wiki
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "The wiki is already up to date."
+            exit 0
+          fi
+          git commit -m "Sync the wiki from the repository (${GITHUB_SHA::7})"
+          git push

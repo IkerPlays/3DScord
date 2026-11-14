@@ -718,6 +718,8 @@ void Config::setNoiseGate(int level) {
 	saveSettings();
 }
 
+bool Config::isVideoExperimental() const { return videoExperimental && Utils::System::isNew3DS(); }
+
 void Config::setBackgroundNotifications(bool enabled) {
 	backgroundNotifications = enabled;
 	saveSettings();
