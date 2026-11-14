@@ -325,6 +325,13 @@ void render() {
 		return;
 	}
 	Utils::VideoReceiver::getInstance().update();
+	// The first picture of a stream you are watching fills the screen (touch L + R to go back).
+	static bool pictureWasLive = false;
+	const bool pictureLive = Utils::VideoReceiver::getInstance().isLive();
+	if (pictureLive && !pictureWasLive && voice.isWatching() && currentMode != Mode::VIDEO) {
+		currentMode = Mode::VIDEO;
+	}
+	pictureWasLive = pictureLive;
 	if (Utils::VideoSender::getInstance().running()) {
 		Utils::VideoSender::getInstance().updatePreview();
 	} else {
