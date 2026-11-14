@@ -1170,8 +1170,8 @@ void VoiceClient::handleRtcp(const uint8_t *packet, size_t len) {
 	}
 	// Walk the whole compound packet and describe it (above all the receiver reports about our video: does Discord get it?).
 	static int described = 0;
-	if (described < 40) {
-		described++;
+	described++;
+	if (described <= 12 || described % 8 == 0) {
 		uint8_t all[8 + 256];
 		memcpy(all, packet, 8);
 		memcpy(all + 8, plain, cipherLen);
@@ -1338,6 +1338,9 @@ void VoiceClient::sendVideoFrame(const uint8_t *annexB, size_t len) {
 		return;
 	}
 
+	const int variant = videoVariant.load();
+	const bool useStap = variant == 0 || variant == 1;
+	const bool useExt = variant == 0 || variant == 3;
 	constexpr size_t MTU = 1000;
 	const uint32_t timestamp = (uint32_t)((osGetTime() - videoClockStart) * 90);
 	uint8_t fragment[MTU + 4];
@@ -1345,7 +1348,7 @@ void VoiceClient::sendVideoFrame(const uint8_t *annexB, size_t len) {
 		const bool lastNal = k + 1 == nals.size();
 		const Nal &nal = nals[k];
 		// Parameter sets travel together in a STAP-A (RFC 6184 5.7), like WebRTC does before a key frame.
-		if ((nal.p[0] & 0x1F) == 7 && k + 1 < nals.size() && (nals[k + 1].p[0] & 0x1F) == 8) {
+		if (useStap && (nal.p[0] & 0x1F) == 7 && k + 1 < nals.size() && (nals[k + 1].p[0] & 0x1F) == 8) {
 			const Nal &pps = nals[k + 1];
 			if (nal.n + pps.n + 5 <= MTU) {
 				uint8_t stap[MTU + 8];
@@ -1359,13 +1362,13 @@ void VoiceClient::sendVideoFrame(const uint8_t *annexB, size_t len) {
 				stap[o++] = (uint8_t)pps.n;
 				memcpy(stap + o, pps.p, pps.n);
 				o += pps.n;
-				sendRtp(VIDEO_PAYLOAD_TYPE, videoOwnSsrc, videoSendSequence++, timestamp, k + 2 == nals.size(), stap, o, true);
+				sendRtp(VIDEO_PAYLOAD_TYPE, videoOwnSsrc, videoSendSequence++, timestamp, k + 2 == nals.size(), stap, o, useExt);
 				k++;
 				continue;
 			}
 		}
 		if (nal.n <= MTU) {
-			sendRtp(VIDEO_PAYLOAD_TYPE, videoOwnSsrc, videoSendSequence++, timestamp, lastNal, nal.p, nal.n, true);
+			sendRtp(VIDEO_PAYLOAD_TYPE, videoOwnSsrc, videoSendSequence++, timestamp, lastNal, nal.p, nal.n, useExt);
 			continue;
 		}
 		const uint8_t indicator = (uint8_t)((nal.p[0] & 0xE0) | 28);
@@ -1378,7 +1381,7 @@ void VoiceClient::sendVideoFrame(const uint8_t *annexB, size_t len) {
 			fragment[0] = indicator;
 			fragment[1] = (uint8_t)(type | (first ? 0x80 : 0) | (end ? 0x40 : 0));
 			memcpy(fragment + 2, nal.p + offset, chunk);
-			sendRtp(VIDEO_PAYLOAD_TYPE, videoOwnSsrc, videoSendSequence++, timestamp, lastNal && end, fragment, chunk + 2, true);
+			sendRtp(VIDEO_PAYLOAD_TYPE, videoOwnSsrc, videoSendSequence++, timestamp, lastNal && end, fragment, chunk + 2, useExt);
 			offset += chunk;
 			first = false;
 		}
@@ -1442,6 +1445,15 @@ void VoiceClient::pumpVideoOut() {
 	if (osGetTime() >= videoReportAt) {
 		videoReportAt = osGetTime() + 1000;
 		sendSenderReport();
+	}
+	if (osGetTime() >= videoVariantAt) {
+		const int next = (videoVariant.load() + 1) % 4;
+		videoVariant = next;
+		videoVariantAt = osGetTime() + 7000;
+		Utils::VideoSender::getInstance().requestKeyFrame(); // each way starts with a key frame
+		Logger::log("[VideoTx] EXPERIMENT: sending the video the way number %d (%s%s)", next,
+		            (next == 0 || next == 3) ? "playout-delay extension" : "no extension",
+		            (next == 0 || next == 1) ? ", SPS+PPS in one STAP-A packet" : ", SPS and PPS as separate packets");
 	}
 	bool key = false;
 	// Not more than a frame or two per pass: the audio comes first.
@@ -1564,6 +1576,8 @@ bool VoiceClient::setVideoSource(int source) {
 	videoSendFails = 0;
 	videoOctetCount = 0;
 	videoReportAt = 0;
+	videoVariantAt = 0;
+	videoVariant = 3; // the first rotation step makes it 0
 	DiscordClient::getInstance().selfVideoEcho = -1;
 	videoSourceNow = source;
 	// The same order as the community sender that works with DAVE: first the voice state (self_video), then speaking, then the video

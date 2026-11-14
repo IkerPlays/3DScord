@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- **Experiment to find out what the other side can show:** while your camera or screen is on, the way the video packets are built changes every 7 seconds (`V0`–`V3` in the stats of your own tile: with or
+  without the playout-delay extension, with SPS+PPS in one STAP-A packet or in two). The log says which one is active. Ask the other person to tell you when the picture appears and note the `V`.
 - **Video packets that the socket refused were lost without a trace:** `send()` is now checked (retried up to 5 times on a full buffer, counted and logged with the error), the UDP send buffer is
   asked for 64 KB, and the RTCP log line shows how many video packets we sent. Discord's reports said it had received nothing of our video (`maxseq 0`).
 - **Order and values like the community sender that works with DAVE:** voice state (`self_video`) first, then speaking, then the video signal and only then the packets (before,

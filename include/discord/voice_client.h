@@ -173,6 +173,10 @@ class VoiceClient {
 	std::atomic<int> videoSourceNow{0};
 	std::atomic<uint32_t> rtcpSeenWhileVideo{0};
 	std::atomic<uint32_t> videoEncryptFails{0};
+	// EXPERIMENT: the way the video packets are built changes every few seconds (0: extension + STAP-A, 1: STAP-A, 2: neither, 3: extension),
+	// shown in the call view, to learn which one the other side can show.
+	std::atomic<int> videoVariant{0};
+	uint64_t videoVariantAt = 0;
 	uint32_t videoOwnSsrc = 0;
 	uint32_t videoOwnRtxSsrc = 0;
 	uint16_t videoSendSequence = 0;
@@ -227,6 +231,7 @@ class VoiceClient {
 	uint32_t rtcpWhileSending() const { return rtcpSeenWhileVideo.load(); }
 	// Video frames sent and frames DAVE could not encrypt (for the call view).
 	uint32_t videoFramesSentCount() const { return videoFramesSent; }
+	int videoVariantNow() const { return videoVariant.load(); }
 	uint32_t videoEncryptFailures() const { return videoEncryptFails.load(); }
 	void setDeafened(bool d);
 	bool isDeafened() const { return audio.isDeafened(); }
