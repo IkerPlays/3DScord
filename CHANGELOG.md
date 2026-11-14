@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.21.0
 - **Camera and screen at the same time:** the call controls now have a button for the camera (nothing, inner, outer) and a new one for the screen (nothing, top, bottom, both). Each one has its own encoder, so you can show your face and share your screen together; your own previews of both appear in the call view.
 - **The Discord logo is back inside the app:** the loading screens, the login, the About screen and the direct messages icon use the Discord logo again; the new logo stays for the HOME Menu icon, the banner and the downloads.
 
