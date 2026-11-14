@@ -34,6 +34,8 @@ enum class VoiceState {
 class VoiceClient {
   public:
 	static VoiceClient &getInstance();
+	// The second connection, to the stream (Go Live) that shares the screen: it sends video only (no audio, no microphone).
+	static VoiceClient &getStreamInstance();
 
 	void connect(const std::string &guildId, const std::string &channelId, bool ringRecipients = false);
 	void disconnect();
@@ -212,6 +214,10 @@ class VoiceClient {
 	uint32_t videoFramesDropped = 0;
 	void *videoFile = nullptr; // FILE *
 	size_t videoFileBytes = 0; // video experiment: packets and bytes per payload type
+	bool streamMode = false; // this object is the stream connection
+	std::string streamKey;
+	std::atomic<bool> shareWanted{false}; // stream mode: start sending the screen when the connection is ready
+	uint64_t daveGroupId() const;
 	std::string ringChannelId;
 	std::atomic<bool> outgoingRing{false};
 	std::atomic<bool> ringPlaying{false};
@@ -220,12 +226,19 @@ class VoiceClient {
 	void stopOutgoingRing();
 
   public:
+	// Go Live (the main connection): opens a stream of the top screen next to the call, and closes it.
+	bool startScreenShare();
+	void stopScreenShare();
+	bool isScreenSharing() const;
+	// The stream connection (see getStreamInstance), called by the gateway.
+	void onStreamCreate(const std::string &key, const std::string &rtcServerId);
+	void onStreamServer(const std::string &key, const std::string &streamEndpoint, const std::string &streamToken);
 	void setMuted(bool m);
 	bool isMuted() const { return capture.isMuted(); }
 	// EXPERIMENTAL: what you send as video in the call: 0 nothing, 1 the inner camera, 2 the outer camera, 3 the top screen. False when
 	// it cannot start (not in a call, the Video setting is off, or the camera is busy).
 	bool setVideoSource(int source);
-	int videoSource() const { return videoSourceNow.load(); }
+	int videoSource() const;
 	bool isCameraOn() const { return cameraSending.load(); }
 	// RTCP messages that came from the call while we were sending video (someone receives it when they come).
 	uint32_t rtcpWhileSending() const { return rtcpSeenWhileVideo.load(); }

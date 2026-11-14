@@ -166,6 +166,17 @@ class DiscordClient {
 	void updateVoiceState(const std::string &guildId, const std::string &channelId, bool selfMute, bool selfDeaf,
 	                      bool selfVideo = false);
 
+	// Go Live (sharing the screen): the gateway opens a stream with its own voice server. The callbacks get the id of that server (stream
+	// create) and its address and token (stream server update).
+	void sendStreamCreate(const std::string &guildId, const std::string &channelId, const std::string &streamKey);
+	void sendStreamDelete(const std::string &streamKey);
+	void setStreamCallbacks(std::function<void(const std::string &, const std::string &)> onCreate,
+	                        std::function<void(const std::string &, const std::string &, const std::string &)> onServer) {
+		std::lock_guard<std::recursive_mutex> lock(clientMutex);
+		streamCreateCallback = onCreate;
+		streamServerCallback = onServer;
+	}
+
 	std::vector<VoiceParticipant> getVoiceParticipants(const std::string &channelId);
 	size_t getVoiceParticipantCount(const std::string &channelId);
 	void resolveVoiceNames(const std::string &guildId);
@@ -474,6 +485,8 @@ class DiscordClient {
 
 	std::function<void()> connectionCallback;
 	std::function<void(const std::string &, bool, bool)> voiceStateCallback;
+	std::function<void(const std::string &, const std::string &)> streamCreateCallback;
+	std::function<void(const std::string &, const std::string &, const std::string &)> streamServerCallback;
 
 	std::map<std::string, std::vector<VoiceParticipant>> voiceParticipants;
 	std::map<std::string, std::string> voiceChannelByUser;

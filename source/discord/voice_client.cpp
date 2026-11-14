@@ -94,6 +94,22 @@ VoiceClient &VoiceClient::getInstance() {
 	return instance;
 }
 
+VoiceClient &VoiceClient::getStreamInstance() {
+	static VoiceClient instance;
+	instance.streamMode = true;
+	return instance;
+}
+
+// The MLS group of the DAVE session: the voice channel for a call; for a stream, the id of its server minus one.
+uint64_t VoiceClient::daveGroupId() const {
+	std::lock_guard<std::mutex> lock(mutex);
+	if (streamMode) {
+		const uint64_t id = strtoull(serverId.c_str(), nullptr, 10);
+		return id > 0 ? id - 1 : 0;
+	}
+	return strtoull(channelId.c_str(), nullptr, 10);
+}
+
 VoiceClient::~VoiceClient() { disconnect(); }
 
 int VoiceClient::connectedSeconds() const {
@@ -103,7 +119,9 @@ int VoiceClient::connectedSeconds() const {
 
 void VoiceClient::setState(VoiceState s) {
 	Utils::requestRedraw();
-	if (s == VoiceState::ESTABLISHED && state != VoiceState::ESTABLISHED) {
+	if (s == VoiceState::ESTABLISHED && state != VoiceState::ESTABLISHED && streamMode) {
+		rosterPrimed = true;
+	} else if (s == VoiceState::ESTABLISHED && state != VoiceState::ESTABLISHED) {
 		Utils::SoundPlayer::getInstance().play(Utils::Sound::VOICE_JOIN);
 		rosterPrimed = true;
 		if (!ringChannelId.empty()) {
@@ -316,6 +334,9 @@ std::string VoiceClient::getGuildId() {
 }
 
 void VoiceClient::publishVoiceState() {
+	if (streamMode) {
+		return;
+	}
 	std::string guild, channel;
 	{
 		std::lock_guard<std::mutex> lock(mutex);
@@ -361,7 +382,7 @@ void VoiceClient::onVoiceServer(const std::string &t, const std::string &e, cons
 void VoiceClient::tryStartSession() {
 	{
 		std::lock_guard<std::mutex> lock(mutex);
-		if (!haveState || !haveServer) {
+		if (!haveState || !haveServer || (streamMode && serverId.empty())) {
 			return;
 		}
 	}
@@ -434,8 +455,10 @@ void VoiceClient::sendIdentify() {
 	writer.StartObject();
 	writer.Key("server_id");
 	writer.String(serverId.c_str());
-	writer.Key("channel_id");
-	writer.String(channelId.c_str());
+	if (!streamMode) {
+		writer.Key("channel_id");
+		writer.String(channelId.c_str());
+	}
 	writer.Key("user_id");
 	writer.String(DiscordClient::getInstance().getCurrentUser().id.c_str());
 	writer.Key("session_id");
@@ -444,14 +467,14 @@ void VoiceClient::sendIdentify() {
 	writer.String(token.c_str());
 	writer.Key("video");
 	// Settings > Voice > Video (experimental): tells Discord this client can receive video.
-	writer.Bool(Config::getInstance().isVideoExperimental());
-	if (Config::getInstance().isVideoExperimental()) {
+	writer.Bool(Config::getInstance().isVideoExperimental() || streamMode);
+	if (Config::getInstance().isVideoExperimental() || streamMode) {
 		// The video stream we may send (the camera or the screen), as Discord's own clients declare it.
 		writer.Key("streams");
 		writer.StartArray();
 		writer.StartObject();
 		writer.Key("type");
-		writer.String("video");
+		writer.String(streamMode ? "screen" : "video");
 		writer.Key("rid");
 		writer.String("100");
 		writer.Key("quality");
@@ -901,6 +924,9 @@ void VoiceClient::handleRtpPacket(uint8_t *packet, size_t len) {
 		}
 		return;
 	}
+	if (streamMode) {
+		return; // the stream connection sends only: whatever else arrives is not used
+	}
 	const bool isVideo = payloadType == VIDEO_PAYLOAD_TYPE && Config::getInstance().isVideoExperimental();
 	if (payloadType != OPUS_PAYLOAD_TYPE && !isVideo) {
 		// With the experiment on, the other kinds of packets are only counted and written to the log.
@@ -1059,7 +1085,7 @@ void VoiceClient::sendSpeaking(bool speaking) {
 	writer.Key("d");
 	writer.StartObject();
 	writer.Key("speaking");
-	writer.Int(speaking ? 1 : 0);
+	writer.Int(speaking ? (streamMode ? 2 : 1) : 0); // 2: the speaking of a stream
 	writer.Key("delay");
 	writer.Int(0);
 	writer.Key("ssrc");
@@ -1534,6 +1560,15 @@ void VoiceClient::sendVideoSignal(bool on) {
 }
 
 bool VoiceClient::setVideoSource(int source) {
+	if (!streamMode) {
+		// The screen goes on a stream of its own (Go Live); the cameras go on the call itself.
+		if (source == 3) {
+			return startScreenShare();
+		}
+		if (isScreenSharing()) {
+			stopScreenShare();
+		}
+	}
 	if (source == videoSourceNow.load()) {
 		return true;
 	}
@@ -1562,7 +1597,9 @@ bool VoiceClient::setVideoSource(int source) {
 	}
 	if (source == 0) {
 		publishVoiceState();
-		sendSinkWants(VIDEO_QUALITY_WANTED);
+		if (!streamMode) {
+			sendSinkWants(VIDEO_QUALITY_WANTED);
+		}
 		return true;
 	}
 	if (state != VoiceState::ESTABLISHED || !gcm || udpSocket < 0 || !Config::getInstance().isVideoExperimental()) {
@@ -1576,7 +1613,9 @@ bool VoiceClient::setVideoSource(int source) {
 	videoClockStart = osGetTime();
 	videoSendSequence = 0;
 	videoFramesSent = 0;
-	sendSinkWants(VIDEO_QUALITY_WHILE_SENDING);
+	if (!streamMode) {
+		sendSinkWants(VIDEO_QUALITY_WHILE_SENDING);
+	}
 	rtcpSeenWhileVideo = 0;
 	videoEncryptFails = 0;
 	videoPacketCount = 0;
@@ -1638,18 +1677,21 @@ void VoiceClient::mediaThread() {
 
 		// Both sides stop together, so the canceller keeps its estimate of the echo
 		// path; re-initialising would leak echo for a second after unmuting.
-		echo.setPaused(capture.isMuted());
-
-		audio.pump();
+		if (!streamMode) {
+			echo.setPaused(capture.isMuted());
+			audio.pump();
+		}
 		const uint64_t afterPump = svcGetSystemTick();
 
 		const uint64_t now = osGetTime();
-		if (now >= echoCheckAt) {
+		if (!streamMode && now >= echoCheckAt) {
 			echo.setEnabled(!osIsHeadsetConnected());
 			echoCheckAt = now + ECHO_CHECK_INTERVAL_MS;
 		}
 
-		pumpMicrophone(selfId);
+		if (!streamMode) {
+			pumpMicrophone(selfId);
+		}
 		pumpVideoOut();
 		const uint64_t afterMic = svcGetSystemTick();
 
@@ -1672,14 +1714,16 @@ void VoiceClient::mediaThread() {
 			    (unsigned long)(pumpSum / loops / TICKS_PER_US), (unsigned long)(pumpMax / TICKS_PER_US),
 			    (unsigned long)(micSum / loops / TICKS_PER_US), (unsigned long)(micMax / TICKS_PER_US),
 			    (unsigned long)micFramesDropped);
-			audio.logStats();
+			if (!streamMode) {
+				audio.logStats();
+			}
 			loops = 0;
 			maxGap = pumpSum = pumpMax = micSum = micMax = 0;
 			micFramesDropped = 0;
 			statsAt = now + STATS_INTERVAL_MS;
 		}
 
-		svcSleepThread(std::clamp(capture.nanosUntilFrame(), MIN_WAIT_NS, MAX_WAIT_NS));
+		svcSleepThread(streamMode ? MIN_WAIT_NS * 2 : std::clamp(capture.nanosUntilFrame(), MIN_WAIT_NS, MAX_WAIT_NS));
 	}
 
 	Logger::log("[Voice] Media thread stopped (decoded=%lu failures=%lu sent=%lu)", (unsigned long)packetsDecoded,
@@ -1799,12 +1843,7 @@ void VoiceClient::recoverFromInvalidGroup() {
 	writer.EndObject();
 	ws.send(s.GetString());
 
-	std::string groupIdStr;
-	{
-		std::lock_guard<std::mutex> lock(mutex);
-		groupIdStr = channelId;
-	}
-	uint64_t groupId = strtoull(groupIdStr.c_str(), nullptr, 10);
+	uint64_t groupId = daveGroupId();
 	if (!dave.init((uint16_t)daveVersion, groupId, DiscordClient::getInstance().getCurrentUser().id)) {
 		Logger::log("[Voice] Re-init failed: %s", dave.lastError().c_str());
 		return;
@@ -2025,21 +2064,23 @@ void VoiceClient::handlePayload(const std::string &message) {
 			break;
 		}
 
-		if (!echo.start()) {
-			Logger::log("[Voice] Echo cancellation unavailable");
-		}
-		audio.setEchoCanceller(&echo);
-		capture.setEchoCanceller(&echo);
+		if (!streamMode) {
+			if (!echo.start()) {
+				Logger::log("[Voice] Echo cancellation unavailable");
+			}
+			audio.setEchoCanceller(&echo);
+			capture.setEchoCanceller(&echo);
 
-		if (!audio.start()) {
-			setState(VoiceState::FAILED);
-			break;
-		}
+			if (!audio.start()) {
+				setState(VoiceState::FAILED);
+				break;
+			}
 
-		capture.setMuted(true);
-		capture.setVolume(Config::getInstance().getMicVolume());
-		if (!capture.start()) {
-			Logger::log("[Voice] Capture unavailable; receive only");
+			capture.setMuted(true);
+			capture.setVolume(Config::getInstance().getMicVolume());
+			if (!capture.start()) {
+				Logger::log("[Voice] Capture unavailable; receive only");
+			}
 		}
 		publishVoiceState();
 		speakingSent = false;
@@ -2079,9 +2120,14 @@ void VoiceClient::handlePayload(const std::string &message) {
 			}
 		}
 
-		logMemory("established");
+		logMemory(streamMode ? "stream established" : "established");
 		setState(VoiceState::ESTABLISHED);
-		if (Config::getInstance().isVideoExperimental()) {
+		if (streamMode) {
+			// The stream is open: send the top screen on it (DAVE may not be ready yet; the frames wait for it).
+			if (shareWanted.load()) {
+				setVideoSource(3);
+			}
+		} else if (Config::getInstance().isVideoExperimental()) {
 			sendSinkWants(VIDEO_QUALITY_WANTED);
 		}
 		break;
@@ -2202,9 +2248,12 @@ void VoiceClient::handlePayload(const std::string &message) {
 }
 
 void VoiceClient::disconnect() {
-	stopOutgoingRing();
+	if (!streamMode) {
+		stopScreenShare(); // the stream is part of the call
+		stopOutgoingRing();
+	}
 
-	if (state == VoiceState::ESTABLISHED) {
+	if (state == VoiceState::ESTABLISHED && !streamMode) {
 		Utils::SoundPlayer::getInstance().play(Utils::Sound::VOICE_LEFT);
 	}
 
@@ -2243,16 +2292,17 @@ void VoiceClient::disconnect() {
 	}
 
 	DiscordClient &client = DiscordClient::getInstance();
-	client.setVoiceStateCallback(nullptr);
-	client.setVoiceServerCallback(nullptr);
-
 	std::string guild;
 	{
 		std::lock_guard<std::mutex> lock(mutex);
 		guild = guildId;
 	}
-	if (!guild.empty() || !channelId.empty()) {
-		client.updateVoiceState(guild, "", false, false);
+	if (!streamMode) {
+		client.setVoiceStateCallback(nullptr);
+		client.setVoiceServerCallback(nullptr);
+		if (!guild.empty() || !channelId.empty()) {
+			client.updateVoiceState(guild, "", false, false);
+		}
 	}
 
 	{
@@ -2264,12 +2314,122 @@ void VoiceClient::disconnect() {
 		externalSenderPackage.clear();
 		haveState = false;
 		haveServer = false;
+		serverId.clear();
 	}
 
 	heartbeatInterval = 0;
 	if (state != VoiceState::FAILED) {
 		setState(VoiceState::DISCONNECTED);
 	}
+}
+
+int VoiceClient::videoSource() const {
+	if (!streamMode && isScreenSharing()) {
+		return 3;
+	}
+	return videoSourceNow.load();
+}
+
+bool VoiceClient::isScreenSharing() const {
+	if (streamMode) {
+		return shareWanted.load() && state != VoiceState::FAILED && state != VoiceState::DISCONNECTED;
+	}
+	return getStreamInstance().isScreenSharing();
+}
+
+// Go Live: the gateway is asked for a stream (STREAM_CREATE); it answers with the server of the stream and then with its address and token,
+// and the stream connection opens like a call does, with DAVE and all, and sends the screen.
+bool VoiceClient::startScreenShare() {
+	if (streamMode || state != VoiceState::ESTABLISHED || !Config::getInstance().isVideoExperimental()) {
+		return false;
+	}
+	if (isScreenSharing()) {
+		return true;
+	}
+	if (videoSourceNow.load() != 0) {
+		setVideoSource(0); // the camera and the screen use the same encoder
+	}
+	std::string guild, channel;
+	{
+		std::lock_guard<std::mutex> lock(mutex);
+		guild = guildId;
+		channel = channelId;
+	}
+	DiscordClient &client = DiscordClient::getInstance();
+	const std::string user = client.getCurrentUser().id;
+	const bool call = guild.empty() || guild == "DM";
+	const std::string key = call ? "call:" + channel + ":" + user : "guild:" + guild + ":" + channel + ":" + user;
+
+	VoiceClient &stream = getStreamInstance();
+	stream.disconnect();
+	svcGetThreadPriority(&stream.callerPriority, CUR_THREAD_HANDLE);
+	{
+		std::lock_guard<std::mutex> lock(stream.mutex);
+		stream.guildId = call ? std::string() : guild;
+		stream.channelId = channel;
+		stream.sessionId = client.getSessionId();
+		stream.token.clear();
+		stream.endpoint.clear();
+		stream.serverId.clear();
+		stream.haveState = true;
+		stream.haveServer = false;
+		stream.streamKey = key;
+	}
+	stream.lastSequence = -1;
+	stream.shareWanted = true;
+	client.setStreamCallbacks(
+	    [&stream](const std::string &k, const std::string &rtcServer) { stream.onStreamCreate(k, rtcServer); },
+	    [&stream](const std::string &k, const std::string &host, const std::string &t) { stream.onStreamServer(k, host, t); });
+	stream.setState(VoiceState::AWAITING_SERVER);
+	client.sendStreamCreate(call ? std::string() : guild, channel, key);
+	Logger::log("[Stream] Starting Go Live, key %s", key.c_str());
+	return true;
+}
+
+void VoiceClient::stopScreenShare() {
+	if (streamMode) {
+		return;
+	}
+	VoiceClient &stream = getStreamInstance();
+	if (!stream.shareWanted.exchange(false) && stream.state == VoiceState::DISCONNECTED) {
+		return;
+	}
+	std::string key;
+	{
+		std::lock_guard<std::mutex> lock(stream.mutex);
+		key = stream.streamKey;
+	}
+	stream.disconnect();
+	DiscordClient &client = DiscordClient::getInstance();
+	client.setStreamCallbacks(nullptr, nullptr);
+	if (!key.empty()) {
+		client.sendStreamDelete(key);
+	}
+	Logger::log("[Stream] Go Live stopped");
+}
+
+void VoiceClient::onStreamCreate(const std::string &key, const std::string &rtcServerId) {
+	{
+		std::lock_guard<std::mutex> lock(mutex);
+		if (key != streamKey) {
+			return;
+		}
+		serverId = rtcServerId;
+	}
+	tryStartSession();
+}
+
+void VoiceClient::onStreamServer(const std::string &key, const std::string &streamEndpoint, const std::string &streamToken) {
+	{
+		std::lock_guard<std::mutex> lock(mutex);
+		if (key != streamKey) {
+			return;
+		}
+		token = streamToken;
+		endpoint = streamEndpoint;
+		haveServer = !streamToken.empty() && !streamEndpoint.empty();
+	}
+	tryStartSession();
 }
 
 } // namespace Discord

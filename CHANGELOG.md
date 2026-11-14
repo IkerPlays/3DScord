@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- **Sharing the screen is now a real "Go Live" stream** (EXPERIMENTAL, needs Settings > Voice > Video): the button asks Discord for a stream (STREAM_CREATE), opens a second voice connection
+  for it (with its own DAVE group) and sends the top screen on it, instead of sending it as a camera. The others see a live stream they can watch. The call and the camera keep working on the main connection.
 - **You can mention people:** type `@name` (username, display name or nickname of someone in the conversation) and it is sent as a real mention; the longest name wins. It works in messages and replies.
 - **More sound formats can be played from the chat:** FLAC and Ogg Vorbis (music files) next to the Opus voice messages, MP3 and WAV (dr_flac and stb_vorbis, both public domain).
 - **Your camera and screen finally show to the others:** the video packets go without the playout-delay extension and with SPS and PPS as separate packets (the way that worked in the

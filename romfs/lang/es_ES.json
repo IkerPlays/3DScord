@@ -509,7 +509,7 @@
     "callcam.need_video": "Activa Ajustes > Voz > Vídeo (experimental) y entra otra vez en la llamada.",
     "callcam.failed": "No se pudo iniciar la cámara.",
     "callcam.busy": "La cámara está enviando a la llamada. Apágala antes en Herramientas del canal.",
-    "callcam.screen_on": "Compartiendo tu pantalla de arriba. Toca otra vez para dejar de compartir.",
+    "callcam.screen_on": "Abriendo tu directo con la pantalla de arriba; los demás pulsan \"Ver\" para verlo. Toca otra vez para dejar de compartir.",
     "videoorient.title": "Prueba de orientación del vídeo",
     "settings.desc.videoorient": "Enseña una imagen de prueba (una F con bordes de colores) como se dibujan las imágenes de las llamadas; A recorre las 8 orientaciones para ver cuál es la correcta.",
     "videoorient.option": "Orientación",

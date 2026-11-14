@@ -174,7 +174,8 @@ void drawTile(const Discord::VoiceParticipant &p, Discord::VoiceClient &voice, f
 		// someone receives the video, R goes up and K (key frames they ask for) too.
 		const int echo = Discord::DiscordClient::getInstance().selfVideoEcho.load();
 		char state[64];
-		auto &vc = Discord::VoiceClient::getInstance();
+		auto &mainVc = Discord::VoiceClient::getInstance();
+		auto &vc = mainVc.isScreenSharing() ? Discord::VoiceClient::getStreamInstance() : mainVc; // the screen goes on its own stream
 		snprintf(state, sizeof(state), "S%s R%u T%u E%u V%d", echo < 0 ? "?" : echo ? "1" : "0", (unsigned)vc.rtcpWhileSending(),
 		         (unsigned)vc.videoFramesSentCount(), (unsigned)vc.videoEncryptFailures(), vc.videoVariantNow());
 		drawRoundedRect(x + border + 3.0f, y + border + 17.0f, 0.57f + zOff, 112.0f, 12.0f, 4.0f, C2D_Color32(0, 0, 0, 170));

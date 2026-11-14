@@ -1091,6 +1091,32 @@ void DiscordClient::handleDispatch(const rapidjson::Document &doc) {
 		return;
 	}
 
+	if (t == "STREAM_CREATE") {
+		const std::string key = Utils::Json::getString(d, "stream_key");
+		const std::string rtcServer = Utils::Json::getString(d, "rtc_server_id");
+		Logger::log("[Stream] STREAM_CREATE key=%s rtc_server=%s", key.c_str(), rtcServer.c_str());
+		if (streamCreateCallback) {
+			streamCreateCallback(key, rtcServer);
+		}
+		return;
+	}
+
+	if (t == "STREAM_SERVER_UPDATE") {
+		const std::string key = Utils::Json::getString(d, "stream_key");
+		const std::string endpoint = Utils::Json::getString(d, "endpoint");
+		const std::string token = Utils::Json::getString(d, "token");
+		Logger::log("[Stream] STREAM_SERVER_UPDATE key=%s endpoint=%s", key.c_str(), endpoint.c_str());
+		if (streamServerCallback) {
+			streamServerCallback(key, endpoint, token);
+		}
+		return;
+	}
+
+	if (t == "STREAM_UPDATE" || t == "STREAM_DELETE") {
+		Logger::log("[Stream] %s %.200s", t.c_str(), Utils::Json::getString(d, "stream_key").c_str());
+		return;
+	}
+
 	if (t == "VOICE_SERVER_UPDATE") {
 		std::string token = Utils::Json::getString(d, "token");
 		std::string endpoint = Utils::Json::getString(d, "endpoint");
@@ -4913,6 +4939,67 @@ void DiscordClient::updateVoiceState(const std::string &guildId, const std::stri
 
 	queueSend(s.GetString());
 	Logger::log("[Voice] Sent Update Voice State (Op 4) guild=%s channel=%s", guildId.c_str(), channelId.c_str());
+}
+
+void DiscordClient::sendStreamCreate(const std::string &guildId, const std::string &channelId, const std::string &streamKey) {
+	const bool call = guildId.empty() || guildId == "DM";
+	{
+		rapidjson::StringBuffer s;
+		rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+		writer.StartObject();
+		writer.Key("op");
+		writer.Int(18); // STREAM_CREATE
+		writer.Key("d");
+		writer.StartObject();
+		writer.Key("type");
+		writer.String(call ? "call" : "guild");
+		writer.Key("guild_id");
+		if (call) {
+			writer.Null();
+		} else {
+			writer.String(guildId.c_str());
+		}
+		writer.Key("channel_id");
+		writer.String(channelId.c_str());
+		writer.Key("preferred_region");
+		writer.Null();
+		writer.EndObject();
+		writer.EndObject();
+		queueSend(s.GetString());
+	}
+	{
+		rapidjson::StringBuffer s;
+		rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+		writer.StartObject();
+		writer.Key("op");
+		writer.Int(22); // STREAM_SET_PAUSED
+		writer.Key("d");
+		writer.StartObject();
+		writer.Key("stream_key");
+		writer.String(streamKey.c_str());
+		writer.Key("paused");
+		writer.Bool(false);
+		writer.EndObject();
+		writer.EndObject();
+		queueSend(s.GetString());
+	}
+	Logger::log("[Stream] Sent Stream Create (Op 18) key=%s", streamKey.c_str());
+}
+
+void DiscordClient::sendStreamDelete(const std::string &streamKey) {
+	rapidjson::StringBuffer s;
+	rapidjson::Writer<rapidjson::StringBuffer> writer(s);
+	writer.StartObject();
+	writer.Key("op");
+	writer.Int(19); // STREAM_DELETE
+	writer.Key("d");
+	writer.StartObject();
+	writer.Key("stream_key");
+	writer.String(streamKey.c_str());
+	writer.EndObject();
+	writer.EndObject();
+	queueSend(s.GetString());
+	Logger::log("[Stream] Sent Stream Delete (Op 19) key=%s", streamKey.c_str());
 }
 
 void DiscordClient::updatePresence(UserStatus status) {
