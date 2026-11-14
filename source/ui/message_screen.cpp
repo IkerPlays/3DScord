@@ -1082,6 +1082,14 @@ void MessageScreen::update() {
 						ScreenManager::getInstance().showToast(TR("message.unsaved"));
 					}
 				}
+			} else if (action == "MentionAuthor") {
+				if (selectedIndex >= 0 && selectedIndex < (int)messages.size()) {
+					const auto &who = messages[selectedIndex].author;
+					std::string &draft = channelDrafts[channelId];
+					draft += std::string(draft.empty() || draft.back() == ' ' ? "" : " ") + "@" +
+					         (who.global_name.empty() ? who.username : who.global_name) + " ";
+					ScreenManager::getInstance().showToast(TR("message.mention_added"));
+				}
 			} else if (action == "CopyDraft") {
 				if (selectedIndex >= 0 && selectedIndex < (int)messages.size()) {
 					channelDrafts[channelId] = messages[selectedIndex].content;
@@ -3835,6 +3843,9 @@ void MessageScreen::showMessageOptions() {
 
 		if (canSend) {
 			addOption("Reply", "message.menu.reply");
+			if (!isMine) {
+				addOption("MentionAuthor", "message.menu.mention");
+			}
 		}
 
 		if (isMine && canSend) {

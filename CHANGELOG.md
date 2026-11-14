@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- **Mention from the message menu:** press A on a message and choose **Mention** to add `@name` of its author to your draft (then write the rest and send).
 - **A test of the video the console sends runs in CI** (`tests/`, `.github/workflows/tests.yml`): the encoder and the SPS rewrite are built on a computer and ffmpeg must read the streams without errors, as constrained baseline level 3.1 without reordering.
 - **The key of the call is hidden in the log** (`"secret_key":[hidden]`): the diagnostics report is meant to be shared, and it used to contain it.
 - **The log is not flooded** by `Decrypt failed` lines any more (the first five and then one in a hundred), so the report keeps the lines that matter.

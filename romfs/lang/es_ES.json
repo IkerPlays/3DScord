@@ -1025,5 +1025,7 @@
     "tip.6": "Consejo: activa Notificaciones fuera de la app en Ajustes (necesita Luma3DS).",
     "tip.7": "Consejo: los mensajes de voz y la música (MP3, FLAC, Ogg) suenan desde el menú del mensaje.",
     "tip.8": "Consejo: Ajustes > Diagnóstico guarda un informe que puedes enviar si algo falla.",
-    "memory.low": "Poca memoria: activa el Modo de compatibilidad en Ajustes"
+    "memory.low": "Poca memoria: activa el Modo de compatibilidad en Ajustes",
+    "message.menu.mention": "Mencionar",
+    "message.mention_added": "Añadido a tu mensaje: escribe el resto y envía"
 }
