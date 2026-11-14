@@ -28,18 +28,27 @@ jobs:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
         run: |
-          if ! git clone "https://x-access-token:${TOKEN}@github.com/${REPO}.wiki.git" /tmp/wiki; then
-            echo "::error::The wiki does not exist yet. On GitHub open the Wiki tab, choose 'Create the first page' and save it once; then run this workflow again."
-            exit 1
+          URL="https://x-access-token:${TOKEN}@github.com/${REPO}.wiki.git"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git clone "$URL" /tmp/wiki 2>/dev/null; then
+            rsync -a --delete --exclude=.git wiki/ /tmp/wiki/
+            cd /tmp/wiki
+          else
+            # A wiki with no pages has no git repository yet: try to create it with a first push.
+            echo "The wiki repository does not exist yet: creating it with the pages of wiki/."
+            mkdir /tmp/wiki && cp -r wiki/. /tmp/wiki/
+            cd /tmp/wiki
+            git init -q -b master
+            git remote add origin "$URL"
           fi
-          rsync -a --delete --exclude=.git wiki/ /tmp/wiki/
-          cd /tmp/wiki
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           if git diff --cached --quiet; then
             echo "The wiki is already up to date."
             exit 0
           fi
-          git commit -m "Sync the wiki from the repository (${GITHUB_SHA::7})"
-          git push
+          git commit -q -m "Sync the wiki from the repository (${GITHUB_SHA::7})"
+          if ! git push origin HEAD:master; then
+            echo "::error::Could not push to the wiki. On GitHub open Settings > Features and tick Wikis, then the Wiki tab > 'Create the first page' > Save once, and run this workflow again."
+            exit 1
+          fi
