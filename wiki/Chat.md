@@ -9,7 +9,7 @@
 ## Mentions
 
 Type `@` and the name (username, display name or nickname) of someone in the conversation, for example `@Lia hello`. When you send it, 3DScord turns it into a real
-mention. If two names start the same, the longest wins (`@Ana Maria` before `@Ana`). `@everyone` and `@here` ask you to send twice, so a slip does not ping the whole server.
+mention. If two names start the same, the longest wins (`@Ana Maria` before `@Ana`). You can also press **A** on a message and choose **Mention** to add its author to your draft. `@everyone` and `@here` ask you to send twice, so a slip does not ping the whole server.
 
 ## Attachments
 
