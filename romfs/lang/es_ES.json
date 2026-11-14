@@ -579,7 +579,7 @@
     "message.menu.read_file": "Leer el archivo",
     "message.audio_file": "Audio:",
     "settings.video_experimental": "Vídeo (experimental)",
-    "settings.desc.video_experimental": "Avisa a Discord de que esta consola puede recibir vídeo en llamadas y escribe en el registro lo que llega. El vídeo todavía NO se muestra. Se aplica en la próxima llamada.",
+    "settings.desc.video_experimental": "Ve las cámaras y las pantallas compartidas de los demás en las llamadas, envía tu cámara y comparte tu pantalla (Go Live). Lo codifica y decodifica el procesador, así que necesita una New 3DS / New 2DS XL y gasta más memoria y batería. Se aplica en la próxima llamada.",
     "mvdtest.title": "Prueba del decodificador (experimental)",
     "list.tools.mvdtest": "Solo New 3DS: reproduce el vídeo guardado de una llamada con el decodificador por hardware",
     "mvdtest.need_new": "Necesita una New 3DS (decodificador de vídeo por hardware)",

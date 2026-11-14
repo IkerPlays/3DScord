@@ -579,7 +579,7 @@
     "message.menu.read_file": "Read File",
     "message.audio_file": "Audio:",
     "settings.video_experimental": "Video (experimental)",
-    "settings.desc.video_experimental": "Tells Discord this console can receive video in calls and writes what arrives to the log. Video is NOT shown yet. Take effect on the next call.",
+    "settings.desc.video_experimental": "See the cameras and shared screens of others in calls, send your own camera and share your screen (Go Live). It is decoded and encoded by the processor, so it needs a New 3DS / New 2DS XL and uses more memory and battery. Takes effect on the next call.",
     "mvdtest.title": "Decoder Test (experimental)",
     "list.tools.mvdtest": "New 3DS only: plays the video saved from a call with the hardware decoder",
     "mvdtest.need_new": "Needs a New 3DS (the hardware video decoder)",
