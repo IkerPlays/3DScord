@@ -499,6 +499,13 @@ void ScreenManager::update() {
 
 	hamburgerMenu.update();
 
+	{
+		const std::string alert = Discord::DiscordClient::getInstance().takeAlert();
+		if (!alert.empty()) {
+			showToast(alert);
+		}
+	}
+
 	if (Discord::VoiceClient::getInstance().takeNotice() == 1) {
 		showToast(TR("callcam.stream_failed"));
 	}

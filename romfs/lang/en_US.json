@@ -1009,5 +1009,6 @@
     "settings.theme.high_contrast": "High contrast",
     "settings.theme.colorblind": "Colour-blind friendly",
     "settings.theme.paper": "Paper (warm light)",
-    "callcam.stream_failed": "The screen stream could not be opened. Try again."
+    "callcam.stream_failed": "The screen stream could not be opened. Try again.",
+    "friends.request_from": "{0} sent you a friend request"
 }

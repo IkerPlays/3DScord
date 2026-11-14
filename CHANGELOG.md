@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- **Friend requests warn you:** a message (and the notification sound, or the Home menu notification if the app is in the background) when someone sends you a friend request.
+- **The screen stream no longer hangs:** if the Go Live stream does not open within 25 seconds or is lost, it is closed and a message says so. The statistics of your own picture (`fps`, `S1 R5...`) only show with the debug overlay (L + R).
 - **Seven more themes** (Settings > Appearance > Theme): Sunset, Ocean, Forest, Rose, **High contrast** (black, white and yellow, for low vision), **Colour-blind friendly** (blue and orange, no red/green pairs) and Paper (warm light).
 - **Clock and date formats:** Settings > Appearance has **Clock Format** (24 h or 12 h AM/PM) and **Date Format** (year/month/day, day/month/year or month/day/year) for the time of the messages.
 - **Sound Volume** (Settings > Voice, 0 to 100 %) for the sounds of the app, and a **Low Battery Warning** when the battery is low and the console is not charging.

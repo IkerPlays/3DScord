@@ -170,6 +170,22 @@ class DiscordClient {
 	// create) and its address and token (stream server update).
 	void sendStreamCreate(const std::string &guildId, const std::string &channelId, const std::string &streamKey);
 	void sendStreamDelete(const std::string &streamKey);
+	// Short messages for the user that come from the gateway (a friend request, for example); the screen manager shows them as toasts.
+	std::string takeAlert() {
+		std::lock_guard<std::mutex> lock(alertMutex);
+		if (alerts.empty()) {
+			return std::string();
+		}
+		std::string first = alerts.front();
+		alerts.erase(alerts.begin());
+		return first;
+	}
+	void pushAlert(const std::string &text) {
+		std::lock_guard<std::mutex> lock(alertMutex);
+		if (alerts.size() < 8) {
+			alerts.push_back(text);
+		}
+	}
 	void setStreamCallbacks(std::function<void(const std::string &, const std::string &)> onCreate,
 	                        std::function<void(const std::string &, const std::string &, const std::string &)> onServer) {
 		std::lock_guard<std::recursive_mutex> lock(clientMutex);
@@ -485,6 +501,8 @@ class DiscordClient {
 
 	std::function<void()> connectionCallback;
 	std::function<void(const std::string &, bool, bool)> voiceStateCallback;
+	std::mutex alertMutex;
+	std::vector<std::string> alerts;
 	std::function<void(const std::string &, const std::string &)> streamCreateCallback;
 	std::function<void(const std::string &, const std::string &, const std::string &)> streamServerCallback;
 

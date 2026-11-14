@@ -1216,6 +1216,20 @@ void DiscordClient::handleDispatch(const rapidjson::Document &doc) {
 		handleInteractionResult(d, InteractionResult::MODAL);
 	} else if (t == "PRESENCE_UPDATE") {
 		handlePresenceUpdate(d);
+	} else if (t == "RELATIONSHIP_ADD") {
+		// type 3: someone sent you a friend request
+		if (Utils::Json::getInt(d, "type") == 3 && d.HasMember("user") && d["user"].IsObject()) {
+			std::string who = Utils::Json::getString(d["user"], "global_name");
+			if (who.empty()) {
+				who = Utils::Json::getString(d["user"], "username");
+			}
+			const std::string text = Core::I18n::format(TR("friends.request_from"), who);
+			pushAlert(text);
+			if (Config::getInstance().isNotificationSoundEnabled() && !inQuietHours()) {
+				Utils::SoundPlayer::getInstance().play(Utils::Sound::NOTIFICATION);
+			}
+			Utils::BackgroundNotifier::getInstance().notify("3DScord", text);
+		}
 	} else if (t == "USER_SETTINGS_UPDATE") {
 		handleUserSettingsUpdate(d);
 	} else if (t == "MESSAGE_ACK") {
