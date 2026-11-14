@@ -1,0 +1,47 @@
+name: Bug report
+description: Something does not work in 3DScord
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping. **Never paste your Discord token.** Please save a report first: in the app open **Settings > Diagnostics**, do the thing that fails, and press **Y**
+        (it writes `sdmc:/3ds/3DScord/diagnostics.txt`). Attach that file below.
+  - type: input
+    id: version
+    attributes:
+      label: 3DScord version
+      description: Shown at the top of the diagnostics report, or in the About screen (for example 0.19.0 or 0.19.0-dev.2)
+    validations:
+      required: true
+  - type: dropdown
+    id: console
+    attributes:
+      label: Console
+      options:
+        - New Nintendo 3DS / 3DS XL
+        - New Nintendo 2DS XL
+        - Nintendo 3DS / 3DS XL (not New)
+        - Nintendo 2DS
+        - Emulator
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How is it installed?
+      options:
+        - CIA (FBI)
+        - 3DSX (Homebrew Launcher)
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected and what you got.
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: Diagnostics report
+      description: Paste the contents of `diagnostics.txt` (or drag the file here).

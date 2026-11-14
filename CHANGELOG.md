@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+- **Releases come with `SHA256SUMS.txt` and a QR code** (`3DScord-cia-qr.png`: FBI > Remote Install > Scan QR Code installs the CIA from it).
+- **For contributors:** issue templates (bug report with the diagnostics report, and ideas), `CONTRIBUTING.md` with a translation guide, and a check of the language files in CI (`tools/check_lang.py`).
+
 ## 0.19.0
 - **Sharper screen sharing:** the screen goes out at 320x192 (top or bottom) or 240x288 (both) to start with, and goes up to the full 400x240 when the console has room, down to 160x96 when it does not (it used to be 208x128).
 - **Low memory warning:** once per session, if less than 3 MB of memory is left, a message suggests the Compatibility Mode in Settings.

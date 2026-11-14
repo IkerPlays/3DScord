@@ -121,6 +121,15 @@ jobs:
             gh release delete "$tag" --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes
           done
 
+      - name: Checksums and the QR code for FBI
+        env:
+          VERSION: ${{ needs.check.outputs.version }}
+        run: |
+          (cd dist && sha256sum 3DScord.cia 3DScord.3dsx > SHA256SUMS.txt && cat SHA256SUMS.txt)
+          # FBI > Remote Install > Scan QR Code installs the CIA straight from this link.
+          sudo apt-get install -y qrencode
+          qrencode -s 8 -m 2 -o dist/3DScord-cia-qr.png "https://github.com/${GITHUB_REPOSITORY}/releases/download/v${VERSION}/3DScord.cia" || echo "No QR code this time"
+
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -131,9 +140,12 @@ jobs:
             awk -v v="$VERSION" '$0=="## "v{f=1;next} /^## /{f=0} f' CHANGELOG.md
             echo
             echo "Built from commit \`${GITHUB_SHA::7}\`. Install \`3DScord.cia\` with FBI, or run \`3DScord.3dsx\` from the Homebrew Launcher."
+            echo "With FBI you can also use Remote Install > Scan QR Code on \`3DScord-cia-qr.png\`. \`SHA256SUMS.txt\` has the checksums of the files."
           } > notes.md
           extra=""; [ "$DRAFT" = "true" ] && extra="--draft"
-          gh release create "v${VERSION}" dist/3DScord.cia dist/3DScord.3dsx \
+          files="dist/3DScord.cia dist/3DScord.3dsx dist/SHA256SUMS.txt"
+          [ -f dist/3DScord-cia-qr.png ] && files="$files dist/3DScord-cia-qr.png"
+          gh release create "v${VERSION}" $files \
             --repo "$GITHUB_REPOSITORY" --target main --latest $extra \
             --title "3DScord ${VERSION}" \
             --notes-file notes.md

@@ -1,0 +1,19 @@
+name: Idea or request
+description: Suggest something for 3DScord
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like?
+      description: What it is and why it would help. The [roadmap](https://github.com/IkerPlays/3DScord/blob/main/ROADMAP.md) lists what is planned.
+    validations:
+      required: true
+  - type: dropdown
+    id: console
+    attributes:
+      label: Which consoles?
+      multiple: true
+      options:
+        - New Nintendo 3DS / 3DS XL / New 2DS XL
+        - Nintendo 3DS / 2DS (not New)

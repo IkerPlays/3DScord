@@ -1,0 +1,19 @@
+name: Check languages
+
+# The language files must be valid JSON and must not have keys that English does not have (a missing key is fine: the app falls back to English).
+on:
+  push:
+    paths:
+      - "romfs/lang/**"
+      - "tools/check_lang.py"
+  pull_request:
+    paths:
+      - "romfs/lang/**"
+      - "tools/check_lang.py"
+
+jobs:
+  lang:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 tools/check_lang.py
