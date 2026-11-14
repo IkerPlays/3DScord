@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.24.0
 - **More translated texts:** French, German, Italian, Portuguese (Brazil) and Polish get the message menu, the chat buttons, the main menu, profiles, direct messages and call view texts (78 strings each), and the updater, the server settings and the voice message screen (78 more), and the descriptions of the settings (42 more).
 - **In common:** a profile shows how many friends you share with that person and the servers you are both in.
 - **Accept all friend requests:** the Pending list of the friends starts with a row that accepts every incoming request at once.
