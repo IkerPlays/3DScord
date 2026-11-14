@@ -1095,6 +1095,27 @@ void MessageScreen::update() {
 					         (who.global_name.empty() ? who.username : who.global_name) + " ";
 					ScreenManager::getInstance().showToast(TR("message.mention_added"));
 				}
+			} else if (action == "Forward") {
+				if (selectedIndex >= 0 && selectedIndex < (int)messages.size()) {
+					if (Core::LocalStore::getInstance().favoriteChannels().empty()) {
+						ScreenManager::getInstance().showToast(TR("message.forward_need_favorites"));
+					} else {
+						const auto &m = messages[selectedIndex];
+						const std::string who = m.author.global_name.empty() ? m.author.username : m.author.global_name;
+						std::string quoted;
+						size_t from = 0;
+						const std::string body = m.content.empty() ? std::string("[...]") : m.content;
+						while (from <= body.size()) {
+							size_t nl = body.find('\n', from);
+							quoted += "> " + body.substr(from, nl == std::string::npos ? std::string::npos : nl - from) + "\n";
+							if (nl == std::string::npos) {
+								break;
+							}
+							from = nl + 1;
+						}
+						ListScreen::openForward(quoted + "- " + who);
+					}
+				}
 			} else if (action == "CopyDraft") {
 				if (selectedIndex >= 0 && selectedIndex < (int)messages.size()) {
 					channelDrafts[channelId] = messages[selectedIndex].content;
@@ -3920,6 +3941,7 @@ void MessageScreen::showMessageOptions() {
 		}
 		if (canSend && !msg.content.empty()) {
 			addOption("CopyDraft", "message.menu.copy_draft");
+			addOption("Forward", "message.menu.forward");
 			if (isMine) {
 				addOption("Repeat", "message.menu.repeat");
 			}

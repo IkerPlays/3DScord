@@ -15,7 +15,7 @@ namespace UI {
 // quick replies and the formatting helpers. The mode is chosen with open() before the screen is created.
 class ListScreen : public Screen {
   public:
-	enum class Mode { TOOLS, PINS, SEARCH, MENTIONS, SAVED, DRAFTS, QUICK_REPLIES, FORMAT, GIFS, STICKERS, FIND, MEMBERS, THREADS, HUB, FRIENDS, GROUP_PICK, SOUNDS, VOICE_CHANNELS, VOICE_PEOPLE, GALLERY, THEME_EDIT, SESSIONS, EVENTS, AUDIT, PERMISSIONS, MOD, DIAG, SERVER, COMMANDS, FOLLOW, SOUNDBOARD, FAVORITES };
+	enum class Mode { TOOLS, PINS, SEARCH, MENTIONS, SAVED, DRAFTS, QUICK_REPLIES, FORMAT, GIFS, STICKERS, FIND, MEMBERS, THREADS, HUB, FRIENDS, GROUP_PICK, SOUNDS, VOICE_CHANNELS, VOICE_PEOPLE, GALLERY, THEME_EDIT, SESSIONS, EVENTS, AUDIT, PERMISSIONS, MOD, DIAG, SERVER, COMMANDS, FOLLOW, SOUNDBOARD, FAVORITES, FORWARD };
 
 	static void open(Mode mode);
 	// Switches to another list without adding the current one to the back history.
@@ -25,6 +25,8 @@ class ListScreen : public Screen {
 	// Kick, ban or time out one member of a server.
 	// Opens the voice channel list so that picking a channel moves someone there instead of joining it.
 	static void openMoveVoice(const std::string &userId);
+	// Lists the favourite channels; picking one sends the text there (forward a message).
+	static void openForward(const std::string &text);
 	static void openModeration(const std::string &userId, const std::string &guildId, const std::string &name);
 
 	ListScreen();
@@ -83,10 +85,12 @@ class ListScreen : public Screen {
 	static std::string pendingSoundTarget;
 	static std::string pendingSoundName;
 	static std::string pendingMoveUser;
+	static std::string pendingForward;
 	static std::string pendingModUser;
 	static std::string pendingModGuild;
 
 	Mode mode;
+	std::string forwardText;
 	std::string channelId;
 	std::shared_ptr<Shared> shared;
 	std::vector<Entry> entries;

@@ -50,6 +50,7 @@ std::string ListScreen::pendingSoundTarget;
 std::string ListScreen::pendingSoundName;
 size_t ListScreen::preferredGifVariant = 0;
 std::string ListScreen::pendingMoveUser;
+std::string ListScreen::pendingForward;
 std::string ListScreen::pendingModUser;
 std::string ListScreen::pendingModGuild;
 
@@ -191,6 +192,12 @@ void ListScreen::openModeration(const std::string &userId, const std::string &gu
 	ScreenManager::getInstance().pushScreen(ScreenType::LIST);
 }
 
+void ListScreen::openForward(const std::string &text) {
+	pendingForward = text;
+	pendingMode = Mode::FORWARD;
+	ScreenManager::getInstance().pushScreen(ScreenType::LIST);
+}
+
 void ListScreen::openMoveVoice(const std::string &userId) {
 	pendingMoveUser = userId;
 	pendingMode = Mode::VOICE_CHANNELS;
@@ -220,6 +227,8 @@ ListScreen::ListScreen()
 	soundTarget = pendingSoundTarget;
 	soundTargetName = pendingSoundName;
 	moveUser = pendingMoveUser;
+	forwardText = pendingForward;
+	pendingForward.clear();
 	pendingMoveUser.clear();
 	modUser = pendingModUser;
 	modGuild = pendingModGuild;
@@ -345,6 +354,7 @@ void ListScreen::loadLocal() {
 			                m.content});
 		}
 		break;
+	case Mode::FORWARD:
 	case Mode::FAVORITES:
 		for (const auto &id : store.favoriteChannels()) {
 			list.push_back({id, id, channelLabel(id), ""});
@@ -1189,6 +1199,8 @@ std::string ListScreen::headerTitle() const {
 		return TR("list.saved");
 	case Mode::FAVORITES:
 		return TR("list.favorites");
+	case Mode::FORWARD:
+		return TR("list.forward");
 	case Mode::DRAFTS:
 		return TR("list.drafts");
 	case Mode::QUICK_REPLIES:
@@ -1249,6 +1261,8 @@ std::string ListScreen::hintLine() const {
 		return TR("list.hint.search");
 	case Mode::FAVORITES:
 		return TR("list.hint.favorites");
+	case Mode::FORWARD:
+		return TR("list.hint.forward");
 	case Mode::MENTIONS:
 	case Mode::SAVED:
 		return TR(mode == Mode::SAVED ? "list.hint.saved" : "list.hint.mentions");
@@ -1845,6 +1859,17 @@ void ListScreen::primaryAction(const Entry &entry) {
 		} else {
 			Utils::Transfers::getInstance().sendSticker(channelId, entry.id);
 			sm.returnToPreviousScreen();
+		}
+		break;
+	case Mode::FORWARD:
+		if (!entry.channelId.empty() && !forwardText.empty()) {
+			if (client.canSendMessage(entry.channelId)) {
+				client.sendMessage(entry.channelId, forwardText);
+				sm.showToast(TR("list.forwarded"));
+				sm.returnToPreviousScreen();
+			} else {
+				sm.showToast(TR("message.no_permission"));
+			}
 		}
 		break;
 	case Mode::MENTIONS:

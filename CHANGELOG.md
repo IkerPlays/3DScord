@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- **Forward a message:** the message menu has **Forward**: it lists your favorite channels and sends the message there as a quote with the name of its author.
+
 ## 0.25.0
 - **Hear the stream you watch:** when you watch someone's Go Live, its sound now plays through the call (it follows your call volume and stays silent while you are deafened).
 - **Calls while the app is in the HOME Menu:** an incoming call now adds the Home menu notification (and pulses the LED), like a message does.
