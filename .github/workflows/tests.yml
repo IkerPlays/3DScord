@@ -1,0 +1,47 @@
+name: Tests
+
+# Checks, on a computer, the video that the console sends: the encoder makes a stream, the SPS is rewritten for WebRTC receivers and ffmpeg
+# must read both streams without errors, with the expected profile and no frame reordering.
+on:
+  push:
+    paths:
+      - "source/utils/h264_*.cpp"
+      - "include/utils/h264_*.h"
+      - "library/minih264/**"
+      - "tests/**"
+      - ".github/workflows/tests.yml"
+  pull_request:
+    paths:
+      - "source/utils/h264_*.cpp"
+      - "include/utils/h264_*.h"
+      - "library/minih264/**"
+      - "tests/**"
+  workflow_dispatch:
+
+jobs:
+  video:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Build the test
+        run: |
+          gcc -c -O1 -Ilibrary/minih264 library/minih264/minih264e.c -o /tmp/minih264e.o
+          g++ -std=c++17 -Itests -Iinclude -Ilibrary/minih264 tests/video_pipeline_test.cpp source/utils/h264_encoder.cpp source/utils/h264_sps.cpp /tmp/minih264e.o -o /tmp/video_test
+      - name: Run it
+        run: /tmp/video_test /tmp/original.h264 /tmp/rewritten.h264
+      - name: ffmpeg reads both streams
+        run: |
+          for f in original rewritten; do
+            echo "== $f"
+            ffmpeg -v error -f h264 -i /tmp/$f.h264 -f null - 2>/tmp/$f.err || true
+            test ! -s /tmp/$f.err || { cat /tmp/$f.err; exit 1; }
+          done
+      - name: The rewritten stream says what WebRTC receivers expect
+        run: |
+          ffprobe -v error -show_entries stream=profile,level,width,height,has_b_frames -of default=nw=1 -f h264 /tmp/rewritten.h264 | tee /tmp/probe.txt
+          grep -q "profile=Constrained Baseline" /tmp/probe.txt
+          grep -q "level=31" /tmp/probe.txt
+          grep -q "has_b_frames=0" /tmp/probe.txt
+          grep -q "width=192" /tmp/probe.txt
