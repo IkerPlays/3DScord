@@ -20,7 +20,7 @@
 - **Servidores:** lista con carpetas, canales, foros, mensajes directos y grupos.
 - **Voz:** canales de voz y llamadas con cifrado de extremo a extremo (DAVE), volumen por persona, pulsar para hablar y cancelación de eco.
 - **Vídeo (experimental, New 3DS / New 2DS XL):** ver la cámara y la pantalla compartida de los demás, enviar tu cámara delantera o trasera y **compartir pantalla (Go Live)**:
-  la pantalla de arriba, la de abajo o las dos, incluso desde el menú HOME u otras aplicaciones. También puedes ver el directo de otra persona.
+  la pantalla de arriba, la de abajo o las dos, incluso desde el menú HOME u otras aplicaciones, y a la vez que la cámara. También puedes ver el directo de otra persona.
 - **Audios y vídeos:** reproduce Opus, MP3, WAV, FLAC y Ogg Vorbis desde el chat, y vídeos MP4 (H.264) sin sonido.
 - **Notificaciones:** sonidos distintos para menciones, aviso de solicitudes de amistad, de batería baja y, con Luma3DS, notificaciones en el menú HOME y en el LED con la app en segundo plano.
 - **Tu cuenta de Discord:** nombre, "Sobre mí", pronombres, color, avatar, banner, estado y estado personalizado, y ajustes de privacidad.

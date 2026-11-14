@@ -30,7 +30,7 @@ See the [wiki](https://github.com/IkerPlays/3DScord/wiki) for guides, [ROADMAP.m
   formatting, sounds and mark as read. Saved messages, mentions, friends and voice are in the side menu (Quick Access).
 - **Voice:** voice channels and calls with end-to-end encryption (DAVE), mic and per-user volume. With the experimental Video setting
   on, the camera or shared screen of someone in the call is decoded in software and shown on the top screen, and you can send your own
-  inner or outer camera, or share the top screen as a Go Live stream (H.264 encoded on the console).
+  inner or outer camera and, at the same time, share the top screen, the bottom one or both as a Go Live stream (H.264 encoded on the console).
 - **Videos:** MP4 attachments (H.264, up to 1280x720 and 16 MB) play without sound from the message menu (experimental).
 - **Your Discord account (Settings):** display name, About Me, pronouns, profile color, avatar and banner (from files on
   the SD card), status and custom status, message display options and privacy options.
