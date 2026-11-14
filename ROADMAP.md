@@ -190,4 +190,5 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
   stored in the CIA are drawn.
 - **Live screen sharing and video calls were thought impossible, and they are done** (see Phase 18): the console encodes H.264 in software and
   decodes it in software, on the New 3DS family only. The older 3DS / 2DS stay without video.- Notifications while the app is closed or the console sleeps: nothing runs then. With Luma3DS and the app in the HOME Menu they can work while the system keeps the app running (Phase 18).
+- **The sound of other apps in a screen share.** The 3DS gives each app its own audio output and has no way to record what another app (or the HOME Menu) plays, so a Go Live stream carries no console sound; people hear you through the call (your microphone) as usual.
 - WebP pictures: the app has no decoder for them; the preview shows the file information instead. (MP4 videos, and Opus, MP3, WAV, FLAC and Ogg Vorbis sounds do play.)

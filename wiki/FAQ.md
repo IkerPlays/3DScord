@@ -21,3 +21,7 @@
 **How do I report a bug?** Save a report in **Settings > Diagnostics** and open an [issue](https://github.com/IkerPlays/3DScord/issues).
 
 **Where do the logo and sounds come from?** They are original and generated with the scripts in `tools/brand/`.
+
+## Does a screen share carry the sound of the game?
+
+No. The 3DS gives every app its own audio output and offers no way to record what another app (or the HOME Menu) plays, so a Go Live stream has picture only. The people in the call hear you through your microphone as usual.
