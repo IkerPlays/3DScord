@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+- **Share the bottom screen too:** the button now goes nothing > inner camera > outer camera > top screen > bottom screen > both screens (top above bottom) > nothing. Changing between them does not close
+  the stream. It also works outside the app.
+
 ## 0.17.0
 - **Your camera and your screen show to the others in the call** (EXPERIMENTAL, Settings > Voice > Video): the video the console sends is now accepted by Discord and shown by its apps. Found by comparing with a
   community sender: the SPS of every key frame is rewritten for WebRTC receivers (`max_num_reorder_frames = 0`), the order is voice state, speaking, video signal, packets, and SPS and PPS go as separate packets without

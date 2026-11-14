@@ -1564,8 +1564,8 @@ void VoiceClient::sendVideoSignal(bool on) {
 bool VoiceClient::setVideoSource(int source) {
 	if (!streamMode) {
 		// The screen goes on a stream of its own (Go Live); the cameras go on the call itself.
-		if (source == 3) {
-			return startScreenShare();
+		if (source >= 3) {
+			return startScreenShare(source);
 		}
 		if (isScreenSharing()) {
 			stopScreenShare();
@@ -1575,11 +1575,18 @@ bool VoiceClient::setVideoSource(int source) {
 		return true;
 	}
 	const int before = videoSourceNow.load();
-	if ((before == 1 || before == 2) && (source == 1 || source == 2)) {
+	auto sourceFor = [](int n) {
+		return n == 5   ? Utils::VideoSender::Source::BOTH
+		       : n == 4 ? Utils::VideoSender::Source::BOTTOM
+		       : n == 3 ? Utils::VideoSender::Source::SCREEN
+		       : n == 2 ? Utils::VideoSender::Source::OUTER
+		                : Utils::VideoSender::Source::CAMERA;
+	};
+	if (((before == 1 || before == 2) && (source == 1 || source == 2)) || (before >= 3 && source >= 3)) {
 		// From one camera to the other: the stream stays announced to Discord and only the capture restarts (it used to be torn down
 		// and announced again, which took a few seconds more).
 		Utils::VideoSender::getInstance().stop();
-		if (Utils::VideoSender::getInstance().start(source == 2 ? Utils::VideoSender::Source::OUTER : Utils::VideoSender::Source::CAMERA)) {
+		if (Utils::VideoSender::getInstance().start(sourceFor(source))) {
 			videoSourceNow = source;
 			sendVideoSignal(true); // the size may differ
 			return true;
@@ -1607,9 +1614,7 @@ bool VoiceClient::setVideoSource(int source) {
 	if (state != VoiceState::ESTABLISHED || !gcm || udpSocket < 0 || !Config::getInstance().isVideoExperimental()) {
 		return false;
 	}
-	if (!Utils::VideoSender::getInstance().start(source == 3   ? Utils::VideoSender::Source::SCREEN
-	                                             : source == 2 ? Utils::VideoSender::Source::OUTER
-	                                                           : Utils::VideoSender::Source::CAMERA)) {
+	if (!Utils::VideoSender::getInstance().start(sourceFor(source))) {
 		return false;
 	}
 	videoClockStart = osGetTime();
@@ -2127,7 +2132,7 @@ void VoiceClient::handlePayload(const std::string &message) {
 		if (streamMode) {
 			// The stream is open: send the top screen on it (DAVE may not be ready yet; the frames wait for it).
 			if (shareWanted.load()) {
-				setVideoSource(3);
+				setVideoSource(shareSource.load());
 			}
 		} else if (Config::getInstance().isVideoExperimental()) {
 			sendSinkWants(VIDEO_QUALITY_WANTED);
@@ -2327,7 +2332,7 @@ void VoiceClient::disconnect() {
 
 int VoiceClient::videoSource() const {
 	if (!streamMode && isScreenSharing()) {
-		return 3;
+		return getStreamInstance().shareSource.load();
 	}
 	return videoSourceNow.load();
 }
@@ -2341,13 +2346,23 @@ bool VoiceClient::isScreenSharing() const {
 
 // Go Live: the gateway is asked for a stream (STREAM_CREATE); it answers with the server of the stream and then with its address and token,
 // and the stream connection opens like a call does, with DAVE and all, and sends the screen.
-bool VoiceClient::startScreenShare() {
+bool VoiceClient::startScreenShare(int source) {
 	if (streamMode || state != VoiceState::ESTABLISHED || !Config::getInstance().isVideoExperimental()) {
 		return false;
 	}
 	if (isScreenSharing()) {
-		return true;
+		// Already on the air: only what is sent changes (the top screen, the bottom one or both).
+		VoiceClient &live = getStreamInstance();
+		if (live.shareSource.load() == source) {
+			return true;
+		}
+		live.shareSource = source;
+		if (live.state == VoiceState::ESTABLISHED) {
+			return live.setVideoSource(source);
+		}
+		return true; // the stream is still opening: it will send the new one
 	}
+	getStreamInstance().shareSource = source;
 	if (videoSourceNow.load() != 0) {
 		setVideoSource(0); // the camera and the screen use the same encoder
 	}

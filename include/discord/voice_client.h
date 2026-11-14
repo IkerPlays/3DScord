@@ -216,6 +216,7 @@ class VoiceClient {
 	size_t videoFileBytes = 0; // video experiment: packets and bytes per payload type
 	bool streamMode = false; // this object is the stream connection
 	std::string streamKey;
+	std::atomic<int> shareSource{3};
 	std::atomic<bool> shareWanted{false}; // stream mode: start sending the screen when the connection is ready
 	uint64_t daveGroupId() const;
 	std::string ringChannelId;
@@ -227,7 +228,7 @@ class VoiceClient {
 
   public:
 	// Go Live (the main connection): opens a stream of the top screen next to the call, and closes it.
-	bool startScreenShare();
+	bool startScreenShare(int source = 3); // 3: top screen, 4: bottom screen, 5: both
 	void stopScreenShare();
 	bool isScreenSharing() const;
 	// The stream connection (see getStreamInstance), called by the gateway.

@@ -16,48 +16,63 @@ double ticksToMs(u64 ticks) { return (double)ticks * 1000.0 / (double)SYSCLOCK_A
 
 // The top screen (400x240), reduced to W x H, as planar YUV 4:2:0 (each pixel is the average of 2x2 pixels of the screen).
 // The framebuffer is stored rotated: column by column, bottom to top, three bytes (B, G, R) per pixel.
-// The top screen as it is on the LCD when the app is not in front (the Home menu or another application): the system tells where the
-// picture is (GSPGPU_ImportDisplayCaptureInfo) and, if that memory is readable from here (VRAM is), it is read like our own screen.
-bool screenOutsideToYuv(int W, int H, std::vector<uint8_t> &yPlane, std::vector<uint8_t> &uPlane, std::vector<uint8_t> &vPlane) {
+// One console screen (0: top, 400x240; 1: bottom, 320x240), scaled into the rectangle (dx, dy, dw, dh) of the planes (W wide); the numbers are
+// even. In front the screen is our own framebuffer; with the app in the background (the Home menu or another application) the system tells
+// where the picture is (GSPGPU_ImportDisplayCaptureInfo) and, if that memory is readable from here (VRAM is), it is read the same way.
+bool blitScreen(int screen, int dx, int dy, int dw, int dh, int W, std::vector<uint8_t> &yPlane, std::vector<uint8_t> &uPlane,
+                std::vector<uint8_t> &vPlane) {
 	static int logged = 0;
-	GSPGPU_CaptureInfo info;
-	if (R_FAILED(GSPGPU_ImportDisplayCaptureInfo(&info))) {
-		if (logged++ < 3) {
-			Logger::log("[VideoTx] The system did not give the screen capture info");
+	const int srcW = screen == 0 ? 400 : 320;
+	const u8 *fb = nullptr;
+	u32 pitch = 0;
+	u32 format = 1;
+	int bpp = 3;
+	if (Utils::BackgroundNotifier::getInstance().inBackground()) {
+		GSPGPU_CaptureInfo info;
+		if (R_FAILED(GSPGPU_ImportDisplayCaptureInfo(&info))) {
+			if (logged++ < 3) {
+				Logger::log("[VideoTx] The system did not give the screen capture info");
+			}
+			return false;
 		}
-		return false;
-	}
-	const GSPGPU_CaptureInfoEntry &e = info.screencapture[0];
-	u32 addr = (u32)e.framebuf0_vaddr;
-	const u32 format = e.format & 7;
-	const u32 pitch = e.framebuf_widthbytesize;
-	// VRAM is at 0x18000000 in physical terms and mapped at 0x1F000000 for applications.
-	if (addr >= 0x18000000 && addr < 0x18600000) {
-		addr = 0x1F000000 + (addr - 0x18000000);
-	}
-	const int bpp = format == 0 ? 4 : format == 1 ? 3 : 2;
-	if (logged++ < 3) {
-		Logger::log("[VideoTx] Screen outside the app: address %08lX, format %lu, pitch %lu", (unsigned long)addr, (unsigned long)format,
-		            (unsigned long)pitch);
-	}
-	if (format > 4 || pitch < 240u * bpp || pitch > 240u * 4) {
-		return false;
-	}
-	// Is it memory this process can read?
-	MemInfo mi;
-	PageInfo pi;
-	if (R_FAILED(svcQueryMemory(&mi, &pi, addr)) || mi.state == MEMSTATE_FREE || !(mi.perm & MEMPERM_READ) ||
-	    (u64)addr + (u64)pitch * 400 > (u64)mi.base_addr + mi.size) {
-		if (logged++ < 6) {
-			Logger::log("[VideoTx] That screen memory cannot be read from the app (state %lu)", (unsigned long)mi.state);
+		const GSPGPU_CaptureInfoEntry &e = info.screencapture[screen];
+		u32 addr = (u32)e.framebuf0_vaddr;
+		format = e.format & 7;
+		pitch = e.framebuf_widthbytesize;
+		// VRAM is at 0x18000000 in physical terms and mapped at 0x1F000000 for applications.
+		if (addr >= 0x18000000 && addr < 0x18600000) {
+			addr = 0x1F000000 + (addr - 0x18000000);
 		}
-		return false;
+		bpp = format == 0 ? 4 : format == 1 ? 3 : 2;
+		if (logged++ < 4) {
+			Logger::log("[VideoTx] Screen %d outside the app: address %08lX, format %lu, pitch %lu", screen, (unsigned long)addr,
+			            (unsigned long)format, (unsigned long)pitch);
+		}
+		if (format > 4 || pitch < 240u * bpp || pitch > 240u * 4) {
+			return false;
+		}
+		MemInfo mi;
+		PageInfo pi;
+		if (R_FAILED(svcQueryMemory(&mi, &pi, addr)) || mi.state == MEMSTATE_FREE || !(mi.perm & MEMPERM_READ) ||
+		    (u64)addr + (u64)pitch * srcW > (u64)mi.base_addr + mi.size) {
+			if (logged++ < 8) {
+				Logger::log("[VideoTx] That screen memory cannot be read from the app (state %lu)", (unsigned long)mi.state);
+			}
+			return false;
+		}
+		fb = (const u8 *)addr;
+	} else {
+		u16 fbW = 0, fbH = 0;
+		fb = gfxGetFramebuffer(screen == 0 ? GFX_TOP : GFX_BOTTOM, GFX_LEFT, &fbW, &fbH);
+		if (!fb || fbW < 240) {
+			return false;
+		}
+		pitch = (u32)fbW * 3;
 	}
-	const u8 *fb = (const u8 *)addr;
-	for (int x = 0; x < W; x++) {
-		const u8 *column = fb + (size_t)(x * 400 / W) * pitch;
-		for (int y = 0; y < H; y++) {
-			const u8 *p = column + (size_t)(239 - (y * 240 / H)) * bpp;
+	for (int x = 0; x < dw; x++) {
+		const u8 *column = fb + (size_t)(x * srcW / dw) * pitch;
+		for (int y = 0; y < dh; y++) {
+			const u8 *p = column + (size_t)(239 - (y * 240 / dh)) * bpp;
 			int r, g, b;
 			if (format == 0) { // RGBA8: A B G R in memory
 				r = p[3];
@@ -83,43 +98,39 @@ bool screenOutsideToYuv(int W, int H, std::vector<uint8_t> &yPlane, std::vector<
 					b = ((v >> 4) & 15) * 17;
 				}
 			}
-			yPlane[(size_t)y * W + x] = (uint8_t)(((66 * r + 129 * g + 25 * b + 128) >> 8) + 16);
+			yPlane[(size_t)(dy + y) * W + dx + x] = (uint8_t)(((66 * r + 129 * g + 25 * b + 128) >> 8) + 16);
 			if (((x | y) & 1) == 0) {
-				uPlane[(size_t)(y / 2) * (W / 2) + x / 2] = (uint8_t)std::clamp(((-38 * r - 74 * g + 112 * b + 128) >> 8) + 128, 0, 255);
-				vPlane[(size_t)(y / 2) * (W / 2) + x / 2] = (uint8_t)std::clamp(((112 * r - 94 * g - 18 * b + 128) >> 8) + 128, 0, 255);
+				const size_t ci = (size_t)((dy + y) / 2) * (W / 2) + (dx + x) / 2;
+				uPlane[ci] = (uint8_t)std::clamp(((-38 * r - 74 * g + 112 * b + 128) >> 8) + 128, 0, 255);
+				vPlane[ci] = (uint8_t)std::clamp(((112 * r - 94 * g - 18 * b + 128) >> 8) + 128, 0, 255);
 			}
 		}
 	}
 	return true;
 }
 
-bool screenToYuv(int W, int H, std::vector<uint8_t> &yPlane, std::vector<uint8_t> &uPlane, std::vector<uint8_t> &vPlane) {
-	if (Utils::BackgroundNotifier::getInstance().inBackground()) {
-		return screenOutsideToYuv(W, H, yPlane, uPlane, vPlane);
+// What the screen share sends: the top screen, the bottom one, or both (the top one above the bottom one, which keeps its proportions).
+bool screenToYuv(VideoSender::Source source, int W, int H, std::vector<uint8_t> &yPlane, std::vector<uint8_t> &uPlane,
+                 std::vector<uint8_t> &vPlane) {
+	if (source == VideoSender::Source::SCREEN) {
+		return blitScreen(0, 0, 0, W, H, W, yPlane, uPlane, vPlane);
 	}
-	u16 fbW = 0, fbH = 0;
-	const u8 *fb = gfxGetFramebuffer(GFX_TOP, GFX_LEFT, &fbW, &fbH);
-	if (!fb || fbW < 240) {
-		return false;
+	if (source == VideoSender::Source::BOTTOM) {
+		return blitScreen(1, 0, 0, W, H, W, yPlane, uPlane, vPlane);
 	}
-	// One read of the screen per pixel of the stream (it used to be four, and the screen memory is slow to read): the screen is stored by
-	// columns, so the outer loop goes along the columns and reads each one from the top.
-	const size_t stride = (size_t)fbW * 3;
-	for (int x = 0; x < W; x++) {
-		const u8 *column = fb + (size_t)(x * 400 / W) * stride;
-		for (int y = 0; y < H; y++) {
-			const u8 *p = column + (size_t)(fbW - 1 - (y * 240 / H)) * 3;
-			const int b = p[0];
-			const int g = p[1];
-			const int r = p[2];
-			yPlane[(size_t)y * W + x] = (uint8_t)(((66 * r + 129 * g + 25 * b + 128) >> 8) + 16);
-			if (((x | y) & 1) == 0) {
-				uPlane[(size_t)(y / 2) * (W / 2) + x / 2] = (uint8_t)std::clamp(((-38 * r - 74 * g + 112 * b + 128) >> 8) + 128, 0, 255);
-				vPlane[(size_t)(y / 2) * (W / 2) + x / 2] = (uint8_t)std::clamp(((112 * r - 94 * g - 18 * b + 128) >> 8) + 128, 0, 255);
-			}
-		}
+	// Both: black first, then each screen in its half.
+	std::fill(yPlane.begin(), yPlane.end(), (uint8_t)16);
+	std::fill(uPlane.begin(), uPlane.end(), (uint8_t)128);
+	std::fill(vPlane.begin(), vPlane.end(), (uint8_t)128);
+	const int half = H / 2;
+	int bottomW = (half * 320 / 240) & ~1;
+	if (bottomW > W) {
+		bottomW = W & ~1;
 	}
-	return true;
+	const int bottomX = ((W - bottomW) / 2) & ~1;
+	const bool top = blitScreen(0, 0, 0, W, half, W, yPlane, uPlane, vPlane);
+	const bool bottom = blitScreen(1, bottomX, half, bottomW, half, W, yPlane, uPlane, vPlane);
+	return top || bottom;
 }
 } // namespace
 
@@ -134,8 +145,8 @@ bool VideoSender::start(Source source) {
 	}
 	current = source;
 	mirrorPreview = source == Source::CAMERA;
-	curW = source == Source::SCREEN ? 208 : 192;
-	curH = source == Source::SCREEN ? 128 : 144;
+	curW = isScreenSource(source) ? 208 : 192;
+	curH = source == Source::BOTH ? 256 : isScreenSource(source) ? 128 : 144;
 	resChanged = false;
 	quit = false;
 	keyRequested = true;
@@ -239,6 +250,7 @@ struct Level {
 // The sizes tried, from the best to the lightest (all multiples of 16 in width and height or at least of 16 for the encoder).
 const Level CAMERA_LEVELS[4] = {{256, 192}, {192, 144}, {128, 96}, {96, 80}};
 const Level SCREEN_LEVELS[3] = {{208, 128}, {160, 96}, {112, 64}};
+const Level BOTH_LEVELS[3] = {{208, 256}, {160, 192}, {112, 128}};
 constexpr int CAM_START_LEVEL = 1; // the camera starts at 192x144 and goes up when the encoder has room
 constexpr int CAM_W = 256; // what the camera gives (its "DS LCD" size)
 constexpr int CAM_H = 192;
@@ -267,7 +279,7 @@ void VideoSender::run() {
 	const Source source = current;
 	const bool camera = source == Source::CAMERA || source == Source::OUTER;
 	const u32 select = source == Source::OUTER ? SELECT_OUT1 : SELECT_IN1;
-	const Level *levels = camera ? CAMERA_LEVELS : SCREEN_LEVELS;
+	const Level *levels = camera ? CAMERA_LEVELS : source == Source::BOTH ? BOTH_LEVELS : SCREEN_LEVELS;
 	const int levelCount = camera ? 4 : 3;
 	int level = camera ? CAM_START_LEVEL : 0;
 	int W = levels[level].w;
@@ -330,7 +342,7 @@ void VideoSender::run() {
 		previewVersion = 0;
 	}
 	ready = true;
-	Logger::log("[VideoTx] Sending the %s: %dx%d, %d fps, %d kbps", camera ? (source == Source::OUTER ? "outer camera" : "inner camera") : "screen", W, H, FPS, kbps);
+	Logger::log("[VideoTx] Sending the %s: %dx%d, %d fps, %d kbps", camera ? (source == Source::OUTER ? "outer camera" : "inner camera") : source == Source::BOTTOM ? "bottom screen" : source == Source::BOTH ? "both screens" : "top screen", W, H, FPS, kbps);
 
 	uint32_t frames = 0;
 	double msTotal = 0;
@@ -413,7 +425,7 @@ void VideoSender::run() {
 				continue;
 			}
 			nextFrameAt = now + 1000 / FPS;
-			if (!screenToYuv(W, H, yPlane, uPlane, vPlane)) {
+			if (!screenToYuv(source, W, H, yPlane, uPlane, vPlane)) {
 				svcSleepThread(50 * 1000000LL);
 				continue;
 			}

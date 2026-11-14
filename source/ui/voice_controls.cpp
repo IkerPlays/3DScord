@@ -89,7 +89,7 @@ void draw(float x, float y) {
 		const float cx = x + step * 3.0f;
 		drawRoundedRect(cx, y, 0.54f, BUTTON_SIZE, BUTTON_SIZE, 8.0f, ScreenManager::colorBackgroundLight());
 		const u32 color = voice.isCameraOn() ? ScreenManager::colorSuccess() : ScreenManager::colorText();
-		if (voice.videoSource() == 3) {
+		if (voice.videoSource() >= 3) {
 			// Sharing the screen: a little monitor.
 			C2D_DrawRectSolid(cx + 6.0f, y + 8.0f, 0.55f, 18.0f, 12.0f, color);
 			C2D_DrawRectSolid(cx + 8.0f, y + 10.0f, 0.56f, 14.0f, 8.0f, ScreenManager::colorBackgroundLight());
@@ -138,13 +138,18 @@ bool handleTouch(const touchPosition &touch, float x, float y) {
 	}
 
 	if (inButton(touch, x + step * 3.0f, y)) {
-		// Each touch goes to the next thing to send: nothing, the inner camera, the outer camera, the top screen, nothing...
+		// Each touch goes to the next thing to send: nothing, the inner camera, the outer camera, the top screen, the bottom screen, both screens, nothing...
 		auto &sm = ScreenManager::getInstance();
-		const int next = (voice.videoSource() + 1) % 4;
+		const int next = (voice.videoSource() + 1) % 6;
 		if (next != 0 && !Config::getInstance().isVideoExperimental()) {
 			sm.showToast(TR("callcam.need_video"));
 		} else if (voice.setVideoSource(next)) {
-			sm.showToast(TR(next == 0 ? "callcam.off" : next == 1 ? "callcam.on" : next == 2 ? "callcam.outer_on" : "callcam.screen_on"));
+			sm.showToast(TR(next == 0   ? "callcam.off"
+			                 : next == 1 ? "callcam.on"
+			                 : next == 2 ? "callcam.outer_on"
+			                 : next == 3 ? "callcam.screen_on"
+			                 : next == 4 ? "callcam.bottom_on"
+			                             : "callcam.both_on"));
 		} else {
 			sm.showToast(TR("callcam.failed"));
 		}

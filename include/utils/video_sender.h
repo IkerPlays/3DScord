@@ -18,7 +18,9 @@ namespace Utils {
 // the call's media thread to encrypt and send them. A small copy is kept to show you what you send.
 class VideoSender {
   public:
-	enum class Source { OFF, CAMERA, OUTER, SCREEN }; // CAMERA is the inner one (facing you), OUTER the one on the back
+	// CAMERA is the inner camera (facing you), OUTER the one on the back; SCREEN is the top screen, BOTTOM the bottom one, BOTH the two.
+	enum class Source { OFF, CAMERA, OUTER, SCREEN, BOTTOM, BOTH };
+	static bool isScreenSource(Source s) { return s == Source::SCREEN || s == Source::BOTTOM || s == Source::BOTH; }
 
 	static VideoSender &getInstance();
 
@@ -32,7 +34,7 @@ class VideoSender {
 	int height() const { return curH.load(); }
 	// True once after the size changed, so the call tells Discord.
 	bool takeResolutionChange() { return resChanged.exchange(false); }
-	int fps() const { return current == Source::SCREEN ? 8 : 10; }
+	int fps() const { return isScreenSource(current) ? 8 : 10; }
 	// Your preview of the inner camera is mirrored, like a mirror; what is sent is not.
 	bool previewMirrored() const { return mirrorPreview; }
 
