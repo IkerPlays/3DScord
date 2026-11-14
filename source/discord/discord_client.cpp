@@ -2290,7 +2290,8 @@ void DiscordClient::handleMessageCreate(const rapidjson::Value &d) {
 			choice = store.getSoundOverride(guildId);
 		}
 		if (choice < 0) {
-			Utils::SoundPlayer::getInstance().play(Utils::Sound::NOTIFICATION);
+			// a message that mentions you has its own, brighter sound
+			Utils::SoundPlayer::getInstance().play(mentioned && !isPrivate ? Utils::Sound::MENTION : Utils::Sound::NOTIFICATION);
 		} else if (choice > 0 && choice <= (int)Utils::Sound::NOTIFICATION + 1) {
 			Utils::SoundPlayer::getInstance().play((Utils::Sound)(choice - 1));
 		}

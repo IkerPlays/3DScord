@@ -18,6 +18,7 @@ const char *const SOUND_PATHS[(size_t)Sound::COUNT] = {
     "romfs:/discord-sounds/mic_off.pcm",       "romfs:/discord-sounds/headphone_on.pcm",
     "romfs:/discord-sounds/headphone_off.pcm", "romfs:/discord-sounds/call_outgoing.pcm",
     "romfs:/discord-sounds/call_incoming.pcm", "romfs:/discord-sounds/notification.pcm",
+    "romfs:/discord-sounds/mention.pcm",
 };
 } // namespace
 

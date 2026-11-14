@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- **A sound of its own for mentions:** a message that mentions you in a server plays a brighter, three-note sound (direct messages and the rest keep the usual one, and a sound you chose for the channel still wins).
 - **Clock and Battery** (Settings > Appearance, off by default): a small time and battery gauge in the top right corner of the top screen, in the clock format you chose.
 - **Friend requests warn you:** a message (and the notification sound, or the Home menu notification if the app is in the background) when someone sends you a friend request.
 - **The screen stream no longer hangs:** if the Go Live stream does not open within 25 seconds or is lost, it is closed and a message says so. The statistics of your own picture (`fps`, `S1 R5...`) only show with the debug overlay (L + R).

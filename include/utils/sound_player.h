@@ -20,6 +20,7 @@ enum class Sound {
 	CALL_OUTGOING,
 	CALL_INCOMING,
 	NOTIFICATION,
+	MENTION, // a message that mentions you (not offered in the sound picker)
 	COUNT,
 };
 

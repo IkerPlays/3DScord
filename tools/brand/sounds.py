@@ -49,6 +49,8 @@ def blip(m0, m1, dur=0.12):
 def main():
     # notification: a short two-note chime, going up
     save_pcm("notification", seq([(0.0, 88, 0.30, 0.8), (0.11, 95, 0.45, 1.0)], 0.6))
+    # mention: three quick bright notes going up
+    save_pcm("mention", seq([(0.0, 91, 0.25, 0.8), (0.09, 95, 0.25, 0.9), (0.18, 100, 0.55, 1.0)], 0.8))
     # joining the call: three notes up; leaving: three notes down; someone else leaves: two soft notes down
     save_pcm("join", seq([(0.0, 76, 0.5, 0.8), (0.13, 80, 0.5, 0.9), (0.26, 83, 0.8, 1.0)], 1.1))
     save_pcm("left", seq([(0.0, 83, 0.5, 0.9), (0.13, 80, 0.5, 0.8), (0.26, 76, 0.8, 0.9)], 1.1))
