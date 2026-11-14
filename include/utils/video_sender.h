@@ -22,7 +22,7 @@ class VideoSender {
 	enum class Source { OFF, CAMERA, OUTER, SCREEN, BOTTOM, BOTH };
 	static bool isScreenSource(Source s) { return s == Source::SCREEN || s == Source::BOTTOM || s == Source::BOTH; }
 
-	static VideoSender &getInstance();
+	static VideoSender &getInstance(bool screen = false);
 
 	// Opens the source and starts the worker. False when it cannot start (for example when the Camera screen has the camera).
 	bool start(Source source);

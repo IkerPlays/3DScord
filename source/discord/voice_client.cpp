@@ -1280,7 +1280,7 @@ void VoiceClient::handleRtcp(const uint8_t *packet, size_t len) {
 	}
 	// A picture loss indication (or full intra request): someone could not show a picture and wants a new key frame.
 	if (pt == 206 && (fmt == 1 || fmt == 4)) {
-		Utils::VideoSender::getInstance().requestKeyFrame();
+		Utils::VideoSender::getInstance(streamMode).requestKeyFrame();
 	}
 }
 
@@ -1510,7 +1510,7 @@ void VoiceClient::pumpVideoOut() {
 	if (!cameraSending.load()) {
 		return;
 	}
-	if (Utils::VideoSender::getInstance().takeResolutionChange()) {
+	if (Utils::VideoSender::getInstance(streamMode).takeResolutionChange()) {
 		sendVideoSignal(true); // the size of the picture changed: tell Discord
 	}
 	if (osGetTime() >= videoReportAt) {
@@ -1520,7 +1520,7 @@ void VoiceClient::pumpVideoOut() {
 	bool key = false;
 	// Not more than a frame or two per pass: the audio comes first.
 	for (int i = 0; i < 2; i++) {
-		if (!Utils::VideoSender::getInstance().takeFrame(videoOutFrame, key)) {
+		if (!Utils::VideoSender::getInstance(streamMode).takeFrame(videoOutFrame, key)) {
 			break;
 		}
 		sendVideoFrame(videoOutFrame.data(), videoOutFrame.size());
@@ -1586,15 +1586,15 @@ void VoiceClient::sendVideoSignal(bool on) {
 	writer.Key("max_bitrate");
 	writer.Int(10000000);
 	writer.Key("max_framerate");
-	writer.Int(Utils::VideoSender::getInstance().fps());
+	writer.Int(Utils::VideoSender::getInstance(streamMode).fps());
 	writer.Key("max_resolution");
 	writer.StartObject();
 	writer.Key("type");
 	writer.String("fixed");
 	writer.Key("width");
-	writer.Int(Utils::VideoSender::getInstance().width());
+	writer.Int(Utils::VideoSender::getInstance(streamMode).width());
 	writer.Key("height");
-	writer.Int(Utils::VideoSender::getInstance().height());
+	writer.Int(Utils::VideoSender::getInstance(streamMode).height());
 	writer.EndObject();
 	writer.EndObject();
 	writer.EndArray();
@@ -1609,9 +1609,6 @@ bool VoiceClient::setVideoSource(int source) {
 		// The screen goes on a stream of its own (Go Live); the cameras go on the call itself.
 		if (source >= 3) {
 			return startScreenShare(source);
-		}
-		if (isScreenSharing()) {
-			stopScreenShare();
 		}
 	}
 	if (source == videoSourceNow.load()) {
@@ -1628,8 +1625,8 @@ bool VoiceClient::setVideoSource(int source) {
 	if (((before == 1 || before == 2) && (source == 1 || source == 2)) || (before >= 3 && source >= 3)) {
 		// From one camera to the other: the stream stays announced to Discord and only the capture restarts (it used to be torn down
 		// and announced again, which took a few seconds more).
-		Utils::VideoSender::getInstance().stop();
-		if (Utils::VideoSender::getInstance().start(sourceFor(source))) {
+		Utils::VideoSender::getInstance(streamMode).stop();
+		if (Utils::VideoSender::getInstance(streamMode).start(sourceFor(source))) {
 			videoSourceNow = source;
 			sendVideoSignal(true); // the size may differ
 			return true;
@@ -1645,7 +1642,7 @@ bool VoiceClient::setVideoSource(int source) {
 		cameraSending = false;
 		videoSourceNow = 0;
 		sendVideoSignal(false);
-		Utils::VideoSender::getInstance().stop();
+		Utils::VideoSender::getInstance(streamMode).stop();
 	}
 	if (source == 0) {
 		publishVoiceState();
@@ -1657,7 +1654,7 @@ bool VoiceClient::setVideoSource(int source) {
 	if (state != VoiceState::ESTABLISHED || !gcm || udpSocket < 0 || !Config::getInstance().isVideoExperimental()) {
 		return false;
 	}
-	if (!Utils::VideoSender::getInstance().start(sourceFor(source))) {
+	if (!Utils::VideoSender::getInstance(streamMode).start(sourceFor(source))) {
 		return false;
 	}
 	videoClockStart = osGetTime();
@@ -2347,7 +2344,7 @@ void VoiceClient::disconnect() {
 	}
 	videoSourceNow = 0;
 	if (cameraSending.exchange(false)) {
-		Utils::VideoSender::getInstance().stop();
+		Utils::VideoSender::getInstance(streamMode).stop();
 	}
 	closeVideoCapture(); // the media thread has stopped by now
 	{
@@ -2388,10 +2385,22 @@ void VoiceClient::disconnect() {
 }
 
 int VoiceClient::videoSource() const {
+	return videoSourceNow.load(); // the camera (the screen goes on its own stream, see screenSource)
+}
+
+int VoiceClient::screenSource() const {
 	if (!streamMode && isScreenSharing()) {
 		return getStreamInstance().shareSource.load();
 	}
-	return videoSourceNow.load();
+	return 0;
+}
+
+bool VoiceClient::setScreenSource(int source) {
+	if (source == 0) {
+		stopScreenShare();
+		return true;
+	}
+	return startScreenShare(source);
 }
 
 bool VoiceClient::isScreenSharing() const {
@@ -2420,9 +2429,6 @@ bool VoiceClient::startScreenShare(int source) {
 		return true; // the stream is still opening: it will send the new one
 	}
 	getStreamInstance().shareSource = source;
-	if (videoSourceNow.load() != 0) {
-		setVideoSource(0); // the camera and the screen use the same encoder
-	}
 	std::string guild, channel;
 	{
 		std::lock_guard<std::mutex> lock(mutex);

@@ -134,9 +134,11 @@ bool screenToYuv(VideoSender::Source source, int W, int H, std::vector<uint8_t> 
 }
 } // namespace
 
-VideoSender &VideoSender::getInstance() {
-	static VideoSender instance;
-	return instance;
+VideoSender &VideoSender::getInstance(bool screen) {
+	// One for the camera (in the call) and one for the screen (on its own stream), so both can go at the same time.
+	static VideoSender cameraInstance;
+	static VideoSender screenInstance;
+	return screen ? screenInstance : cameraInstance;
 }
 
 bool VideoSender::start(Source source) {

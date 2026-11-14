@@ -89,24 +89,33 @@ void draw(float x, float y) {
 		const float cx = x + step * 3.0f;
 		drawRoundedRect(cx, y, 0.54f, BUTTON_SIZE, BUTTON_SIZE, 8.0f, ScreenManager::colorBackgroundLight());
 		const u32 color = voice.isCameraOn() ? ScreenManager::colorSuccess() : ScreenManager::colorText();
-		if (voice.videoSource() >= 3) {
-			// Sharing the screen: a little monitor.
-			C2D_DrawRectSolid(cx + 6.0f, y + 8.0f, 0.55f, 18.0f, 12.0f, color);
-			C2D_DrawRectSolid(cx + 8.0f, y + 10.0f, 0.56f, 14.0f, 8.0f, ScreenManager::colorBackgroundLight());
-			C2D_DrawRectSolid(cx + 13.0f, y + 20.0f, 0.55f, 4.0f, 3.0f, color);
-			C2D_DrawRectSolid(cx + 10.0f, y + 23.0f, 0.55f, 10.0f, 2.0f, color);
-		} else {
-			C2D_DrawRectSolid(cx + 6.0f, y + 9.0f, 0.55f, 14.0f, 12.0f, color);
-			C2D_DrawRectSolid(cx + 8.0f, y + 11.0f, 0.56f, 10.0f, 8.0f, ScreenManager::colorBackgroundLight());
-			C2D_DrawRectSolid(cx + 12.0f, y + 13.0f, 0.57f, 2.0f, 4.0f, color);
-			C2D_DrawTriangle(cx + 23.0f, y + 11.0f, color, cx + 23.0f, y + 19.0f, color, cx + 19.0f, y + 15.0f, color, 0.55f);
-			if (voice.videoSource() == 2) {
-				// The camera on the back: a small flash above the body.
-				C2D_DrawRectSolid(cx + 8.0f, y + 5.0f, 0.55f, 5.0f, 3.0f, color);
-			}
+		C2D_DrawRectSolid(cx + 6.0f, y + 9.0f, 0.55f, 14.0f, 12.0f, color);
+		C2D_DrawRectSolid(cx + 8.0f, y + 11.0f, 0.56f, 10.0f, 8.0f, ScreenManager::colorBackgroundLight());
+		C2D_DrawRectSolid(cx + 12.0f, y + 13.0f, 0.57f, 2.0f, 4.0f, color);
+		C2D_DrawTriangle(cx + 23.0f, y + 11.0f, color, cx + 23.0f, y + 19.0f, color, cx + 19.0f, y + 15.0f, color, 0.55f);
+		if (voice.videoSource() == 2) {
+			// The camera on the back: a small flash above the body.
+			C2D_DrawRectSolid(cx + 8.0f, y + 5.0f, 0.55f, 5.0f, 3.0f, color);
 		}
 	}
-	drawButton(x + step * 4.0f, y, "romfs:/discord-icons/phone-hangup.png", false);
+	// Your screen (Go Live), next to the camera: a little monitor, green while it is on. Both can go at the same time.
+	{
+		const float cx = x + step * 4.0f;
+		drawRoundedRect(cx, y, 0.54f, BUTTON_SIZE, BUTTON_SIZE, 8.0f, ScreenManager::colorBackgroundLight());
+		const int shown = voice.screenSource();
+		const u32 color = shown != 0 ? ScreenManager::colorSuccess() : ScreenManager::colorText();
+		C2D_DrawRectSolid(cx + 6.0f, y + 7.0f, 0.55f, 18.0f, 12.0f, color);
+		C2D_DrawRectSolid(cx + 8.0f, y + 9.0f, 0.56f, 14.0f, 8.0f, ScreenManager::colorBackgroundLight());
+		C2D_DrawRectSolid(cx + 13.0f, y + 19.0f, 0.55f, 4.0f, 3.0f, color);
+		C2D_DrawRectSolid(cx + 10.0f, y + 22.0f, 0.55f, 10.0f, 2.0f, color);
+		if (shown == 3 || shown == 5) {
+			C2D_DrawRectSolid(cx + 8.0f, y + 9.0f, 0.57f, 14.0f, shown == 5 ? 3.0f : 8.0f, color);
+		}
+		if (shown == 4 || shown == 5) {
+			C2D_DrawRectSolid(cx + 8.0f, y + (shown == 5 ? 14.0f : 9.0f), 0.57f, 14.0f, shown == 5 ? 3.0f : 8.0f, color);
+		}
+	}
+	drawButton(x + step * 5.0f, y, "romfs:/discord-icons/phone-hangup.png", false);
 }
 
 bool handleTouch(const touchPosition &touch, float x, float y) {
@@ -138,18 +147,13 @@ bool handleTouch(const touchPosition &touch, float x, float y) {
 	}
 
 	if (inButton(touch, x + step * 3.0f, y)) {
-		// Each touch goes to the next thing to send: nothing, the inner camera, the outer camera, the top screen, the bottom screen, both screens, nothing...
+		// Each touch goes to the next camera: nothing, the inner camera, the outer camera, nothing... (the screen has its own button)
 		auto &sm = ScreenManager::getInstance();
-		const int next = (voice.videoSource() + 1) % 6;
+		const int next = (voice.videoSource() + 1) % 3;
 		if (next != 0 && !Config::getInstance().isVideoExperimental()) {
 			sm.showToast(TR("callcam.need_video"));
 		} else if (voice.setVideoSource(next)) {
-			sm.showToast(TR(next == 0   ? "callcam.off"
-			                 : next == 1 ? "callcam.on"
-			                 : next == 2 ? "callcam.outer_on"
-			                 : next == 3 ? "callcam.screen_on"
-			                 : next == 4 ? "callcam.bottom_on"
-			                             : "callcam.both_on"));
+			sm.showToast(TR(next == 0 ? "callcam.off" : next == 1 ? "callcam.on" : "callcam.outer_on"));
 		} else {
 			sm.showToast(TR("callcam.failed"));
 		}
@@ -157,6 +161,21 @@ bool handleTouch(const touchPosition &touch, float x, float y) {
 	}
 
 	if (inButton(touch, x + step * 4.0f, y)) {
+		// Each touch goes to the next screen: nothing, the top screen, the bottom screen, both, nothing...
+		auto &sm = ScreenManager::getInstance();
+		const int now = voice.screenSource();
+		const int next = now == 0 ? 3 : now == 3 ? 4 : now == 4 ? 5 : 0;
+		if (next != 0 && !Config::getInstance().isVideoExperimental()) {
+			sm.showToast(TR("callcam.need_video"));
+		} else if (voice.setScreenSource(next)) {
+			sm.showToast(TR(next == 0 ? "callcam.screen_off" : next == 3 ? "callcam.screen_on" : next == 4 ? "callcam.bottom_on" : "callcam.both_on"));
+		} else {
+			sm.showToast(TR("callcam.failed"));
+		}
+		return true;
+	}
+
+	if (inButton(touch, x + step * 5.0f, y)) {
 		voice.disconnect();
 		return true;
 	}

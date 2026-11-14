@@ -255,7 +255,10 @@ class VoiceClient {
 	// EXPERIMENTAL: what you send as video in the call: 0 nothing, 1 the inner camera, 2 the outer camera, 3 the top screen. False when
 	// it cannot start (not in a call, the Video setting is off, or the camera is busy).
 	bool setVideoSource(int source);
-	int videoSource() const;
+	int videoSource() const; // the camera: 0 off, 1 inner, 2 outer
+	// The screen (Go Live) goes on its own stream, so it can go together with the camera: 0 off, 3 top, 4 bottom, 5 both.
+	int screenSource() const;
+	bool setScreenSource(int source);
 	bool isCameraOn() const { return cameraSending.load(); }
 	// RTCP messages that came from the call while we were sending video (someone receives it when they come).
 	uint32_t rtcpWhileSending() const { return rtcpSeenWhileVideo.load(); }

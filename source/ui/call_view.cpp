@@ -119,13 +119,15 @@ void drawCompact(const std::vector<Discord::VoiceParticipant> &people, Discord::
 		lineY += vh + 3.0f;
 	}
 	// What you send (your camera or your screen), small, so you can see it while you chat.
-	Utils::VideoSender &tx = Utils::VideoSender::getInstance();
-	if (tx.running() && tx.hasPreview()) {
-		const float pw = w * 0.5f;
-		const float ph = pw * 0.75f;
-		C2D_DrawRectSolid(x + w - pw, lineY, 0.5f, pw, ph, C2D_Color32(0, 0, 0, 255));
-		tx.drawPreview(x + w - pw, lineY, 0.51f, pw, ph);
-		lineY += ph + 3.0f;
+	for (bool screen : {false, true}) {
+		Utils::VideoSender &tx = Utils::VideoSender::getInstance(screen);
+		if (tx.running() && tx.hasPreview()) {
+			const float pw = w * 0.5f;
+			const float ph = pw * 0.75f;
+			C2D_DrawRectSolid(x + w - pw, lineY, 0.5f, pw, ph, C2D_Color32(0, 0, 0, 255));
+			tx.drawPreview(x + w - pw, lineY, 0.51f, pw, ph);
+			lineY += ph + 3.0f;
+		}
 	}
 	// Anyone with the camera on or sharing the screen gets a line under the panel, speaking or not.
 	int lines = 0;
@@ -158,7 +160,9 @@ void drawTile(const Discord::VoiceParticipant &p, Discord::VoiceClient &voice, f
 	drawRoundedRect(x + border, y + border, 0.51f + zOff, w - 2 * border, h - 2 * border, 8.0f, C2D_Color32(17, 18, 20, 255));
 
 	Utils::VideoReceiver &rx = Utils::VideoReceiver::getInstance();
-	Utils::VideoSender &tx = Utils::VideoSender::getInstance();
+	// With the camera and the screen on at once, the tile shows the camera.
+	const bool camOn = Utils::VideoSender::getInstance().running();
+	Utils::VideoSender &tx = Utils::VideoSender::getInstance(!camOn);
 	const bool own = tx.running() && p.userId == Discord::DiscordClient::getInstance().getCurrentUser().id;
 	if (own && tx.hasPreview()) {
 		// What you are sending (your camera or your screen), where your profile picture would be.
@@ -178,7 +182,7 @@ void drawTile(const Discord::VoiceParticipant &p, Discord::VoiceClient &voice, f
 			const int echo = Discord::DiscordClient::getInstance().selfVideoEcho.load();
 			char state[64];
 			auto &mainVc = Discord::VoiceClient::getInstance();
-			auto &vc = mainVc.isScreenSharing() ? Discord::VoiceClient::getStreamInstance() : mainVc; // the screen goes on its own stream
+			auto &vc = (!camOn && mainVc.isScreenSharing()) ? Discord::VoiceClient::getStreamInstance() : mainVc; // the screen goes on its own stream
 			snprintf(state, sizeof(state), "S%s R%u T%u E%u V%d", echo < 0 ? "?" : echo ? "1" : "0", (unsigned)vc.rtcpWhileSending(),
 			         (unsigned)vc.videoFramesSentCount(), (unsigned)vc.videoEncryptFailures(), vc.videoVariantNow());
 			drawRoundedRect(x + border + 3.0f, y + border + 17.0f, 0.57f + zOff, 112.0f, 12.0f, 4.0f, C2D_Color32(0, 0, 0, 170));
@@ -332,10 +336,13 @@ void render() {
 		currentMode = Mode::VIDEO;
 	}
 	pictureWasLive = pictureLive;
-	if (Utils::VideoSender::getInstance().running()) {
-		Utils::VideoSender::getInstance().updatePreview();
-	} else {
-		Utils::VideoSender::getInstance().releasePreview();
+	for (bool screen : {false, true}) {
+		Utils::VideoSender &sender = Utils::VideoSender::getInstance(screen);
+		if (sender.running()) {
+			sender.updatePreview();
+		} else {
+			sender.releasePreview();
+		}
 	}
 	if (currentMode == Mode::VIDEO) {
 		if (Utils::VideoReceiver::getInstance().isLive()) {
