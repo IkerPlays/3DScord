@@ -1025,6 +1025,15 @@ void VoiceClient::handleRtpPacket(uint8_t *packet, size_t len) {
 		opusLen -= extBytes;
 	}
 
+	// RTP padding (the P bit): the last byte of the payload says how many bytes at the end are padding. Chrome and the Discord apps add
+	// it now and then; left in, those bytes ended up inside the frame and DAVE could not decrypt it.
+	if ((packet[0] & 0x20) && opusLen > 0) {
+		const size_t padding = opusData[opusLen - 1];
+		if (padding > 0 && padding <= opusLen) {
+			opusLen -= padding;
+		}
+	}
+
 	if (opusLen == 0) {
 		return;
 	}

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+- **Fewer pictures lost in the video of the others:** RTP padding (the P bit) is now removed from the packets before the frame is joined; before, those bytes stayed in the frame and DAVE could not
+  decrypt it (the log showed `DAVE could not decrypt a frame` for about one in four frames).
+
 ## 0.18.0
 - **New logo, icon and banner:** a chat bubble with "3D" on a blurple tile, drawn for the project (it does not use the logos of Discord or Nintendo). It is the HOME Menu icon, the HOME Menu banner,
   the spinning logo of the start screen and the About screen, and `resources/logo.png`. `tools/brand/brand.py` makes all the sizes.
