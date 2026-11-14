@@ -1998,7 +1998,16 @@ void VoiceClient::handleBinaryPayload(const std::string &message) {
 }
 
 void VoiceClient::handlePayload(const std::string &message) {
-	Logger::log("[Voice] <- %.300s", message.c_str());
+	// The key of the call (session description) must not end up in the log: the diagnostics report is meant to be shared.
+	std::string shown = message;
+	const size_t keyAt = shown.find("\"secret_key\":[");
+	if (keyAt != std::string::npos) {
+		const size_t keyEnd = shown.find(']', keyAt);
+		if (keyEnd != std::string::npos) {
+			shown.replace(keyAt, keyEnd - keyAt + 1, "\"secret_key\":[hidden]");
+		}
+	}
+	Logger::log("[Voice] <- %.300s", shown.c_str());
 
 	rapidjson::Document doc;
 	doc.Parse(message.c_str());

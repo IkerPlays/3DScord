@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- **The key of the call is hidden in the log** (`"secret_key":[hidden]`): the diagnostics report is meant to be shared, and it used to contain it.
 - **The log is not flooded** by `Decrypt failed` lines any more (the first five and then one in a hundred), so the report keeps the lines that matter.
 - **README in Spanish** (`README.es.md`).
 - **The stream you watch fills the top screen** as soon as its first picture arrives (L + R changes the view). A stream connection that received nothing no longer stops the receiver used by the call.
