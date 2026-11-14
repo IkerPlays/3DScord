@@ -422,6 +422,20 @@ void ListScreen::loadLocal() {
 		        {"s_push_on", "", TR("server.push_on"), TR("server.push_desc")},
 		        {"s_push_off", "", TR("server.push_off"), TR("server.push_desc")},
 		        {"s_sound", "", TR("list.sound_guild"), TR("list.tools.sound_guild")}};
+		// What is known about the server: when it was created, how many people it has, and whether you own it.
+		{
+			auto &dc = Discord::DiscordClient::getInstance();
+			const std::string gid = currentGuild();
+			const Discord::Guild *guild = dc.getGuildPtr(gid);
+			std::string info = UI::MessageUtils::formatTimestamp(UI::MessageUtils::getISOTimestamp(UI::MessageUtils::snowflakeToTimestamp(gid)));
+			if (guild && guild->approximateMemberCount > 0) {
+				info += "  -  " + std::to_string(guild->approximateMemberCount) + " " + TR("server.info_members");
+			}
+			if (guild && guild->ownerId == dc.getCurrentUser().id) {
+				info += "  -  " + TR("server.info_owner");
+			}
+			list.insert(list.begin(), {"", "", TR("server.info"), info});
+		}
 		// Editing the server itself needs Manage Server.
 		if (Discord::DiscordClient::getInstance().getGuildPermissions(currentGuild()) & (1ULL << 5)) {
 			list.push_back({"s_name", "", TR("server.edit_name"), TR("server.edit_desc")});
