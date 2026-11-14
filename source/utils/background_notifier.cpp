@@ -80,16 +80,25 @@ void BackgroundNotifier::shutdown() {
 
 bool BackgroundNotifier::inBackground() const { return background.load(); }
 
+// The notification LED is register 0x2D of the MCU: four bytes of animation (ticks per frame, transition delay, repeats of the last
+// frame, padding) and 32 steps each of red, green and blue. Written as bytes so it builds with every version of libctru.
+static Result writeLed(const u8 *animation, const u8 *red, const u8 *green, const u8 *blue) {
+	u8 data[100];
+	memcpy(data, animation, 4);
+	memcpy(data + 4, red, 32);
+	memcpy(data + 36, green, 32);
+	memcpy(data + 68, blue, 32);
+	return MCUHWC_WriteRegister(0x2D, data, sizeof(data));
+}
+
 void BackgroundNotifier::clearLed() {
 	if (!haveMcu) {
 		return;
 	}
-	MCU_InfoLedPattern pattern;
-	memset(&pattern, 0, sizeof(pattern));
-	pattern.animation.ticksPerFrame = 0x10;
-	pattern.animation.frameTransitionDelay = 0;
-	pattern.animation.numLastFrameRepeats = 0;
-	MCUHWC_SetInfoLedPattern(&pattern);
+	const u8 animation[4] = {0x10, 0, 0, 0};
+	u8 zero[32];
+	memset(zero, 0, sizeof(zero));
+	writeLed(animation, zero, zero, zero);
 }
 
 void BackgroundNotifier::notify(const std::string &title, const std::string &body) {
@@ -110,19 +119,19 @@ void BackgroundNotifier::notify(const std::string &title, const std::string &bod
 	}
 	if (haveMcu) {
 		// A slow blue-violet pulse, three times.
-		MCU_InfoLedPattern pattern;
-		memset(&pattern, 0, sizeof(pattern));
-		pattern.animation.ticksPerFrame = 0x28;
-		pattern.animation.frameTransitionDelay = 0x28;
-		pattern.animation.numLastFrameRepeats = 0;
+		const u8 animation[4] = {0x28, 0x28, 0, 0};
+		u8 red[32], green[32], blue[32];
+		memset(red, 0, sizeof(red));
+		memset(green, 0, sizeof(green));
+		memset(blue, 0, sizeof(blue));
 		for (int i = 0; i < 24; i += 8) {
 			for (int k = 0; k < 4; k++) {
-				pattern.redPattern[i + k] = 0x58;
-				pattern.greenPattern[i + k] = 0x65;
-				pattern.bluePattern[i + k] = 0xF2;
+				red[i + k] = 0x58;
+				green[i + k] = 0x65;
+				blue[i + k] = 0xF2;
 			}
 		}
-		const Result rc = MCUHWC_SetInfoLedPattern(&pattern);
+		const Result rc = writeLed(animation, red, green, blue);
 		Logger::log("[Notify] LED rc=%08lX", (unsigned long)rc);
 	}
 }
