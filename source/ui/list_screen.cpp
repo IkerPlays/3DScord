@@ -735,6 +735,13 @@ void ListScreen::fetch(const std::string &path) {
 						    name = str(u, "username");
 					    }
 					    std::string note = "@" + str(u, "username");
+					    if (type == 1) {
+						    // What the friend plays or listens to, when Discord told us.
+						    const std::string activity = Discord::DiscordClient::getInstance().getUserActivity(str(u, "id"));
+						    if (!activity.empty()) {
+							    note += "  - " + activity;
+						    }
+					    }
 					    if (type == 3) {
 						    note += "  - " + TR("friends.incoming");
 					    } else if (type == 4) {
