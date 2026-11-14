@@ -180,7 +180,8 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
 - [x] Go Live: the screen goes on a stream of its own (top, bottom or both) and keeps working from the HOME Menu and other apps (experimental)
 - [x] Notifications outside the app (Home menu entry and LED), friend request alerts, low battery warning
 - [x] New logo, icon, banner and sounds; @mentions; FLAC and Ogg Vorbis; wiki, Universal-DB text
-- [x] 13 themes (high contrast and colour-blind friendly), clock and date formats, sound volume
+- [x] 13 themes (high contrast and colour-blind friendly), clock and date formats, sound volume, clock and battery gauge, a sound for mentions, tips on the start screen
+- [x] Watch the Go Live streams of others (a third connection, experimental) and a sharper screen share (up to 400x240)
 - [ ] Not possible: notifications or sharing with the app closed (it needs a system module that runs all the time)
 
 ## Not possible on the 3DS
