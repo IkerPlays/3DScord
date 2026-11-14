@@ -1,58 +1,23 @@
 # Changelog
 
-## Unreleased
-- **Notifications outside the app** (Settings > Notifications Outside the App, on by default): when a message arrives while the app is in the Home menu, it adds an entry to the Home menu Notifications and
-  pulses the notification LED. It needs Luma3DS, and it only works if the system keeps the app's network running in the background (it may not).
-- **Sharing the screen outside the app (EXPERIMENTAL):** when you go to the Home menu or another application while sharing, the stream tries to capture what is on the top screen of the console
-  (not only the app's own screen). It depends on the system letting the app keep running and read that memory; the log says what happened (`[VideoTx] Screen outside the app`).
+## 0.17.0
+- **Your camera and your screen show to the others in the call** (EXPERIMENTAL, Settings > Voice > Video): the video the console sends is now accepted by Discord and shown by its apps. Found by comparing with a
+  community sender: the SPS of every key frame is rewritten for WebRTC receivers (`max_num_reorder_frames = 0`), the order is voice state, speaking, video signal, packets, and SPS and PPS go as separate packets without
+  the playout-delay extension. The first frames are also decrypted again with your own key as a check (`[DAVE] Video self-check`), and `send()` of video packets is checked and counted.
+- **Sharing the screen is a real "Go Live" stream:** the button opens a stream (STREAM_CREATE) with its own voice connection and DAVE group and sends the top screen on it; the others touch "Watch" to see it. The call
+  and the camera keep working on the main connection. The screen is captured four times cheaper than before.
+- **Camera button:** nothing > inner camera > outer camera > screen > nothing. Switching between the two cameras is much faster (the stream stays announced to Discord), the picture size goes up and down with the
+  load (256x192 to 96x80, 160 to 380 kbps), your own inner camera preview is mirrored, and your own tile shows `N fps  M ms  K  D` and `S1 R5 T120 E0 V2` (Discord's confirmation, RTCP messages, frames sent,
+  frames DAVE could not encrypt).
+- **Fixes in the video of the others:** the decoder had a lower priority than your encoder and starved (equal priority now, and Discord is asked for 20 % quality while you send); RTCP packets were never recognised
+  (the type was masked); key frames asked for by the others are made at most once a second; RTCP sender reports go once a second.
+- **Notifications outside the app** (Settings > Notifications Outside the App): when a message arrives with the app in the Home menu, it adds an entry to the Home menu Notifications and pulses the notification LED.
+  It needs Luma3DS and only works if the system keeps the app's network running in the background (it may not).
+- **Sharing the screen outside the app (EXPERIMENTAL):** in the Home menu or another application the stream tries to capture what is on the top screen of the console; it depends on the system letting the app run and
+  read that memory (the log says: `[VideoTx] Screen outside the app`).
+- **You can mention people:** type `@name` (username, display name or nickname of someone in the conversation) and it is sent as a real mention; the longest name wins. Messages and replies.
+- **More sounds can be played from the chat:** FLAC and Ogg Vorbis (music) next to the Opus voice messages, MP3 and WAV (minimp3, dr_flac and stb_vorbis, all public domain). The first three minutes play; stereo is mixed to mono.
 - The incoming video is no longer saved to the SD card in every call.
-- **Sharing the screen is now a real "Go Live" stream** (EXPERIMENTAL, needs Settings > Voice > Video): the button asks Discord for a stream (STREAM_CREATE), opens a second voice connection
-  for it (with its own DAVE group) and sends the top screen on it, instead of sending it as a camera. The others see a live stream they can watch. The call and the camera keep working on the main connection.
-- **You can mention people:** type `@name` (username, display name or nickname of someone in the conversation) and it is sent as a real mention; the longest name wins. It works in messages and replies.
-- **More sound formats can be played from the chat:** FLAC and Ogg Vorbis (music files) next to the Opus voice messages, MP3 and WAV (dr_flac and stb_vorbis, both public domain).
-- **Your camera and screen finally show to the others:** the video packets go without the playout-delay extension and with SPS and PPS as separate packets (the way that worked in the
-  experiment that tried four ways), the order is voice state, speaking, video signal, packets, and the SPS of every key frame is rewritten for WebRTC receivers.
-- **Switching between the inner and the outer camera is faster** (the stream stays announced to Discord and only the capture restarts), and **sharing the screen is about four times
-  cheaper to capture** (one read of the screen per pixel instead of four).
-- **Video packets that the socket refused were lost without a trace:** `send()` is now checked (retried up to 5 times on a full buffer, counted and logged with the error), the UDP send buffer is
-  asked for 64 KB, and the RTCP log line shows how many video packets we sent. Discord's reports said it had received nothing of our video (`maxseq 0`).
-- **Order and values like the community sender that works with DAVE:** voice state (`self_video`) first, then speaking, then the video signal and only then the packets (before,
-  the first key frame could leave before Discord knew the stream); playout delay 0–100 ms and maximum bitrate 10 Mbps in the video signal; the "off" signal carries no streams.
-- **Self-check of the video encryption:** the first frames we send are decrypted again with our own key and the result goes to the log (`[DAVE] Video self-check ...`).
-- **The key frames the encoder makes by itself (every 2 s) now also get the SPS rewrite:** only the first one had it, so receivers saw two different SPS. The call log now
-  describes the whole RTCP packets (receiver reports about your video) to see whether Discord is getting it.
-- **SPS and PPS now travel together in a single RTP packet (STAP-A, RFC 6184)** before every key frame, as the Discord web client and libwebrtc do, instead of two
-  separate packets.
-- **Your camera should now show to the others (found by comparing with Discord-video-stream, a community project that sends video to Discord):** the SPS of the
-  H.264 of the encoder had no "bitstream restriction", so WebRTC receivers (the browsers and phones of Discord) take the stream as one that may reorder pictures and
-  hold frames back or show nothing (and ask for key frames without end, which is what the `K` counter showed). Every key frame now gets its SPS rewritten with
-  `max_num_reorder_frames = 0` and `max_dec_frame_buffering`, saying constrained baseline level 3.1, as WebRTC's own rewriter does (checked on a computer: the
-  pictures decode the same, ffprobe reads "Constrained Baseline, level 31, no B frames").
-- The playout-delay header extension had the wrong length (`0x51` where the element is `0x52`: three data bytes), and the stream says a maximum bitrate of 2 Mbit/s.
-- **Audio files in the chat play:** MP3 and WAV attachments (besides Ogg) can be played from the message menu (Play, Play 1.5x, Queue), with a small
-  public-domain MP3 decoder (minimp3). The first three minutes are played; stereo is mixed to mono and a high sample rate is halved to save memory.
-- **Fix (the video of the others vanished while you sent yours):** the decoder had a lower priority than your encoder, and on the console a thread of lower priority only
-  runs when every higher one waits, so it got no processor time. Both have the same priority again, and while you send video the call asks Discord for
-  less quality (20 %) to decode less.
-- **Key frames asked for by the others are made at most once a second** (they could ask without end, and every key frame costs several ordinary frames, which
-  made your frame rate fall to 2).
-- **RTCP in the log:** the first RTCP messages from the call are logged with their type, format, sender and first bytes (`[VideoTx] RTCP type ...`).
-- **Fix (RTCP never recognised):** the check for RTCP packets used the type with the marker bit masked off (200-206 became 72-78), so no RTCP packet from the call
-  was ever recognised: not the receiver reports, and not the key frame requests (PLI and FIR) of the others. It now looks at the whole byte. The `R` in your own
-  tile counts them for real now.
-- **More about your video in your own tile:** `S1 R5 T120 E0` is Discord's confirmation (S), RTCP messages from the call (R), video frames sent (T) and frames that
-  DAVE could not encrypt (E).
-- **Fewer drops of your frame rate:** the decoder of the video of the others runs at a lower priority than the encoder of yours, so on the extra core it gives way.
-- **What Discord says about your video, in your own tile:** under `N fps  M ms  K  D` there is now `S1  R5`: S is Discord's confirmation of your video state
-  (`S1` on, `S0` off, `S?` nothing yet), R the RTCP control messages that come back from the call while you send (if someone receives the video they come, and
-  K, the key frames they ask for, goes up). The log (`[VideoTx]`, `[Voice] VOICE_STATE_UPDATE ... self_video`) says the same.
-- **RTCP sender reports** for your video once a second, as Discord's own clients send them (when, how many packets and bytes).
-- **Outer camera in the call** (experimental): the camera button next to the microphone now goes nothing > inner camera > outer camera (the one on the back) > top
-  screen > nothing. If the camera or the encoder cannot start (for example the Camera screen has the camera) it says so at once and nothing is announced to Discord.
-- **Better camera picture:** the camera is read at 256x192 and starts sending at 192x144; the size now also goes UP (to 256x192) when the encoder has room (under
-  35 ms a frame for eight seconds), and down (to 128x96 and 96x80) when it is slow; bigger pictures get more bits (160 to 380 kbps).
-- **Your own picture:** the preview of your inner camera is mirrored, like a mirror (what is sent is not), and in the compact call view a small preview of what you send
-  shows under the speaker panel.
 
 ## 0.16.0
 You can now send video to a call: your inner camera or the top screen of the console. Experimental (Settings > Voice > Video, then join the call again).
