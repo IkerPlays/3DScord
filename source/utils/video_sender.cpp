@@ -21,39 +21,21 @@ bool screenToYuv(int W, int H, std::vector<uint8_t> &yPlane, std::vector<uint8_t
 	if (!fb || fbW < 240) {
 		return false;
 	}
-	auto pixel = [&](int sx, int sy, int &r, int &g, int &b) {
-		sx = std::min(sx, 399);
-		sy = std::min(sy, 239);
-		const u8 *p = fb + ((size_t)sx * fbW + (fbW - 1 - sy)) * 3;
-		b = p[0];
-		g = p[1];
-		r = p[2];
-	};
-	for (int y = 0; y < H; y += 2) {
-		for (int x = 0; x < W; x += 2) {
-			int sumU = 0;
-			int sumV = 0;
-			for (int dy = 0; dy < 2; dy++) {
-				for (int dx = 0; dx < 2; dx++) {
-					// Each pixel of the stream is the average of 2x2 pixels of the screen.
-					int r = 0, g = 0, b = 0;
-					for (int k = 0; k < 4; k++) {
-						int pr, pg, pb;
-						pixel((x + dx) * 400 / W + (k & 1), (y + dy) * 240 / H + (k >> 1), pr, pg, pb);
-						r += pr;
-						g += pg;
-						b += pb;
-					}
-					r /= 4;
-					g /= 4;
-					b /= 4;
-					yPlane[(size_t)(y + dy) * W + x + dx] = (uint8_t)(((66 * r + 129 * g + 25 * b + 128) >> 8) + 16);
-					sumU += ((-38 * r - 74 * g + 112 * b + 128) >> 8) + 128;
-					sumV += ((112 * r - 94 * g - 18 * b + 128) >> 8) + 128;
-				}
+	// One read of the screen per pixel of the stream (it used to be four, and the screen memory is slow to read): the screen is stored by
+	// columns, so the outer loop goes along the columns and reads each one from the top.
+	const size_t stride = (size_t)fbW * 3;
+	for (int x = 0; x < W; x++) {
+		const u8 *column = fb + (size_t)(x * 400 / W) * stride;
+		for (int y = 0; y < H; y++) {
+			const u8 *p = column + (size_t)(fbW - 1 - (y * 240 / H)) * 3;
+			const int b = p[0];
+			const int g = p[1];
+			const int r = p[2];
+			yPlane[(size_t)y * W + x] = (uint8_t)(((66 * r + 129 * g + 25 * b + 128) >> 8) + 16);
+			if (((x | y) & 1) == 0) {
+				uPlane[(size_t)(y / 2) * (W / 2) + x / 2] = (uint8_t)std::clamp(((-38 * r - 74 * g + 112 * b + 128) >> 8) + 128, 0, 255);
+				vPlane[(size_t)(y / 2) * (W / 2) + x / 2] = (uint8_t)std::clamp(((112 * r - 94 * g - 18 * b + 128) >> 8) + 128, 0, 255);
 			}
-			uPlane[(size_t)(y / 2) * (W / 2) + x / 2] = (uint8_t)std::clamp(sumU / 4, 0, 255);
-			vPlane[(size_t)(y / 2) * (W / 2) + x / 2] = (uint8_t)std::clamp(sumV / 4, 0, 255);
 		}
 	}
 	return true;

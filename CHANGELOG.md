@@ -1,8 +1,10 @@
 # Changelog
 
 ## Unreleased
-- **Experiment to find out what the other side can show:** while your camera or screen is on, the way the video packets are built changes every 7 seconds (`V0`–`V3` in the stats of your own tile: with or
-  without the playout-delay extension, with SPS+PPS in one STAP-A packet or in two). The log says which one is active. Ask the other person to tell you when the picture appears and note the `V`.
+- **Your camera and screen finally show to the others:** the video packets go without the playout-delay extension and with SPS and PPS as separate packets (the way that worked in the
+  experiment that tried four ways), the order is voice state, speaking, video signal, packets, and the SPS of every key frame is rewritten for WebRTC receivers.
+- **Switching between the inner and the outer camera is faster** (the stream stays announced to Discord and only the capture restarts), and **sharing the screen is about four times
+  cheaper to capture** (one read of the screen per pixel instead of four).
 - **Video packets that the socket refused were lost without a trace:** `send()` is now checked (retried up to 5 times on a full buffer, counted and logged with the error), the UDP send buffer is
   asked for 64 KB, and the RTCP log line shows how many video packets we sent. Discord's reports said it had received nothing of our video (`maxseq 0`).
 - **Order and values like the community sender that works with DAVE:** voice state (`self_video`) first, then speaking, then the video signal and only then the packets (before,

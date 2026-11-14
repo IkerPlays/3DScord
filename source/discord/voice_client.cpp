@@ -1446,15 +1446,6 @@ void VoiceClient::pumpVideoOut() {
 		videoReportAt = osGetTime() + 1000;
 		sendSenderReport();
 	}
-	if (osGetTime() >= videoVariantAt) {
-		const int next = (videoVariant.load() + 1) % 4;
-		videoVariant = next;
-		videoVariantAt = osGetTime() + 7000;
-		Utils::VideoSender::getInstance().requestKeyFrame(); // each way starts with a key frame
-		Logger::log("[VideoTx] EXPERIMENT: sending the video the way number %d (%s%s)", next,
-		            (next == 0 || next == 3) ? "playout-delay extension" : "no extension",
-		            (next == 0 || next == 1) ? ", SPS+PPS in one STAP-A packet" : ", SPS and PPS as separate packets");
-	}
 	bool key = false;
 	// Not more than a frame or two per pass: the audio comes first.
 	for (int i = 0; i < 2; i++) {
@@ -1546,6 +1537,22 @@ bool VoiceClient::setVideoSource(int source) {
 	if (source == videoSourceNow.load()) {
 		return true;
 	}
+	const int before = videoSourceNow.load();
+	if ((before == 1 || before == 2) && (source == 1 || source == 2)) {
+		// From one camera to the other: the stream stays announced to Discord and only the capture restarts (it used to be torn down
+		// and announced again, which took a few seconds more).
+		Utils::VideoSender::getInstance().stop();
+		if (Utils::VideoSender::getInstance().start(source == 2 ? Utils::VideoSender::Source::OUTER : Utils::VideoSender::Source::CAMERA)) {
+			videoSourceNow = source;
+			sendVideoSignal(true); // the size may differ
+			return true;
+		}
+		cameraSending = false;
+		videoSourceNow = 0;
+		sendVideoSignal(false);
+		publishVoiceState();
+		return false;
+	}
 	if (videoSourceNow.load() != 0) {
 		// Stop what was sent before (the camera and the screen use the same stream).
 		cameraSending = false;
@@ -1577,7 +1584,7 @@ bool VoiceClient::setVideoSource(int source) {
 	videoOctetCount = 0;
 	videoReportAt = 0;
 	videoVariantAt = 0;
-	videoVariant = 3; // the first rotation step makes it 0
+	videoVariant = 2; // no extension, SPS and PPS as separate packets (the way the old UDP sender of the community did it)
 	DiscordClient::getInstance().selfVideoEcho = -1;
 	videoSourceNow = source;
 	// The same order as the community sender that works with DAVE: first the voice state (self_video), then speaking, then the video
