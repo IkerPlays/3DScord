@@ -3725,25 +3725,53 @@ void MessageScreen::openKeyboard() {
 	if (res.button == SWKBD_BUTTON_RIGHT && !res.text.empty()) {
 		everyoneConfirmed.clear();
 		channelDrafts.erase(channelId);
-		const std::string outgoing = resolveMentions(res.text);
-		Discord::Message optimisticMsg = createOptimisticMessage(outgoing);
-		{
-			std::lock_guard<std::recursive_mutex> lock(messageMutex);
-			this->messages.push_back(optimisticMsg);
-			rebuildLayoutCache();
-			scrollToBottom();
-		}
+		// Discord takes 2000 characters per message: a longer text (the mentions get longer when they are converted) goes in several,
+		// cut at a line break or a space, never inside a character.
+		std::string rest = resolveMentions(res.text);
+		while (!rest.empty()) {
+			std::string outgoing;
+			constexpr size_t LIMIT = 1900;
+			if (rest.size() <= LIMIT) {
+				outgoing = rest;
+				rest.clear();
+			} else {
+				size_t cut = rest.find_last_of("\n", LIMIT);
+				if (cut == std::string::npos || cut < LIMIT / 2) {
+					cut = rest.find_last_of(' ', LIMIT);
+				}
+				if (cut == std::string::npos || cut < LIMIT / 2) {
+					cut = LIMIT;
+					while (cut > 0 && (static_cast<unsigned char>(rest[cut]) & 0xC0) == 0x80) {
+						cut--;
+					}
+				}
+				outgoing = rest.substr(0, cut);
+				rest.erase(0, cut);
+				const size_t first = rest.find_first_not_of(" \n");
+				rest.erase(0, first == std::string::npos ? rest.size() : first);
+			}
+			if (outgoing.empty()) {
+				continue;
+			}
+			Discord::Message optimisticMsg = createOptimisticMessage(outgoing);
+			{
+				std::lock_guard<std::recursive_mutex> lock(messageMutex);
+				this->messages.push_back(optimisticMsg);
+				rebuildLayoutCache();
+				scrollToBottom();
+			}
 
-		client.sendMessage(
-		    channelId, outgoing,
-		    [this, token = aliveToken, pendingId = optimisticMsg.id](const Discord::Message &sentMsg, bool success,
-		                                                             int errorCode) {
-			    if (!*token) {
-				    return;
-			    }
-			    this->handleMessageSendResult(pendingId, sentMsg, success, errorCode);
-		    },
-		    optimisticMsg.nonce);
+			client.sendMessage(
+			    channelId, outgoing,
+			    [this, token = aliveToken, pendingId = optimisticMsg.id](const Discord::Message &sentMsg, bool success,
+			                                                             int errorCode) {
+				    if (!*token) {
+					    return;
+				    }
+				    this->handleMessageSendResult(pendingId, sentMsg, success, errorCode);
+			    },
+			    optimisticMsg.nonce);
+		}
 	} else if (!res.text.empty()) {
 		channelDrafts[channelId] = res.text;
 	} else {
