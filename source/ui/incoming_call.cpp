@@ -6,6 +6,7 @@
 #include "discord/discord_client.h"
 #include "discord/voice_client.h"
 #include "ui/screen_manager.h"
+#include "utils/background_notifier.h"
 #include "utils/message_utils.h"
 #include "utils/sound_player.h"
 
@@ -53,6 +54,8 @@ void IncomingCall::update() {
 			decline();
 			return;
 		}
+		// With the app in the HOME Menu: an entry in the notifications and the LED, so you hear about the call.
+		Utils::BackgroundNotifier::getInstance().notify(callerName, TR("call.incoming"));
 	}
 
 	if (--ringTimer <= 0) {
