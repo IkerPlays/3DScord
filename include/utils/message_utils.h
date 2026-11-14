@@ -19,6 +19,8 @@ bool isNewerSnowflake(const std::string &a, const std::string &b);
 std::string formatTimestamp(const std::string &timestamp);
 // The time of day now (local), in the format chosen in Settings.
 std::string currentClockText();
+// Today's date (local), in the format chosen in Settings.
+std::string currentDateText();
 std::string getLocalDateString(const std::string &timestamp);
 std::string formatTimeOnly(const std::string &timestamp);
 std::string getISOTimestamp(time_t epoch);

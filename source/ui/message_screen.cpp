@@ -3744,7 +3744,21 @@ void MessageScreen::openKeyboard() {
 		// Discord takes 2000 characters per message: a longer text (the mentions get longer when they are converted) goes in several,
 		// cut at a line break or a space, never inside a character.
 		lastSentAt[channelId] = osGetTime();
-		std::string rest = resolveMentions(res.text);
+		// Variables: {time}, {date}, {channel} and {server} turn into what they say when the message is sent.
+		std::string typed = res.text;
+		auto replaceAll = [&typed](const std::string &key, const std::string &value) {
+			for (size_t at = typed.find(key); at != std::string::npos; at = typed.find(key, at + value.size())) {
+				typed.replace(at, key.size(), value);
+			}
+		};
+		if (typed.find('{') != std::string::npos) {
+			replaceAll("{time}", UI::MessageUtils::currentClockText());
+			replaceAll("{date}", UI::MessageUtils::currentDateText());
+			replaceAll("{channel}", channelName);
+			const Discord::Guild *guildNow = client.getGuildPtr(guildId);
+			replaceAll("{server}", guildNow ? guildNow->name : std::string());
+		}
+		std::string rest = resolveMentions(typed);
 		while (!rest.empty()) {
 			std::string outgoing;
 			constexpr size_t LIMIT = 1900;

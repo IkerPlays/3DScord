@@ -21,3 +21,7 @@ mention. If two names start the same, the longest wins (`@Ana Maria` before `@An
 ## Reactions, polls, pins and more
 
 Reactions, polls, spoilers, embeds, stickers and emoji work. **Channel Tools** has **Save This Chat** (the last 100 messages as a text file in `sdmc:/3ds/3DScord/exports/`), the gallery, threads, members, quick replies, drafts, formatting, sounds and mark as read.
+
+## Message variables
+
+Type `{time}`, `{date}`, `{channel}` or `{server}` in a message and it is replaced when you send it (for example `Be there at {time}`). The time and the date use the formats chosen in Settings.

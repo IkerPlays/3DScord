@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- **Message variables:** type `{time}`, `{date}`, `{channel}` or `{server}` in a message and it is replaced when you send it (the time and date use the format chosen in Settings).
+
 ## 0.22.0
 - The second picture to start (camera and screen together) begins one size smaller so the console keeps up.
 - **Slow mode:** when a channel has slow mode and you wrote there a moment ago, the app tells how many seconds are left instead of letting Discord refuse the message (people who manage messages are not limited).
