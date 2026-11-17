@@ -543,6 +543,7 @@
     "callcam.outer_on": "Cámara exterior activada (la de atrás). Toca otra vez para apagarla.",
     "callcam.screen_off": "Has dejado de compartir la pantalla.",
     "call.view_hidden": "Llamada: oculta",
+    "call.stream_started": "{0} está en directo (Go Live)",
     "settings.call_volume": "Volumen de las llamadas",
     "settings.desc.call_volume": "Cuánto se oye a todos en una llamada, además del volumen de cada persona.",
     "settings.busy_mode": "Ocupado (rechazar llamadas)",

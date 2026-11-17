@@ -543,6 +543,7 @@
     "callcam.outer_on": "Outer camera on (the one on the back). Touch again to turn it off.",
     "callcam.screen_off": "Screen sharing stopped.",
     "call.view_hidden": "Call: hidden",
+    "call.stream_started": "{0} is live (Go Live)",
     "settings.call_volume": "Call Volume",
     "settings.desc.call_volume": "How loud everyone sounds in a call, on top of each person's own volume.",
     "settings.busy_mode": "Busy (decline calls)",

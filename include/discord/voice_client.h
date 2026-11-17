@@ -223,6 +223,7 @@ class VoiceClient {
 	uint64_t watchStartedAt = 0;
 	uint64_t nextWatchScan = 0;
 	void scanStreams();
+	std::set<std::string> announcedStreamers; // who was already announced as live (main connection only)
 	std::atomic<int> notice{0};
 	uint64_t shareStartedAt = 0;
 	std::string streamKey;

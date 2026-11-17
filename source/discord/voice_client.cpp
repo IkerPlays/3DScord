@@ -4,6 +4,7 @@
 #include "utils/video_receiver.h"
 #include "utils/video_sender.h"
 #include "core/config.h"
+#include "core/i18n.h"
 #include <ctime>
 #include <sys/stat.h>
 #include "utils/call_recorder.h"
@@ -2601,6 +2602,25 @@ void VoiceClient::stopWatching() {
 // Once a second and a half: who in the call is sharing a screen? Watch the first one (when Settings > Voice > Watch Streams is on), and let go
 // when the stream ends or does not open.
 void VoiceClient::scanStreams() {
+	// Tell when someone in the call goes live, whether the stream is opened by itself or not.
+	{
+		DiscordClient &announce = DiscordClient::getInstance();
+		if (state == VoiceState::ESTABLISHED) {
+			const std::string self = announce.getCurrentUser().id;
+			std::set<std::string> liveNow;
+			for (const auto &p : announce.getVoiceParticipants(getChannelId())) {
+				if (p.selfStream && p.userId != self) {
+					liveNow.insert(p.userId);
+					if (!announcedStreamers.count(p.userId)) {
+						announce.pushAlert(Core::I18n::format(TR("call.stream_started"), p.name));
+					}
+				}
+			}
+			announcedStreamers = liveNow;
+		} else {
+			announcedStreamers.clear();
+		}
+	}
 	VoiceClient &watch = getWatchInstance();
 	const bool allowed = Config::getInstance().isAutoWatchStreams() && Config::getInstance().isVideoExperimental() &&
 	                     state == VoiceState::ESTABLISHED && !isScreenSharing();
