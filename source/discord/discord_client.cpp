@@ -73,8 +73,12 @@ bool peekEventName(const char *json, size_t size, std::string &event) {
 	return p.ok();
 }
 
-// Quiet hours silence message sounds between two hours of the day (they may wrap past midnight).
+// Quiet hours silence message sounds between two hours of the day (they may wrap past midnight). The Do Not Disturb status does the same
+// all day, as in Discord.
 bool inQuietHours() {
+	if (DiscordClient::getInstance().getCurrentUser().status == UserStatus::DND) {
+		return true;
+	}
 	const Config &cfg = Config::getInstance();
 	if (!cfg.isQuietHoursEnabled() || cfg.getQuietStart() == cfg.getQuietEnd()) {
 		return false;
