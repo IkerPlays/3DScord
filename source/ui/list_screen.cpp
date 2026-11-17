@@ -783,6 +783,12 @@ void ListScreen::fetch(const std::string &path) {
 					    list.push_back(e);
 				    }
 				    std::sort(list.begin(), list.end(), [](const Entry &a, const Entry &b) {
+					    // Friends that are playing or listening to something come first (their line has the activity).
+					    const bool busyA = a.kind == 1 && a.body.find("  - ") != std::string::npos;
+					    const bool busyB = b.kind == 1 && b.body.find("  - ") != std::string::npos;
+					    if (busyA != busyB) {
+						    return busyA;
+					    }
 					    return strcasecmp(a.title.c_str(), b.title.c_str()) < 0;
 				    });
 				    // Pending requests: a first row accepts all the incoming ones at once.

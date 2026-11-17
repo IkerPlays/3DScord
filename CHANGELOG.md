@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- **Friends list order:** the friends that are playing or listening to something come first.
 - **Drafts survive restarts:** the text you left unsent in each chat is kept on the SD card (up to 30 chats) and comes back the next time you open the app.
 
 ## 0.29.0
