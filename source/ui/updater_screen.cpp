@@ -227,7 +227,7 @@ void UpdaterScreen::renderTop(C3D_RenderTarget *target) {
 
 	// While it looks for a new version: a tip about the app (a different one each start).
 	if (updater.getState() == Updater::State::CHECKING) {
-		static const int tip = (int)(osGetTime() % 8) + 1;
+		static const int tip = (int)(osGetTime() % 12) + 1;
 		drawCenteredText(centerY + 100.0f, 0.5f, 0.4f, 0.4f, ScreenManager::colorTextMuted(), TR("tip." + std::to_string(tip)), TOP_SCREEN_WIDTH);
 	}
 

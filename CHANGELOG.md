@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- Four new tips on the start screen (twelve in all), and the tip about the camera button is up to date.
+
 ## 0.27.0
 - Forwarding a message also sends the links of its files.
 - **Setting for the stream sound:** Settings > Voice > **Stream Sound** turns off the sound of the Go Live streams you watch (on by default).
