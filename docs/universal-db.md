@@ -36,6 +36,7 @@ and it is a fork of TriCord by 2b-zipper.
 - Servers with folders, channels, forum threads, direct messages and group chats
 - Replies, reactions, edits, deletes, pins, spoilers, polls, embeds, stickers and emoji
 - @mentions: type `@name` and it is sent as a real mention
+- Favorite channels, forward a message to one, see who reacted, slow mode timer, drafts that show in the lists, and message variables (`{time}`, `{date}`)
 - Attachments with a file browser and a preview before sending, GIFs, and animated images (GIF, APNG, Lottie)
 - Voice messages and sound files from the chat: Opus, MP3, WAV, FLAC and Ogg Vorbis
 - MP4 videos (H.264) play from the message menu
@@ -45,8 +46,8 @@ and it is a fork of TriCord by 2b-zipper.
 
 - Voice channels and calls with end-to-end encryption (DAVE), per-user volume, push to talk and echo cancellation
 - Your camera in a call: inner or outer camera (New 3DS / New 2DS XL, Settings > Voice > Video)
-- See the camera and the shared screen of other people in the call
-- Go Live: share the top screen, the bottom screen or both as a stream. It keeps working when you go to the HOME Menu
+- See the camera and the shared screen of other people in the call, and hear the sound of the stream you watch
+- Go Live: share the top screen, the bottom screen or both as a stream, together with your camera if you want. It keeps working when you go to the HOME Menu
 - Notifications outside the app (Home menu entry and LED) on consoles with Luma3DS, when the system keeps the app running
 
 **Your account and your console**
