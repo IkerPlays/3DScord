@@ -1038,6 +1038,8 @@
     "settings.status_bar": "Clock and Battery",
     "settings.desc.status_bar": "Shows the time and the battery in the corner of the top screen.",
     "settings.auto_watch": "Watch Streams Automatically",
+    "settings.stream_sound": "Stream Sound",
+    "settings.desc.stream_sound": "Play the sound of the Go Live stream you watch through the call. Turn it off if it is too loud or garbled.",
     "settings.desc.auto_watch": "When someone in the call shares their screen (Go Live), open the stream to see it. Needs Video (experimental). It uses more memory and processor.",
     "stream.opening": "Opening the live stream of the call...",
     "diag.video": "Video",

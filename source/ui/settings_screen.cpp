@@ -604,6 +604,17 @@ void SettingsScreen::onEnter() {
 		autoWatch.valueFormatter = [](int val) { return (val == 1) ? TR("common.enabled") : TR("common.disabled"); };
 		autoWatch.onUpdate = [](int val) { Config::getInstance().setAutoWatchStreams(val == 1); };
 		allItems.push_back(autoWatch);
+
+		SettingItem streamSound;
+		streamSound.label = TR("settings.stream_sound");
+		streamSound.description = TR("settings.desc.stream_sound");
+		streamSound.type = SettingItemType::TOGGLE;
+		streamSound.value = Config::getInstance().isStreamSound() ? 1 : 0;
+		streamSound.min = 0;
+		streamSound.max = 1;
+		streamSound.valueFormatter = [](int val) { return (val == 1) ? TR("common.enabled") : TR("common.disabled"); };
+		streamSound.onUpdate = [](int val) { Config::getInstance().setStreamSound(val == 1); };
+		allItems.push_back(streamSound);
 	}
 
 	SettingItem busy;

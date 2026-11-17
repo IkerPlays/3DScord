@@ -1116,7 +1116,7 @@ void VoiceClient::handleRtpPacket(uint8_t *packet, size_t len) {
 	if (watchRole) {
 		// The sound of a stream you watch plays through the call's speakers (nothing while you are deafened).
 		VoiceClient &call = VoiceClient::getInstance();
-		if (call.state == VoiceState::ESTABLISHED && !call.audio.isDeafened()) {
+		if (Config::getInstance().isStreamSound() && call.state == VoiceState::ESTABLISHED && !call.audio.isDeafened()) {
 			call.audio.pushOpus(ssrc, seq, opusData, opusLen, (float)Config::getInstance().getCallVolume() / 100.0f);
 		}
 		return;

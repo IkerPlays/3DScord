@@ -513,6 +513,9 @@ void Config::loadSettings() {
 			if (doc.HasMember("auto_watch_streams") && doc["auto_watch_streams"].IsBool()) {
 				autoWatchStreams = doc["auto_watch_streams"].GetBool();
 			}
+			if (doc.HasMember("stream_sound") && doc["stream_sound"].IsBool()) {
+				streamSound = doc["stream_sound"].GetBool();
+			}
 			if (doc.HasMember("notification_led") && doc["notification_led"].IsBool()) {
 				notificationLed = doc["notification_led"].GetBool();
 			}
@@ -639,6 +642,8 @@ void Config::saveSettings() {
 	writer.Bool(showStatusBar);
 	writer.Key("auto_watch_streams");
 	writer.Bool(autoWatchStreams);
+	writer.Key("stream_sound");
+	writer.Bool(streamSound);
 	writer.Key("notification_led");
 	writer.Bool(notificationLed);
 	writer.Key("clock_12h");
@@ -892,6 +897,11 @@ void Config::setShowStatusBar(bool enabled) {
 
 void Config::setAutoWatchStreams(bool enabled) {
 	autoWatchStreams = enabled;
+	saveSettings();
+}
+
+void Config::setStreamSound(bool enabled) {
+	streamSound = enabled;
 	saveSettings();
 }
 

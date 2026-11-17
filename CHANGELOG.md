@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- **Setting for the stream sound:** Settings > Voice > **Stream Sound** turns off the sound of the Go Live streams you watch (on by default).
+
 ## 0.26.0
 - **Forward a message:** the message menu has **Forward**: it lists your favorite channels and sends the message there as a quote with the name of its author.
 
