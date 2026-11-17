@@ -156,6 +156,8 @@
     "diag.wifi": "Wi-Fi signal",
     "dm.no_messages": "No direct messages",
     "dm.typing": "typing...",
+    "dm.has_draft": "Draft waiting...",
+    "channel.has_draft": "draft",
     "dm.pinned": "Conversation pinned to the top",
     "dm.unpinned": "Conversation unpinned",
     "events.hint": "A: Interested    X: Not interested    B: Back",

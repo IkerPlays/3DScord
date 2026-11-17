@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- **Drafts show in the lists:** a direct message with an unsent draft says "Draft waiting..." under its name, and a channel with one shows "[draft]" next to its name.
+
 ## 0.28.0
 - **Someone goes live:** a message tells you when a person in your call starts a Go Live stream, even if the stream does not open by itself.
 - **Recent emoji:** the emoji you used last come first in the first tab of the emoji picker.

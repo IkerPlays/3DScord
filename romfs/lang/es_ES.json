@@ -156,6 +156,8 @@
     "diag.wifi": "Señal Wi-Fi",
     "dm.no_messages": "No hay mensajes.",
     "dm.typing": "escribiendo...",
+    "dm.has_draft": "Borrador sin enviar...",
+    "channel.has_draft": "borrador",
     "dm.pinned": "Conversación fijada arriba",
     "dm.unpinned": "Conversación desfijada",
     "events.hint": "A: Me interesa    X: No me interesa    B: Atrás",

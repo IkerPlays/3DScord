@@ -7,6 +7,7 @@
 #include "discord/voice_client.h"
 #include "log.h"
 #include "ui/image_manager.h"
+#include "ui/message_screen.h"
 #include "ui/voice_controls.h"
 #include "ui/voice_popup.h"
 #include "utils/message_utils.h"
@@ -1666,6 +1667,10 @@ void ServerListScreen::drawChannelList(float x, float y, float alpha) {
 			if (!Discord::DiscordClient::getInstance().getTypingUsers(ch.id).empty()) {
 				drawText(nameX, dmY + dmHeight / 2.0f + 6.0f, 0.5f, 0.38f, 0.38f, ScreenManager::colorAccent(),
 				         TR("dm.typing"));
+			} else if (!getChannelDraft(ch.id).empty()) {
+				// An unsent draft waits in this conversation.
+				drawText(nameX, dmY + dmHeight / 2.0f + 6.0f, 0.5f, 0.38f, 0.38f, ScreenManager::colorTextMuted(),
+				         TR("dm.has_draft"));
 			}
 
 			rendered++;
@@ -1749,6 +1754,9 @@ void ServerListScreen::drawChannelList(float x, float y, float alpha) {
 				iconOffset = iconSize + 4.0f;
 			}
 
+			if (!getChannelDraft(ch.id).empty()) {
+				name += "  [" + TR("channel.has_draft") + "]"; // an unsent draft waits here
+			}
 			drawRichText(currentX + iconOffset, currentY + 3.0f, 0.5f, 0.5f, 0.5f, color, name);
 
 			if (chMentions > 0) {
