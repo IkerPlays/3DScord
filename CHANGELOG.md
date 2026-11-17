@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.28.0
 - **Someone goes live:** a message tells you when a person in your call starts a Go Live stream, even if the stream does not open by itself.
 - **Recent emoji:** the emoji you used last come first in the first tab of the emoji picker.
 - Four new tips on the start screen (twelve in all), and the tip about the camera button is up to date.
