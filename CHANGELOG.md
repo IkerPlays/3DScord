@@ -1,7 +1,7 @@
 # Changelog
 
 ## Unreleased
-- French, German, Italian, Portuguese (Brazil) and Polish: the theme editor texts (29 strings each).
+- French, German, Italian, Portuguese (Brazil) and Polish: the theme editor texts (29 strings each) and the list screens, their hints and hubs (70 more).
 
 ## 0.30.0
 - **Friends list order:** the friends that are playing or listening to something come first.
