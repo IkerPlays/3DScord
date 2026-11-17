@@ -184,6 +184,14 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
 - [x] Watch the Go Live streams of others (a third connection, experimental) and a sharper screen share (up to 400x240)
 - [ ] Not possible: notifications or sharing with the app closed (it needs a system module that runs all the time)
 
+## Phase 19 — Chat quality of life and two videos at once (0.20 - 0.31)
+- [x] Camera and screen share at the same time (two encoders, two buttons), and the sound of the streams you watch
+- [x] Chat: slow mode timer, long messages split (with a CI test), message variables, who reacted, forward, drafts kept between runs and shown in the lists
+- [x] Favorite channels, recent emoji first, friends with activity first, accept all requests, friends and servers in common, server info
+- [x] Do Not Disturb silences sounds, LED and Home menu notifications; incoming calls notify from the HOME Menu
+- [x] More translations (French, German, Italian, Portuguese, Polish): menus, settings, lists, updater, theme editor
+- [ ] Not possible: the sound of other apps in a screen share (the console cannot record it)
+
 ## Not possible on the 3DS
 
 - **HOME menu widget.** The HOME menu cannot show anything from a running or closed app; only the icon and banner
