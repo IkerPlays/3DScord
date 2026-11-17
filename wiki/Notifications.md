@@ -2,7 +2,7 @@
 
 ## In the app
 
-New messages in unmuted channels and direct messages play a sound (you can pick a sound per channel or server) and add a badge. **Quiet hours** (Settings) silence the sound at night.
+New messages in unmuted channels and direct messages play a sound (you can pick a sound per channel or server) and add a badge. **Quiet hours** (Settings) silence the sound at night, and the **Do Not Disturb** status silences the sounds, the LED and the Home menu notifications all day.
 
 ## The LED
 

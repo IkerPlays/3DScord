@@ -33,3 +33,5 @@ Type `{time}`, `{date}`, `{channel}` or `{server}` in a message and it is replac
 - **Who reacted:** in the message menu, shows the names behind the first three reactions.
 - **Friends:** under each friend you see what they play or listen to; in the Pending list, the first row accepts all the requests.
 - **Favorite channels:** Channel Tools > Add to Favorites; the list is in Quick Access > Favorite Channels.
+- **Drafts:** what you leave unsent in a chat is kept (also after closing the app) and a chat with a draft shows "Draft waiting..." in the lists.
+- **Recent emoji:** the emoji you used last come first in the picker.
