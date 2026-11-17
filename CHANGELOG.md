@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Forwarding a message also sends the links of its files.
 - **Setting for the stream sound:** Settings > Voice > **Stream Sound** turns off the sound of the Go Live streams you watch (on by default).
 
 ## 0.26.0

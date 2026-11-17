@@ -1104,14 +1104,17 @@ void MessageScreen::update() {
 						const std::string who = m.author.global_name.empty() ? m.author.username : m.author.global_name;
 						std::string quoted;
 						size_t from = 0;
-						const std::string body = m.content.empty() ? std::string("[...]") : m.content;
-						while (from <= body.size()) {
+						const std::string body = m.content.empty() ? (m.attachments.empty() ? std::string("[...]") : std::string()) : m.content;
+						while (!body.empty() && from <= body.size()) {
 							size_t nl = body.find('\n', from);
 							quoted += "> " + body.substr(from, nl == std::string::npos ? std::string::npos : nl - from) + "\n";
 							if (nl == std::string::npos) {
 								break;
 							}
 							from = nl + 1;
+						}
+						for (const auto &attachment : m.attachments) {
+							quoted += attachment.url + "\n"; // the files go as links
 						}
 						ListScreen::openForward(quoted + "- " + who);
 					}
