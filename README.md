@@ -22,7 +22,8 @@ See the [wiki](https://github.com/IkerPlays/3DScord/wiki) for guides, [ROADMAP.m
 
 - **Login:** QR code, email/password, or a `token.txt` file; several accounts with quick switching.
 - **Chat:** text, emoji, attachments, embeds, stickers, reactions, replies, edit and delete, spoilers, polls, GIF /
-  APNG / Lottie animations, pin and unpin messages, jump to the message you replied to, reply with or without ping.
+  APNG / Lottie animations, pin and unpin messages, jump to the message you replied to, reply with or without ping, forward a message to a favorite channel, see who reacted, slow mode timer,
+  long messages split automatically, message variables (`{time}`, `{date}`, `{channel}`, `{server}`) and favorite channels.
 - **Servers:** server list with folders, channels, forum threads, direct messages and group chats.
 - **Find and look up:** find a server or channel by name, search server members, open user profiles, create and join threads.
 - **Right in the chat:** buttons for files (with a file browser and a preview before sending), GIFs, stickers, pinned

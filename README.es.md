@@ -16,7 +16,7 @@
 
 - **Inicio de sesión:** código QR, correo y contraseña, o un archivo `token.txt`; varias cuentas con cambio rápido.
 - **Chat:** texto, emojis, archivos adjuntos, embeds, stickers, reacciones, respuestas, editar y borrar, spoilers, encuestas, GIF / APNG / Lottie, fijar mensajes,
-  **menciones** (escribe `@nombre` y se envía como mención real) y mensajes de voz.
+  **menciones** (escribe `@nombre` y se envía como mención real), mensajes de voz, reenviar a un canal favorito, ver quién reaccionó, aviso del modo lento, mensajes largos partidos solos, variables (`{time}`, `{date}`, `{channel}`, `{server}`) y canales favoritos.
 - **Servidores:** lista con carpetas, canales, foros, mensajes directos y grupos.
 - **Voz:** canales de voz y llamadas con cifrado de extremo a extremo (DAVE), volumen por persona, pulsar para hablar y cancelación de eco.
 - **Vídeo (experimental, New 3DS / New 2DS XL):** ver la cámara y la pantalla compartida de los demás, enviar tu cámara delantera o trasera y **compartir pantalla (Go Live)**:
