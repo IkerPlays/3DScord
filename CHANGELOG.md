@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.31.0
 - French, German, Italian, Portuguese (Brazil) and Polish: the theme editor texts (29 strings each) and the list screens, their hints, hubs and channel tools (134 in all).
 
 ## 0.30.0
