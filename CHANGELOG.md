@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- **Recent emoji:** the emoji you used last come first in the first tab of the emoji picker.
 - Four new tips on the start screen (twelve in all), and the tip about the camera button is up to date.
 
 ## 0.27.0

@@ -43,6 +43,9 @@ class LocalStore {
 	bool isFavoriteChannel(const std::string &channelId);
 	bool toggleFavoriteChannel(const std::string &channelId); // returns the new state
 	const std::vector<std::string> &favoriteChannels();
+	// The emoji used last (their hex codes, newest first): they come first in the picker.
+	const std::vector<std::string> &recentEmojis();
+	void pushRecentEmoji(const std::string &hex);
 
 	// Notification sound of a server or channel: -1 = the default, 0 = silent, otherwise Utils::Sound + 1.
 	int getSoundOverride(const std::string &id);
@@ -64,6 +67,7 @@ class LocalStore {
 	std::vector<std::string> pinnedDms;
 	std::vector<std::string> pinnedGuilds;
 	std::vector<std::string> favorites;
+	std::vector<std::string> recents;
 	std::map<std::string, int> soundOverrides;
 };
 

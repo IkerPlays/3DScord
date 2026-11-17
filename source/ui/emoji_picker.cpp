@@ -1,4 +1,5 @@
 #include "ui/emoji_picker.h"
+#include "core/local_store.h"
 #include "ui/emoji_manager.h"
 #include "ui/image_manager.h"
 #include "ui/screen_manager.h"
@@ -18,6 +19,7 @@ EmojiPicker::~EmojiPicker() {}
 
 void EmojiPicker::reset() {
 	currentCategoryIndex = 0;
+	viewFor = -1;
 	emojiIndex = 0;
 	emojiScrollY = 0.0f;
 	targetEmojiScrollY = 0.0f;
@@ -26,6 +28,34 @@ void EmojiPicker::reset() {
 	touchVelocityY = 0.0f;
 	pendingTapIndex = -1;
 	keyRepeatTimer = 0;
+}
+
+const EmojiCategory &EmojiPicker::currentView() {
+	auto &emojiMgr = EmojiManager::getInstance();
+	const auto &categories = emojiMgr.getCategories();
+	if (viewFor != currentCategoryIndex) {
+		view = categories[currentCategoryIndex];
+		viewFor = currentCategoryIndex;
+		if (currentCategoryIndex == 0) {
+			const auto &codes = emojiMgr.getCodepoints();
+			std::vector<size_t> first;
+			for (const auto &hex : Core::LocalStore::getInstance().recentEmojis()) {
+				for (size_t i = 0; i < codes.size(); i++) {
+					if (codes[i] == hex) {
+						first.push_back(i);
+						break;
+					}
+				}
+			}
+			view.emojiIndices.insert(view.emojiIndices.begin(), first.begin(), first.end());
+		}
+	}
+	return view;
+}
+
+void EmojiPicker::rememberEmoji(const std::string &hex) {
+	Core::LocalStore::getInstance().pushRecentEmoji(hex);
+	viewFor = -1; // the first tab is built again with it in front
 }
 
 void EmojiPicker::handleCategoryChange(int delta) {
@@ -47,7 +77,7 @@ void EmojiPicker::update(u32 kDown, u32 kHeld, u32 kUp, circlePosition circle) {
 		return;
 	}
 
-	const auto &currentCat = categories[currentCategoryIndex];
+	const auto &currentCat = currentView();
 	const float VISIBLE_H = 240.0f - HEADER_H;
 	int rowsCount = (currentCat.emojiIndices.size() + emojisPerRow - 1) / emojisPerRow;
 	float totalH = rowsCount * CELL_SIZE;
@@ -95,7 +125,9 @@ void EmojiPicker::update(u32 kDown, u32 kHeld, u32 kUp, circlePosition circle) {
 						if (idx == pendingTapIndex) {
 							if (onEmojiSelected) {
 								const auto &allCodepoints = emojiMgr.getCodepoints();
-								onEmojiSelected(Utils::Utf8::hexToUtf8(allCodepoints[currentCat.emojiIndices[idx]]));
+								const std::string pickedHex = allCodepoints[currentCat.emojiIndices[idx]];
+								rememberEmoji(pickedHex);
+								onEmojiSelected(Utils::Utf8::hexToUtf8(pickedHex));
 							}
 							pendingTapIndex = -1;
 						} else {
@@ -207,7 +239,9 @@ void EmojiPicker::update(u32 kDown, u32 kHeld, u32 kUp, circlePosition circle) {
 
 	if (kDown & KEY_A && onEmojiSelected) {
 		const auto &allCodepoints = emojiMgr.getCodepoints();
-		onEmojiSelected(Utils::Utf8::hexToUtf8(allCodepoints[currentCat.emojiIndices[emojiIndex]]));
+		const std::string pickedHex = allCodepoints[currentCat.emojiIndices[emojiIndex]];
+		rememberEmoji(pickedHex);
+		onEmojiSelected(Utils::Utf8::hexToUtf8(pickedHex));
 	}
 
 	if (targetEmojiScrollY < 0) {
@@ -274,7 +308,7 @@ void EmojiPicker::render(C3D_RenderTarget *target, const Discord::Message *activ
 		}
 	}
 
-	const auto &currentCat = categories[currentCategoryIndex];
+	const auto &currentCat = currentView();
 	const float VISIBLE_H = 240.0f - HEADER_H;
 	float gridW = emojisPerRow * CELL_SIZE;
 	float xOffset = (320.0f - gridW) / 2.0f;

@@ -2,6 +2,7 @@
 #define EMOJI_PICKER_H
 
 #include "discord/types.h"
+#include "ui/emoji_manager.h"
 #include <citro2d.h>
 #include <functional>
 #include <string>
@@ -30,9 +31,14 @@ class EmojiPicker {
 
   private:
 	void handleCategoryChange(int delta);
+	// The emoji of the current tab; in the first one, the ones used last come first.
+	const EmojiCategory &currentView();
+	void rememberEmoji(const std::string &hex);
 	void ensureSelectionVisible();
 
 	int currentCategoryIndex = 0;
+	EmojiCategory view;
+	int viewFor = -1;
 	int emojiIndex = 0;
 	float emojiScrollY = 0.0f;
 	float targetEmojiScrollY = 0.0f;

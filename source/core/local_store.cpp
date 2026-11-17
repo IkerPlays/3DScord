@@ -83,6 +83,13 @@ void LocalStore::ensureLoaded() {
 					}
 				}
 			}
+			if (doc.HasMember("recent_emojis") && doc["recent_emojis"].IsArray()) {
+				for (const auto &r : doc["recent_emojis"].GetArray()) {
+					if (r.IsString()) {
+						recents.push_back(r.GetString());
+					}
+				}
+			}
 			if (doc.HasMember("sound_overrides") && doc["sound_overrides"].IsObject()) {
 				for (auto it = doc["sound_overrides"].MemberBegin(); it != doc["sound_overrides"].MemberEnd(); ++it) {
 					if (it->value.IsInt()) {
@@ -147,6 +154,12 @@ void LocalStore::save() {
 	w.StartArray();
 	for (const auto &id : favorites) {
 		w.String(id.c_str());
+	}
+	w.EndArray();
+	w.Key("recent_emojis");
+	w.StartArray();
+	for (const auto &hex : recents) {
+		w.String(hex.c_str());
 	}
 	w.EndArray();
 	w.Key("sound_overrides");
@@ -246,6 +259,27 @@ bool LocalStore::toggleGuildPinned(const std::string &guildId) {
 bool LocalStore::isDmPinned(const std::string &channelId) {
 	ensureLoaded();
 	return std::find(pinnedDms.begin(), pinnedDms.end(), channelId) != pinnedDms.end();
+}
+
+const std::vector<std::string> &LocalStore::recentEmojis() {
+	ensureLoaded();
+	return recents;
+}
+
+void LocalStore::pushRecentEmoji(const std::string &hex) {
+	ensureLoaded();
+	if (hex.empty()) {
+		return;
+	}
+	auto it = std::find(recents.begin(), recents.end(), hex);
+	if (it != recents.end()) {
+		recents.erase(it);
+	}
+	recents.insert(recents.begin(), hex);
+	if (recents.size() > 16) {
+		recents.resize(16);
+	}
+	save();
 }
 
 bool LocalStore::isFavoriteChannel(const std::string &channelId) {
