@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- **Drafts survive restarts:** the text you left unsent in each chat is kept on the SD card (up to 30 chats) and comes back the next time you open the app.
+
 ## 0.29.0
 - **Do Not Disturb really does not disturb:** with that status the app plays no message sounds and adds no Home menu notification or LED pulse, like Discord does.
 - **Drafts show in the lists:** a direct message with an unsent draft says "Draft waiting..." under its name, and a channel with one shows "[draft]" next to its name.

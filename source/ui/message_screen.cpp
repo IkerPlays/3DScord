@@ -340,7 +340,32 @@ float buttonWidth(const Discord::MessageControl &control, float maxWidth) {
 }
 } // namespace
 
+namespace {
+// The drafts are loaded from the SD card the first time they are needed and saved after each change made with the keyboard.
+void loadDraftsOnce() {
+	static bool loaded = false;
+	if (loaded) {
+		return;
+	}
+	loaded = true;
+	for (const auto &d : Core::LocalStore::getInstance().persistedDrafts()) {
+		channelDrafts.emplace(d.first, d.second);
+	}
+}
+
+void persistDrafts() {
+	std::map<std::string, std::string> keep;
+	for (const auto &d : channelDrafts) {
+		if (!d.second.empty() && keep.size() < 30) {
+			keep[d.first] = d.second.substr(0, 1900);
+		}
+	}
+	Core::LocalStore::getInstance().setPersistedDrafts(keep);
+}
+} // namespace
+
 std::string getChannelDraft(const std::string &channelId) {
+	loadDraftsOnce();
 	auto it = channelDrafts.find(channelId);
 	return it == channelDrafts.end() ? std::string() : it->second;
 }
@@ -351,6 +376,7 @@ void setChannelDraft(const std::string &channelId, const std::string &text) {
 	} else {
 		channelDrafts[channelId] = text;
 	}
+	persistDrafts();
 }
 
 // Shows the posts of a forum, only those with the chosen tag when a filter is on. The tags go before the title.
@@ -3781,6 +3807,7 @@ void MessageScreen::openKeyboard() {
 
 	client.triggerTypingIndicator(channelId);
 
+	loadDraftsOnce();
 	auto res = runKeyboard(TR("common.message_hint"), channelDrafts[channelId]);
 
 	if (res.button == SWKBD_BUTTON_RIGHT && !res.text.empty() &&
@@ -3837,6 +3864,7 @@ void MessageScreen::openKeyboard() {
 	} else {
 		channelDrafts.erase(channelId);
 	}
+	persistDrafts();
 }
 
 MessageScreen::KeyboardResult MessageScreen::runKeyboard(const std::string &hint, const std::string &initialText,

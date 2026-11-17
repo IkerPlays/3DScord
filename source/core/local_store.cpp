@@ -90,6 +90,13 @@ void LocalStore::ensureLoaded() {
 					}
 				}
 			}
+			if (doc.HasMember("channel_drafts") && doc["channel_drafts"].IsObject()) {
+				for (auto it = doc["channel_drafts"].MemberBegin(); it != doc["channel_drafts"].MemberEnd(); ++it) {
+					if (it->value.IsString()) {
+						channelDraftsSaved[it->name.GetString()] = it->value.GetString();
+					}
+				}
+			}
 			if (doc.HasMember("sound_overrides") && doc["sound_overrides"].IsObject()) {
 				for (auto it = doc["sound_overrides"].MemberBegin(); it != doc["sound_overrides"].MemberEnd(); ++it) {
 					if (it->value.IsInt()) {
@@ -162,6 +169,13 @@ void LocalStore::save() {
 		w.String(hex.c_str());
 	}
 	w.EndArray();
+	w.Key("channel_drafts");
+	w.StartObject();
+	for (const auto &d : channelDraftsSaved) {
+		w.Key(d.first.c_str());
+		w.String(d.second.c_str());
+	}
+	w.EndObject();
 	w.Key("sound_overrides");
 	w.StartObject();
 	for (const auto &kv : soundOverrides) {
@@ -259,6 +273,20 @@ bool LocalStore::toggleGuildPinned(const std::string &guildId) {
 bool LocalStore::isDmPinned(const std::string &channelId) {
 	ensureLoaded();
 	return std::find(pinnedDms.begin(), pinnedDms.end(), channelId) != pinnedDms.end();
+}
+
+const std::map<std::string, std::string> &LocalStore::persistedDrafts() {
+	ensureLoaded();
+	return channelDraftsSaved;
+}
+
+void LocalStore::setPersistedDrafts(const std::map<std::string, std::string> &drafts) {
+	ensureLoaded();
+	if (drafts == channelDraftsSaved) {
+		return;
+	}
+	channelDraftsSaved = drafts;
+	save();
 }
 
 const std::vector<std::string> &LocalStore::recentEmojis() {

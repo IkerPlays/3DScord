@@ -44,6 +44,9 @@ class LocalStore {
 	bool toggleFavoriteChannel(const std::string &channelId); // returns the new state
 	const std::vector<std::string> &favoriteChannels();
 	// The emoji used last (their hex codes, newest first): they come first in the picker.
+	// The unsent text of each channel, kept between runs of the app.
+	const std::map<std::string, std::string> &persistedDrafts();
+	void setPersistedDrafts(const std::map<std::string, std::string> &drafts);
 	const std::vector<std::string> &recentEmojis();
 	void pushRecentEmoji(const std::string &hex);
 
@@ -68,6 +71,7 @@ class LocalStore {
 	std::vector<std::string> pinnedGuilds;
 	std::vector<std::string> favorites;
 	std::vector<std::string> recents;
+	std::map<std::string, std::string> channelDraftsSaved;
 	std::map<std::string, int> soundOverrides;
 };
 
