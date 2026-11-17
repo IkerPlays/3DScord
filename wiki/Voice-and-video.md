@@ -36,7 +36,7 @@ The others touch **Watch** to see it. The call and the camera keep working on th
 
 ## Watching the screen of someone else (Go Live)
 
-The sound of the stream plays through the call (it follows the call volume and is silent while you are deafened).
+The sound of the stream plays through the call (it follows the call volume and is silent while you are deafened). **Settings > Voice > Stream Sound** turns it off, and **Watch Streams Automatically** decides whether a stream opens by itself; either way a message tells you when someone goes live.
 
 When someone in the call shares their screen, 3DScord can open that stream by itself (**Settings > Voice > Watch Streams Automatically**, on by default when Video is on): it asks Discord to watch the
 stream, opens a connection for it and shows the picture on the top screen like a camera. The console decodes it in software, so it asks for a light picture; it is slower than a camera. If the stream does not
