@@ -72,6 +72,25 @@ std::string embedMediaUrl(const Discord::Embed &embed, const EmbedLayout &layout
 	return embed.thumbnail_proxy_url.empty() ? embed.thumbnail_url : embed.thumbnail_proxy_url;
 }
 
+// The first link in a text that points straight at a video file (MP4 / M4V / MOV), or "".
+std::string directVideoLinkIn(const std::string &text) {
+	size_t from = 0;
+	while ((from = text.find("http", from)) != std::string::npos) {
+		const size_t end = text.find_first_of(" \n\t<>\"", from);
+		const std::string link = text.substr(from, end == std::string::npos ? std::string::npos : end - from);
+		from += 4;
+		if (link.rfind("http://", 0) != 0 && link.rfind("https://", 0) != 0) {
+			continue;
+		}
+		Discord::Embed probe;
+		probe.url = link;
+		if (!probe.playableVideoUrl().empty()) {
+			return link;
+		}
+	}
+	return "";
+}
+
 bool isImageAttachment(const Discord::Attachment &attach) {
 	return attach.content_type.find("image/") != std::string::npos ||
 	       attach.filename.find(".png") != std::string::npos || attach.filename.find(".jpg") != std::string::npos ||
@@ -1034,8 +1053,12 @@ void MessageScreen::update() {
 			} else if (action == "PlayEmbedVideo") {
 				// A direct video link: the file is downloaded (up to 16 MB) and played from the SD card, like an attached video.
 				if (selectedIndex >= 0 && selectedIndex < (int)messages.size()) {
+					std::vector<std::string> candidates;
 					for (const auto &embed : messages[selectedIndex].embeds) {
-						const std::string videoUrl = embed.playableVideoUrl();
+						candidates.push_back(embed.playableVideoUrl());
+					}
+					candidates.push_back(directVideoLinkIn(messages[selectedIndex].content)); // a link the site did not embed
+					for (const std::string &videoUrl : candidates) {
 						if (videoUrl.empty()) {
 							continue;
 						}
@@ -4048,7 +4071,7 @@ void MessageScreen::showMessageOptions() {
 					anyPlayable = anyPlayable || !embed.playableVideoUrl().empty();
 				}
 			}
-			if (anyPlayable) {
+			if (anyPlayable || !directVideoLinkIn(msg.content).empty()) {
 				addOption("PlayEmbedVideo", "message.menu.play_video");
 			} else if (anyVideo) {
 				addOption("VideoInfo", "message.menu.video_info");
