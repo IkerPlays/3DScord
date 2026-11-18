@@ -35,3 +35,4 @@ Type `{time}`, `{date}`, `{channel}` or `{server}` in a message and it is replac
 - **Favorite channels:** Channel Tools > Add to Favorites; the list is in Quick Access > Favorite Channels.
 - **Drafts:** what you leave unsent in a chat is kept (also after closing the app) and a chat with a draft shows "Draft waiting..." in the lists.
 - **Recent emoji:** the emoji you used last come first in the picker.
+- **Video links:** a link to a video shows its picture with a play button. A direct MP4 link (H.264, up to 16 MB) plays from the message menu without sound; sites like YouTube only show the preview (they do not give a file the console can play).

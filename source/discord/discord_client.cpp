@@ -2966,6 +2966,10 @@ Embed DiscordClient::parseEmbedObject(const rapidjson::Value &eObj) {
 		embed.thumbnail_width = Utils::Json::getInt(thumb, "width");
 		embed.thumbnail_height = Utils::Json::getInt(thumb, "height");
 	}
+	if (eObj.HasMember("video") && eObj["video"].IsObject()) {
+		embed.video_url = Utils::Json::getString(eObj["video"], "url");
+		embed.video_proxy_url = Utils::Json::getString(eObj["video"], "proxy_url");
+	}
 	if (embed.type == "gifv" && eObj.HasMember("video") && eObj["video"].IsObject()) {
 		embed.gif_url = gifvUrl(embed, eObj["video"]);
 	}

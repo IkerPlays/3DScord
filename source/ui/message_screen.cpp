@@ -1021,6 +1021,53 @@ void MessageScreen::update() {
 						break;
 					}
 				}
+			} else if (action == "VideoInfo") {
+				if (selectedIndex >= 0 && selectedIndex < (int)messages.size()) {
+					for (const auto &embed : messages[selectedIndex].embeds) {
+						if (embed.hasVideo() && !embed.isBareGif()) {
+							std::string what = embed.provider_name.empty() ? embed.title : embed.provider_name;
+							ScreenManager::getInstance().showToast(Core::I18n::format(TR("player.site_video"), what.empty() ? "?" : what));
+							break;
+						}
+					}
+				}
+			} else if (action == "PlayEmbedVideo") {
+				// A direct video link: the file is downloaded (up to 16 MB) and played from the SD card, like an attached video.
+				if (selectedIndex >= 0 && selectedIndex < (int)messages.size()) {
+					for (const auto &embed : messages[selectedIndex].embeds) {
+						const std::string videoUrl = embed.playableVideoUrl();
+						if (videoUrl.empty()) {
+							continue;
+						}
+						constexpr size_t LIMIT = 16 * 1024 * 1024;
+						ScreenManager::getInstance().showToast(TR("player.loading"));
+						Network::HttpRequest request{videoUrl, "GET", "", {{"Range", "bytes=0-" + std::to_string(LIMIT - 1)}}, 90};
+						Network::HttpResponse resp = Network::NetworkManager::getInstance().perform(std::move(request));
+						if (!resp.success || resp.body.empty()) {
+							ScreenManager::getInstance().showToast(TR("player.download_failed"));
+							break;
+						}
+						if (resp.body.size() >= LIMIT) {
+							ScreenManager::getInstance().showToast(TR("player.too_big"));
+							break;
+						}
+						const std::string dir = Utils::Transfers::downloadDir();
+						mkdir("sdmc:/3ds", 0777);
+						mkdir(CONFIG_DIR_PATH, 0777);
+						mkdir(dir.c_str(), 0777);
+						const std::string path = dir + "/play_link.mp4";
+						if (!Utils::File::writeFile(path, resp.body)) {
+							ScreenManager::getInstance().showToast(TR("player.download_failed"));
+							break;
+						}
+						resp.body.clear();
+						resp.body.shrink_to_fit();
+						updateLock.unlock();
+						VideoPlayerScreen::open(path);
+						updateLock.lock();
+						break;
+					}
+				}
 			} else if (action == "ReadFile") {
 				// A small text file is fetched and shown in the same preview that files get before they are sent.
 				if (selectedIndex >= 0 && selectedIndex < (int)messages.size()) {
@@ -3991,6 +4038,21 @@ void MessageScreen::showMessageOptions() {
 		if (std::any_of(msg.attachments.begin(), msg.attachments.end(),
 		                [](const Discord::Attachment &a) { return a.isPlayableVideo(); })) {
 			addOption("PlayVideo", "message.menu.play_video");
+		} else {
+			// A link to a video: a direct MP4 file plays; the player page of a site (YouTube and the like) only says what it is.
+			bool anyVideo = false;
+			bool anyPlayable = false;
+			for (const auto &embed : msg.embeds) {
+				if (embed.hasVideo() && !embed.isBareGif()) {
+					anyVideo = true;
+					anyPlayable = anyPlayable || !embed.playableVideoUrl().empty();
+				}
+			}
+			if (anyPlayable) {
+				addOption("PlayEmbedVideo", "message.menu.play_video");
+			} else if (anyVideo) {
+				addOption("VideoInfo", "message.menu.video_info");
+			}
 		}
 		if (std::any_of(msg.attachments.begin(), msg.attachments.end(),
 		                [](const Discord::Attachment &a) { return a.isReadableText(); })) {
@@ -4897,6 +4959,20 @@ float MessageScreen::renderEmbed(const Discord::Embed &embed, float x, float y, 
 			C2D_Image img = {info.tex, &subtex};
 			C2D_DrawImageAt(img, textX, currentY, 0.49f, nullptr, drawW / info.originalW, drawH / info.originalH);
 			markDrawnIfVisible(info, currentY, drawH);
+			if (embed.hasVideo() && embed.gif_url.empty() && !embed.isBareGif()) {
+				// A video link: a play button over the picture.
+				const float cx = textX + drawW / 2.0f;
+				const float cy = currentY + drawH / 2.0f;
+				drawRoundedRect(cx - 16.0f, cy - 16.0f, 0.5f, 32.0f, 32.0f, 16.0f, C2D_Color32(0, 0, 0, 170));
+				C2D_DrawTriangle(cx - 5.0f, cy - 9.0f, C2D_Color32(255, 255, 255, 255), cx - 5.0f, cy + 9.0f,
+				                 C2D_Color32(255, 255, 255, 255), cx + 9.0f, cy, C2D_Color32(255, 255, 255, 255), 0.51f);
+				if (!embed.provider_name.empty()) {
+					drawRoundedRect(textX + 4.0f, currentY + drawH - 15.0f, 0.5f, 6.0f * (float)std::min<size_t>(embed.provider_name.size(), 22) + 8.0f,
+					                12.0f, 3.0f, C2D_Color32(0, 0, 0, 170));
+					drawText(textX + 8.0f, currentY + drawH - 15.0f, 0.51f, 0.32f, 0.32f, C2D_Color32(255, 255, 255, 255),
+					         embed.provider_name.substr(0, 22));
+				}
+			}
 		} else if (info.failed) {
 			u32 errorBg = C2D_Color32(60, 40, 40, 255);
 			C2D_DrawRectSolid(textX, currentY, 0.49f, drawW, drawH, errorBg);
@@ -4911,6 +4987,19 @@ float MessageScreen::renderEmbed(const Discord::Embed &embed, float x, float y, 
 			         TR("common.loading"));
 		}
 		currentY += drawH + 4.0f;
+	}
+
+	if (embed.hasVideo() && !layout.hasMedia && !embed.isBareGif()) {
+		// A video link without a picture: a dark box with the play button.
+		const float boxW = std::min(maxWidth - 16.0f, 220.0f);
+		const float boxH = boxW * 9.0f / 16.0f;
+		C2D_DrawRectSolid(textX, currentY, 0.49f, boxW, boxH, ScreenManager::colorEmbedMedia());
+		const float cx = textX + boxW / 2.0f;
+		const float cy = currentY + boxH / 2.0f;
+		drawRoundedRect(cx - 16.0f, cy - 16.0f, 0.5f, 32.0f, 32.0f, 16.0f, C2D_Color32(0, 0, 0, 170));
+		C2D_DrawTriangle(cx - 5.0f, cy - 9.0f, C2D_Color32(255, 255, 255, 255), cx - 5.0f, cy + 9.0f,
+		                 C2D_Color32(255, 255, 255, 255), cx + 9.0f, cy, C2D_Color32(255, 255, 255, 255), 0.51f);
+		currentY += boxH + 4.0f;
 	}
 
 	if (layout.showThumbnailOnRight) {

@@ -176,11 +176,32 @@ struct Embed {
 	int thumbnail_width = 0;
 	int thumbnail_height = 0;
 	std::string gif_url;
+	std::string video_url;       // the video of the link (a direct file, or the player page of a site such as YouTube)
+	std::string video_proxy_url;
 	std::string provider_name;
 	std::string type;
 	std::string timestamp;
 	std::vector<EmbedField> fields;
 
+	bool hasVideo() const { return type == "video" || !video_url.empty() || !video_proxy_url.empty(); }
+	// The address of a video file the console can play (MP4 / H.264, a direct link), or "" when the link is a player page of a site.
+	std::string playableVideoUrl() const {
+		for (const std::string *candidate : {&video_proxy_url, &video_url, &url}) {
+			if (candidate->empty()) {
+				continue;
+			}
+			std::string path = candidate->substr(0, candidate->find_first_of("?#"));
+			for (char &c : path) {
+				c = (char)tolower((unsigned char)c);
+			}
+			const size_t n = path.size();
+			if ((n > 4 && path.compare(n - 4, 4, ".mp4") == 0) || (n > 4 && path.compare(n - 4, 4, ".m4v") == 0) ||
+			    (n > 4 && path.compare(n - 4, 4, ".mov") == 0)) {
+				return *candidate;
+			}
+		}
+		return "";
+	}
 	bool isBareGif() const {
 		return type == "gifv" && !(gif_url.empty() && thumbnail_url.empty() && image_url.empty());
 	}

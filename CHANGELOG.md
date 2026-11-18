@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- **Video links have a preview:** a link to a video (YouTube, direct MP4 files and any site that Discord can embed) shows its picture with a play button and the name of the site. A link to a **direct MP4 file** (H.264, up to 16 MB) plays from the message menu (**Play Video**, no sound). For the player page of a site (YouTube and the like) the menu has **About This Video**, because those pages do not give a file the console can play.
+
 ## 0.31.0
 - French, German, Italian, Portuguese (Brazil) and Polish: the theme editor texts (29 strings each) and the list screens, their hints, hubs and channel tools (134 in all).
 
