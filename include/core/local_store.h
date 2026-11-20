@@ -47,6 +47,9 @@ class LocalStore {
 	// The unsent text of each channel, kept between runs of the app.
 	const std::map<std::string, std::string> &persistedDrafts();
 	void setPersistedDrafts(const std::map<std::string, std::string> &drafts);
+	// People whose messages are hidden here (a local mute: nothing is changed on Discord).
+	bool isIgnored(const std::string &userId);
+	bool toggleIgnored(const std::string &userId); // returns the new state
 	const std::vector<std::string> &recentEmojis();
 	void pushRecentEmoji(const std::string &hex);
 
@@ -71,6 +74,7 @@ class LocalStore {
 	std::vector<std::string> pinnedGuilds;
 	std::vector<std::string> favorites;
 	std::vector<std::string> recents;
+	std::vector<std::string> ignored;
 	std::map<std::string, std::string> channelDraftsSaved;
 	std::map<std::string, int> soundOverrides;
 };

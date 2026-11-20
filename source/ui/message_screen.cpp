@@ -1063,6 +1063,22 @@ void MessageScreen::update() {
 						break;
 					}
 				}
+			} else if (action == "Ignore") {
+				if (selectedIndex >= 0 && selectedIndex < (int)messages.size()) {
+					const std::string who = messages[selectedIndex].author.id;
+					const bool now = Core::LocalStore::getInstance().toggleIgnored(who);
+					if (now) {
+						// What is on the screen is hidden at once; the next messages are hidden as they arrive.
+						const std::string self = Discord::DiscordClient::getInstance().getCurrentUser().id;
+						for (auto &m : messages) {
+							if (m.author.id == who) {
+								MessageUtils::hideIfIgnored(m, self);
+							}
+						}
+						rebuildLayoutCache();
+					}
+					ScreenManager::getInstance().showToast(TR(now ? "message.ignored_on" : "message.ignored_off"));
+				}
 			} else if (action == "VideoInfo") {
 				if (selectedIndex >= 0 && selectedIndex < (int)messages.size()) {
 					for (const auto &embed : messages[selectedIndex].embeds) {
@@ -4142,6 +4158,9 @@ void MessageScreen::showMessageOptions() {
 
 		if (msg.showsContent() && !msg.author.id.empty()) {
 			addOption("ViewProfile", "message.menu.view_profile");
+			if (!isMine && !msg.author.bot) {
+				addOption("Ignore", Core::LocalStore::getInstance().isIgnored(msg.author.id) ? "message.menu.unignore" : "message.menu.ignore");
+			}
 		}
 		{
 			const std::string guildOfChannel = client.getGuildIdFromChannel(channelId);

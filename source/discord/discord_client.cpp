@@ -2319,6 +2319,10 @@ void DiscordClient::handleMessageCreate(const rapidjson::Value &d) {
 		}
 	}
 
+	if (Core::LocalStore::getInstance().isIgnored(msg.author.id)) {
+		playSound = false; // an ignored person makes no sound and no notification
+	}
+
 	if (playSound && Config::getInstance().isNotificationSoundEnabled() && !inQuietHours()) {
 		// A channel's own sound wins over its server's, which wins over the default one.
 		auto &store = Core::LocalStore::getInstance();
@@ -3480,6 +3484,7 @@ Message DiscordClient::parseSingleMessage(const rapidjson::Value &d) {
 		}
 	}
 
+	UI::MessageUtils::hideIfIgnored(msg, currentUser.id);
 	return msg;
 }
 

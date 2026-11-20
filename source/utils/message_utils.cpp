@@ -5,6 +5,7 @@
 #include "utils/string_utils.h"
 #include "utils/utf8_utils.h"
 #include "discord/discord_client.h"
+#include "core/local_store.h"
 #include <3ds.h>
 #include <algorithm>
 #include <cmath>
@@ -802,6 +803,23 @@ std::string buildDisplayContent(const Discord::Message &msg) {
 		return "";
 	}
 	return hideGifLinks(formatMentions(msg.content, msg), msg.embeds);
+}
+
+bool hideIfIgnored(Discord::Message &msg, const std::string &selfId) {
+	if (msg.author.id.empty() || msg.author.id == selfId || !Core::LocalStore::getInstance().isIgnored(msg.author.id)) {
+		return false;
+	}
+	if (msg.type != 0 && msg.type != 19) {
+		return false;
+	}
+	msg.content = TR("message.ignored");
+	msg.displayContent = msg.content;
+	msg.attachments.clear();
+	msg.embeds.clear();
+	msg.stickers.clear();
+	msg.reactions.clear();
+	msg.blocks.clear();
+	return true;
 }
 
 } // namespace MessageUtils

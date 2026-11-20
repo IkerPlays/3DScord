@@ -97,6 +97,13 @@ void LocalStore::ensureLoaded() {
 					}
 				}
 			}
+			if (doc.HasMember("ignored_users") && doc["ignored_users"].IsArray()) {
+				for (const auto &r : doc["ignored_users"].GetArray()) {
+					if (r.IsString()) {
+						ignored.push_back(r.GetString());
+					}
+				}
+			}
 			if (doc.HasMember("sound_overrides") && doc["sound_overrides"].IsObject()) {
 				for (auto it = doc["sound_overrides"].MemberBegin(); it != doc["sound_overrides"].MemberEnd(); ++it) {
 					if (it->value.IsInt()) {
@@ -176,6 +183,12 @@ void LocalStore::save() {
 		w.String(d.second.c_str());
 	}
 	w.EndObject();
+	w.Key("ignored_users");
+	w.StartArray();
+	for (const auto &id : ignored) {
+		w.String(id.c_str());
+	}
+	w.EndArray();
 	w.Key("sound_overrides");
 	w.StartObject();
 	for (const auto &kv : soundOverrides) {
@@ -287,6 +300,27 @@ void LocalStore::setPersistedDrafts(const std::map<std::string, std::string> &dr
 	}
 	channelDraftsSaved = drafts;
 	save();
+}
+
+bool LocalStore::isIgnored(const std::string &userId) {
+	ensureLoaded();
+	return !userId.empty() && std::find(ignored.begin(), ignored.end(), userId) != ignored.end();
+}
+
+bool LocalStore::toggleIgnored(const std::string &userId) {
+	ensureLoaded();
+	auto it = std::find(ignored.begin(), ignored.end(), userId);
+	const bool now = it == ignored.end();
+	if (now) {
+		if (ignored.size() >= 100) {
+			ignored.erase(ignored.begin());
+		}
+		ignored.push_back(userId);
+	} else {
+		ignored.erase(it);
+	}
+	save();
+	return now;
 }
 
 const std::vector<std::string> &LocalStore::recentEmojis() {

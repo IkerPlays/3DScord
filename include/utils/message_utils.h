@@ -33,6 +33,9 @@ std::string getChannelDisplayName(const Discord::Channel &channel);
 bool canGroupWithPrevious(const Discord::Message &current, const Discord::Message &previous);
 std::string formatMentions(const std::string &text, const Discord::Message &msg);
 std::string buildDisplayContent(const Discord::Message &msg);
+// Hides what an ignored person wrote (a local mute): the text becomes a short notice and the pictures, embeds and reactions go.
+// Returns true when the message was hidden. Your own messages are never hidden.
+bool hideIfIgnored(Discord::Message &msg, const std::string &selfId);
 
 } // namespace MessageUtils
 } // namespace UI

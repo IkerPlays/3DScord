@@ -47,3 +47,4 @@ invidious https://your-invidious.example
 ```
 
 Turn it off in Settings > Video Link Helper. Long videos are usually over 16 MB and will not play.
+- **Ignore a person:** message menu > Ignore This Person hides their messages (a short notice stays) and silences their sounds and notifications. It only happens on this console. Use Stop Ignoring on one of their messages to undo it.
