@@ -143,6 +143,9 @@ class Config {
 	bool isVideoExperimental() const;
 	void setVideoExperimental(bool enabled);
 	int getUploadQuality() const { return uploadQuality; }
+	// Where the picture of the camera and of a screen share starts: 0 light (smaller, smoother), 1 balanced, 2 sharp. It still goes down by itself if the console cannot keep up.
+	int getVideoQuality() const { return videoQuality; }
+	void setVideoQuality(int level);
 	void setUploadQuality(int level);
 	int getCallVolume() const { return callVolume; }
 	void setCallVolume(int percent);
@@ -264,6 +267,7 @@ class Config {
 	int callVolume = 100;
 	bool videoExperimental = false;
 	int uploadQuality = 1; // 0 small, 1 normal, 2 high
+	int videoQuality = 1;
 	int voiceTone = 0; // -2 warmer ... 2 brighter
 	bool busyMode = false;
 	bool autoReconnect = true;

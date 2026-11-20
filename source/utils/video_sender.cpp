@@ -1,4 +1,5 @@
 #include "utils/video_sender.h"
+#include "core/config.h"
 #include "log.h"
 #include "utils/background_notifier.h"
 #include "utils/h264_sps.h"
@@ -286,7 +287,8 @@ void VideoSender::run() {
 	const u32 select = source == Source::OUTER ? SELECT_OUT1 : SELECT_IN1;
 	const Level *levels = camera ? CAMERA_LEVELS : source == Source::BOTH ? BOTH_LEVELS : SCREEN_LEVELS;
 	const int levelCount = 4;
-	int level = camera ? CAM_START_LEVEL : SCREEN_START_LEVEL;
+	// Settings > Voice > Video Quality: light starts one size smaller, sharp one size bigger (the load moves it from there).
+	int level = std::clamp((camera ? CAM_START_LEVEL : SCREEN_START_LEVEL) + 1 - Config::getInstance().getVideoQuality(), 0, 3);
 	// With the camera and the screen at once the console encodes two pictures: the second one to start begins smaller.
 	if (VideoSender &other = getInstance(camera); &other != this && other.running()) {
 		level = std::min(level + 1, 3);

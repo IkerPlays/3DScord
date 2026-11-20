@@ -20,6 +20,8 @@ So you can show your face and share your screen together. Each one has its own e
 
 Changing between the two cameras is quick: the stream stays announced and only the capture restarts.
 
+**Settings > Voice > Video Quality** (Light, Balanced, Sharp) chooses the size where your camera and your screen share start; the picture still goes down by itself when the console cannot keep up.
+
 ### What others see
 
 - The cameras appear in your tile in the call, in the Discord apps. They are small on purpose (the console encodes in software): the picture size goes up and down with the load.

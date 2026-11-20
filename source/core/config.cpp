@@ -492,6 +492,9 @@ void Config::loadSettings() {
 			if (doc.HasMember("upload_quality") && doc["upload_quality"].IsInt()) {
 				uploadQuality = std::clamp(doc["upload_quality"].GetInt(), 0, 2);
 			}
+			if (doc.HasMember("video_quality") && doc["video_quality"].IsInt()) {
+				videoQuality = std::clamp(doc["video_quality"].GetInt(), 0, 2);
+			}
 			if (doc.HasMember("voice_tone") && doc["voice_tone"].IsInt()) {
 				voiceTone = std::clamp(doc["voice_tone"].GetInt(), -2, 2);
 			}
@@ -647,6 +650,8 @@ void Config::saveSettings() {
 	writer.Bool(autoWatchStreams);
 	writer.Key("stream_sound");
 	writer.Bool(streamSound);
+	writer.Key("video_quality");
+	writer.Int(videoQuality);
 	writer.Key("video_helper");
 	writer.Bool(videoHelper);
 	writer.Key("notification_led");
@@ -902,6 +907,11 @@ void Config::setShowStatusBar(bool enabled) {
 
 void Config::setAutoWatchStreams(bool enabled) {
 	autoWatchStreams = enabled;
+	saveSettings();
+}
+
+void Config::setVideoQuality(int level) {
+	videoQuality = std::clamp(level, 0, 2);
 	saveSettings();
 }
 

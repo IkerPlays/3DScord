@@ -592,6 +592,20 @@ void SettingsScreen::onEnter() {
 	videoExp.valueFormatter = [](int val) { return (val == 1) ? TR("common.enabled") : TR("common.disabled"); };
 	videoExp.onUpdate = [](int val) { Config::getInstance().setVideoExperimental(val == 1); };
 	{
+		SettingItem quality;
+		quality.label = TR("settings.video_quality");
+		quality.description = TR("settings.desc.video_quality");
+		quality.type = SettingItemType::STEPPER;
+		quality.value = Config::getInstance().getVideoQuality();
+		quality.min = 0;
+		quality.max = 2;
+		quality.valueFormatter = [](int val) -> std::string {
+			return TR(val == 0 ? "settings.vq.light" : val == 2 ? "settings.vq.sharp" : "settings.vq.balanced");
+		};
+		quality.onUpdate = [](int val) { Config::getInstance().setVideoQuality(val); };
+		if (Utils::System::isNew3DS()) {
+			allItems.push_back(quality);
+		}
 		SettingItem helper;
 		helper.label = TR("settings.video_helper");
 		helper.description = TR("settings.desc.video_helper");

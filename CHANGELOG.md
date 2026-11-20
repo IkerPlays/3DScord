@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- **Video Quality setting:** Settings > Voice > Video Quality (Light, Balanced, Sharp, on a New 3DS) chooses the size where your camera and your screen share start. The picture still goes down by itself when the console cannot keep up.
+
 ## 0.34.0
 - **More translated texts:** French, German, Italian, Portuguese (Brazil) and Polish get the account settings (58), and the video player, calls, camera, PIN lock, previews, sessions, sounds, transfers, tips and chat export (106), so most of the app now reads in those languages.
 
