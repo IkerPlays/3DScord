@@ -128,6 +128,12 @@ extremo, tu cámara (delantera y trasera) y compartir pantalla (Go Live, tambié
 [plan de desarrollo](ROADMAP.md) por fases. Hay una [wiki](https://github.com/IkerPlays/3DScord/wiki) con guías. Instálalo con el `.cia` (FBI) o el
 `.3dsx` (Homebrew Launcher) desde [Releases](https://github.com/IkerPlays/3DScord/releases). Funciona en 3DS y 2DS (sin vídeo) y en New 3DS / New 2DS XL; no en la Nintendo DS.
 
+## Farewell
+
+3DScord reaches its final version, **1.2.0**. It started as a fork of [TriCord](https://github.com/2b-zipper/TriCord) and grew into a Discord client with voice calls, camera, screen sharing (Go Live), video links and a lot of small comforts, on a console that was never meant to do any of it.
+
+Thank you to 2b-zipper and every TriCord contributor, to the translators, and to everyone who tested a devbuild and sent a report. There will be **no more updates**: the code is free (GPLv3), so fork it and make it yours. The app keeps working for as long as Discord's API does not change. It was a pleasure. See you on Discord!
+
 ## Credits and license
 
 Based on [TriCord](https://github.com/2b-zipper/TriCord) by 2b-zipper. Licensed under the GNU GPLv3, see [LICENSE](LICENSE).

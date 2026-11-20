@@ -1,3 +1,5 @@
+> **Note:** 3DScord is finished (1.2.0 is the final version) and no longer maintained. Forks are welcome under the GPLv3.
+
 # Contributing to 3DScord
 
 Thanks for helping. Bug reports, ideas, translations and code are all welcome.

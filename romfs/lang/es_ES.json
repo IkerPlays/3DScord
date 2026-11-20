@@ -53,6 +53,8 @@
     "account.status.online": "En línea",
     "account.uploading": "Subiendo...",
     "app.name": "3DScord",
+    "about.farewell_title": "Despedida",
+    "about.farewell": "3DScord llega a su versión final, la 1.2.0. Empezó como una bifurcación de TriCord y creció hasta ser un cliente de Discord con llamadas de voz, cámara, compartir pantalla, enlaces de vídeo y muchos detalles pequeños, en una consola que nunca estuvo pensada para nada de eso. Gracias a 2b-zipper y a todos los que contribuyeron a TriCord, a los traductores y a quienes probaron una devbuild y mandaron un reporte. No habrá más actualizaciones, pero el código es libre (GPLv3): haz tu propia versión. Ha sido un placer. ¡Nos vemos en Discord!",
     "audit.1": "Servidor actualizado",
     "audit.10": "Canal creado",
     "audit.11": "Canal actualizado",

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.0
+- **Final version.** 3DScord is finished: this is the last release and there will be no more updates. Thank you to 2b-zipper and every TriCord contributor, to the translators, and to everyone who tested a devbuild and sent a report. The app keeps working for as long as Discord's API does not change. The code is free (GPLv3): fork it and make it yours. It was a pleasure. See you on Discord!
+- The About screen has a **Farewell** section (English and Spanish), and the README, the wiki and the roadmap say that the project is closed.
+
 ## 1.1.0
 - **More translated texts:** French, German, Italian, Portuguese (Brazil) and Polish get the file browser, diagnostics, formatting, events, bot commands, soundboard, moderation and screenshot texts (83 strings each). Only the administrator screens (audit log, permissions) and the developer test screens stay in English.
 - **Ignored People list:** Quick Access has a new **Ignored People** list with the names of the people you ignore; X stops ignoring one.

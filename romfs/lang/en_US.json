@@ -53,6 +53,8 @@
     "account.status.online": "Online",
     "account.uploading": "Uploading...",
     "app.name": "3DScord",
+    "about.farewell_title": "Farewell",
+    "about.farewell": "3DScord reaches its final version, 1.2.0. It started as a fork of TriCord and grew into a Discord client with voice calls, camera, screen sharing, video links and a lot of small comforts, on a console that was never meant to do any of it. Thank you to 2b-zipper and every TriCord contributor, to the translators, and to everyone who tested a devbuild and sent a report. There will be no more updates, but the code is free (GPLv3): fork it and make it yours. It was a pleasure. See you on Discord!",
     "audit.1": "Server updated",
     "audit.10": "Channel created",
     "audit.11": "Channel updated",

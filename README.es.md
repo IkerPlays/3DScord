@@ -77,6 +77,12 @@ Adjúntalo al [abrir una incidencia](https://github.com/IkerPlays/3DScord/issues
 
 Mira [CONTRIBUTING.md](CONTRIBUTING.md) (en inglés) y la [wiki](https://github.com/IkerPlays/3DScord/wiki/Building-from-source). Las traducciones están en `romfs/lang/` y se agradecen.
 
+## Despedida
+
+3DScord llega a su versión final, la **1.2.0**. Empezó como una bifurcación de [TriCord](https://github.com/2b-zipper/TriCord) y creció hasta ser un cliente de Discord con llamadas de voz, cámara, compartir pantalla (Go Live), enlaces de vídeo y muchos detalles pequeños, en una consola que nunca estuvo pensada para nada de eso.
+
+Gracias a 2b-zipper y a todos los que contribuyeron a TriCord, a los traductores y a quienes probaron una devbuild y mandaron un reporte. **No habrá más actualizaciones**: el código es libre (GPLv3), así que haz tu propia versión. La app seguirá funcionando mientras la API de Discord no cambie. Ha sido un placer. ¡Nos vemos en Discord!
+
 ## Créditos y licencia
 
 Basado en [TriCord](https://github.com/2b-zipper/TriCord) de 2b-zipper. Licencia GNU GPLv3, ver [LICENSE](LICENSE). El logo y los sonidos son originales (`tools/brand/`).

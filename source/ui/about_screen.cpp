@@ -165,6 +165,16 @@ void AboutScreen::renderBottom(C3D_RenderTarget *target) {
 	drawText(x + 8.0f, y, 0.5f, 0.35f, 0.35f, ScreenManager::colorTextMuted(), "License texts: romfs:/licenses");
 	y += 12.0f;
 
+	drawSectionTitle(TR("about.farewell_title"));
+	{
+		auto lines = MessageUtils::wrapText(TR("about.farewell"), 280.0f, 0.34f);
+		for (const auto &line : lines) {
+			drawText(x + 8.0f, y, 0.5f, 0.34f, 0.34f, ScreenManager::colorText(), line);
+			y += 12.0f;
+		}
+		y += 4.0f;
+	}
+
 	drawSectionTitle("Source Code");
 	drawText(x + 8.0f, y, 0.5f, 0.36f, 0.36f, ScreenManager::colorTextMuted(), "Licensed under GPL v3.0");
 	y += 13.0f;

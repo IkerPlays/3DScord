@@ -6,6 +6,8 @@
 
 3DScord is free and open source (GPLv3) and a fork of [TriCord](https://github.com/2b-zipper/TriCord) by 2b-zipper.
 
+> **Farewell.** 3DScord 1.2.0 is the final version; there will be no more updates. Thank you to everyone who helped. The code is free (GPLv3): fork it and make it yours.
+
 ## Start here
 
 | I want to... | Page |

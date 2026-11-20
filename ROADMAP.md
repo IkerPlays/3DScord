@@ -1,5 +1,7 @@
 # Roadmap
 
+> **The project is finished.** 3DScord 1.2.0 is the final version and there will be no more updates (see the farewell in the README). The roadmap below is the history of what was built.
+
 Work is split into **phases**. Every finished phase is published as a **devbuild** (with release notes). Every
 **second** phase also ships a **stable** release, which bundles the notes of both.
 
@@ -197,6 +199,11 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
 - [x] Ignore a person, Auto Idle in the HOME Menu, Video Quality setting
 - [x] Most of the app translated to French, German, Italian, Portuguese and Polish (only the admin and developer test screens stay in English)
 - [x] Documentation and the wiki up to date; updated credits in the About screen
+
+## Phase 21 — Final (1.0 - 1.2)
+- [x] 1.0.0: complete feature set and documentation
+- [x] 1.1.0: Ignored People list, more translations
+- [x] 1.2.0: farewell note (README, About screen, wiki) and end of development
 
 ## Not possible on the 3DS
 
