@@ -54,3 +54,12 @@ jobs:
         run: |
           g++ -std=c++17 -Wall -Iinclude tests/text_split_test.cpp -o /tmp/text_test
           /tmp/text_test
+
+  links:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: YouTube links are recognised
+        run: |
+          g++ -std=c++17 -Wall -Iinclude tests/video_links_test.cpp -o /tmp/links_test
+          /tmp/links_test

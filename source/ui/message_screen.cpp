@@ -27,6 +27,8 @@
 #include "ui/video_player_screen.h"
 #include "utils/message_utils.h"
 #include "utils/text_split.h"
+#include "utils/video_links.h"
+#include "utils/video_resolver.h"
 #include "utils/redraw.h"
 #include "utils/utf8_utils.h"
 #include <3ds.h>
@@ -85,6 +87,27 @@ std::string directVideoLinkIn(const std::string &text) {
 		Discord::Embed probe;
 		probe.url = link;
 		if (!probe.playableVideoUrl().empty()) {
+			return link;
+		}
+	}
+	return "";
+}
+
+// The first YouTube link of a message (in its embeds or its text), or "".
+std::string youtubeLinkOf(const Discord::Message &msg) {
+	for (const auto &embed : msg.embeds) {
+		for (const std::string *candidate : {&embed.url, &embed.video_url}) {
+			if (!Utils::VideoLinks::youtubeId(*candidate).empty()) {
+				return *candidate;
+			}
+		}
+	}
+	size_t from = 0;
+	while ((from = msg.content.find("http", from)) != std::string::npos) {
+		const size_t end = msg.content.find_first_of(" \n\t<>\"", from);
+		const std::string link = msg.content.substr(from, end == std::string::npos ? std::string::npos : end - from);
+		from += 4;
+		if (!Utils::VideoLinks::youtubeId(link).empty()) {
 			return link;
 		}
 	}
@@ -1058,6 +1081,23 @@ void MessageScreen::update() {
 						candidates.push_back(embed.playableVideoUrl());
 					}
 					candidates.push_back(directVideoLinkIn(messages[selectedIndex].content)); // a link the site did not embed
+					if (std::all_of(candidates.begin(), candidates.end(), [](const std::string &c) { return c.empty(); }) &&
+					    Config::getInstance().isVideoHelper()) {
+						// A YouTube link: a public server gives a small MP4 of it (only the video id is sent there).
+						const std::string id = Utils::VideoLinks::youtubeId(youtubeLinkOf(messages[selectedIndex]));
+						if (!id.empty()) {
+							ScreenManager::getInstance().showToast(TR("player.looking"));
+							std::string file, why;
+							updateLock.unlock();
+							const bool found = Utils::VideoResolver::resolveYoutube(id, file, why);
+							updateLock.lock();
+							if (found) {
+								candidates.push_back(file);
+							} else {
+								ScreenManager::getInstance().showToast(TR("player.no_server"));
+							}
+						}
+					}
 					for (const std::string &videoUrl : candidates) {
 						if (videoUrl.empty()) {
 							continue;
@@ -4071,7 +4111,8 @@ void MessageScreen::showMessageOptions() {
 					anyPlayable = anyPlayable || !embed.playableVideoUrl().empty();
 				}
 			}
-			if (anyPlayable || !directVideoLinkIn(msg.content).empty()) {
+			if (anyPlayable || !directVideoLinkIn(msg.content).empty() ||
+			    (Config::getInstance().isVideoHelper() && !youtubeLinkOf(msg).empty())) {
 				addOption("PlayEmbedVideo", "message.menu.play_video");
 			} else if (anyVideo) {
 				addOption("VideoInfo", "message.menu.video_info");

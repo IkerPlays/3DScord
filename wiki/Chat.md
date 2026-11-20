@@ -36,3 +36,14 @@ Type `{time}`, `{date}`, `{channel}` or `{server}` in a message and it is replac
 - **Drafts:** what you leave unsent in a chat is kept (also after closing the app) and a chat with a draft shows "Draft waiting..." in the lists.
 - **Recent emoji:** the emoji you used last come first in the picker.
 - **Video links:** a link to a video shows its picture with a play button. A direct MP4 link (H.264, up to 16 MB) plays from the message menu without sound; sites like YouTube only show the preview (they do not give a file the console can play).
+
+## YouTube links (Video Link Helper)
+
+Play Video also works for YouTube links. The app asks public Piped / Invidious servers for a small MP4 (up to 360p, up to 16 MB) and plays it without sound. Only the video id is sent, and only when you touch Play Video. If no server answers, add your own in `sdmc:/3ds/3DScord/video_servers.txt`, one per line:
+
+```
+piped https://your-piped-api.example
+invidious https://your-invidious.example
+```
+
+Turn it off in Settings > Video Link Helper. Long videos are usually over 16 MB and will not play.

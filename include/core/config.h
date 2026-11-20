@@ -171,6 +171,8 @@ class Config {
 	bool isAutoWatchStreams() const { return autoWatchStreams; }
 	void setAutoWatchStreams(bool enabled);
 	bool isStreamSound() const { return streamSound; }
+	bool isVideoHelper() const { return videoHelper; }
+	void setVideoHelper(bool enabled);
 	void setStreamSound(bool enabled);
 	// Pulse the notification LED when a message that should notify you arrives (in the app too).
 	bool isNotificationLed() const { return notificationLed; }
@@ -270,6 +272,7 @@ class Config {
 	bool notificationLed = true;
 	bool autoWatchStreams = true;
 	bool streamSound = true;
+	bool videoHelper = true;
 	bool showStatusBar = false;
 	int dateFormat = 0;
 	int soundVolume = 10;

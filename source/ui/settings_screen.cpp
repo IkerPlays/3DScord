@@ -591,6 +591,18 @@ void SettingsScreen::onEnter() {
 	videoExp.max = 1;
 	videoExp.valueFormatter = [](int val) { return (val == 1) ? TR("common.enabled") : TR("common.disabled"); };
 	videoExp.onUpdate = [](int val) { Config::getInstance().setVideoExperimental(val == 1); };
+	{
+		SettingItem helper;
+		helper.label = TR("settings.video_helper");
+		helper.description = TR("settings.desc.video_helper");
+		helper.type = SettingItemType::TOGGLE;
+		helper.value = Config::getInstance().isVideoHelper() ? 1 : 0;
+		helper.min = 0;
+		helper.max = 1;
+		helper.valueFormatter = [](int val) { return (val == 1) ? TR("common.enabled") : TR("common.disabled"); };
+		helper.onUpdate = [](int val) { Config::getInstance().setVideoHelper(val == 1); };
+		allItems.push_back(helper);
+	}
 	if (Utils::System::isNew3DS()) {
 		allItems.push_back(videoExp); // the video is too heavy for the other 3DS / 2DS models
 
