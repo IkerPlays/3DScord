@@ -24,6 +24,7 @@ See the [wiki](https://github.com/IkerPlays/3DScord/wiki) for guides, [ROADMAP.m
 - **Chat:** text, emoji, attachments, embeds, stickers, reactions, replies, edit and delete, spoilers, polls, GIF /
   APNG / Lottie animations, pin and unpin messages, jump to the message you replied to, reply with or without ping, forward a message to a favorite channel, see who reacted, slow mode timer,
   long messages split automatically, message variables (`{time}`, `{date}`, `{channel}`, `{server}`) and favorite channels.
+- **Video links:** links to videos show a preview with a play button; direct MP4 links (H.264, up to 16 MB) and, with the Video Link Helper, YouTube links play from the message menu (without sound).
 - **Servers:** server list with folders, channels, forum threads, direct messages and group chats.
 - **Find and look up:** find a server or channel by name, search server members, open user profiles, create and join threads.
 - **Right in the chat:** buttons for files (with a file browser and a preview before sending), GIFs, stickers, pinned

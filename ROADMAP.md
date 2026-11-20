@@ -192,6 +192,12 @@ Status: `[x]` done, `[~]` partly done, `[ ]` planned. The order inside a phase c
 - [x] More translations (French, German, Italian, Portuguese, Polish): menus, settings, lists, updater, theme editor
 - [ ] Not possible: the sound of other apps in a screen share (the console cannot record it)
 
+## Phase 20 — 1.0 (0.32 - 1.0)
+- [x] Video link previews (play button) and playback of direct MP4 links; YouTube links through public Piped / Invidious servers (Video Link Helper)
+- [x] Ignore a person, Auto Idle in the HOME Menu, Video Quality setting
+- [x] Most of the app translated to French, German, Italian, Portuguese and Polish (only the admin and developer test screens stay in English)
+- [x] Documentation and the wiki up to date; updated credits in the About screen
+
 ## Not possible on the 3DS
 
 - **HOME menu widget.** The HOME menu cannot show anything from a running or closed app; only the icon and banner

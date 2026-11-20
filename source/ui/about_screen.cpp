@@ -132,7 +132,8 @@ void AboutScreen::renderBottom(C3D_RenderTarget *target) {
 	};
 
 	drawSectionTitle("Credits", true);
-	drawEntry("2b-zipper", "Lead Developer");
+	drawEntry("2b-zipper", "TriCord, the original client");
+	drawEntry("IkerPlays", "3DScord: video, Go Live and more");
 	drawEntry("Str4ky", "French Translation");
 	drawEntry("AverageJohtonian", "Spanish Translation");
 	drawEntry("RossoDev", "Italian Translation");
@@ -156,6 +157,8 @@ void AboutScreen::renderBottom(C3D_RenderTarget *target) {
 	drawLib("libopus, mlspp, libdave");
 	drawLib("WebRTC AECM, ThorVG");
 	drawLib("RapidJSON, stb_image, qrcodegen");
+	drawLib("minih264e, OpenH264 (video)");
+	drawLib("minimp3, dr_flac, stb_vorbis (sound)");
 	drawLib("Twemoji Assets");
 
 	y += 2.0f;

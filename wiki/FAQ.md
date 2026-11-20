@@ -25,3 +25,7 @@
 ## Does a screen share carry the sound of the game?
 
 No. The 3DS gives every app its own audio output and offers no way to record what another app (or the HOME Menu) plays, so a Go Live stream has picture only. The people in the call hear you through your microphone as usual.
+
+## Can it play YouTube videos?
+
+Yes, in a limited way. In the message menu, Play Video asks public Piped / Invidious servers for a small MP4 (up to 360p, up to 16 MB) and plays it without sound. Those servers come and go, so you can add your own in `sdmc:/3ds/3DScord/video_servers.txt` (see [[Chat]]). Settings > Video Link Helper turns it off. Long videos are too big for the console.

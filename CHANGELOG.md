@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- **1.0:** the About screen has up to date credits and libraries; the README, the wiki and the roadmap describe the final feature set.
+
 ## 0.36.0
 - **Auto Idle:** after a minute in the HOME Menu the app shows you as Idle on Discord, and as Online again when you come back (only if you were Online). Settings > Auto Idle turns it off.
 
