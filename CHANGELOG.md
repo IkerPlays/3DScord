@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.1.0
 - **More translated texts:** French, German, Italian, Portuguese (Brazil) and Polish get the file browser, diagnostics, formatting, events, bot commands, soundboard, moderation and screenshot texts (83 strings each). Only the administrator screens (audit log, permissions) and the developer test screens stay in English.
 - **Ignored People list:** Quick Access has a new **Ignored People** list with the names of the people you ignore; X stops ignoring one.
 
