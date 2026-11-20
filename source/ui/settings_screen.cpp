@@ -728,6 +728,17 @@ void SettingsScreen::onEnter() {
 	led.onUpdate = [](int val) { Config::getInstance().setNotificationLed(val == 1); };
 	allItems.push_back(led);
 
+	SettingItem autoIdleItem;
+	autoIdleItem.label = TR("settings.auto_idle");
+	autoIdleItem.description = TR("settings.desc.auto_idle");
+	autoIdleItem.type = SettingItemType::TOGGLE;
+	autoIdleItem.value = Config::getInstance().isAutoIdle() ? 1 : 0;
+	autoIdleItem.min = 0;
+	autoIdleItem.max = 1;
+	autoIdleItem.valueFormatter = [](int val) { return (val == 1) ? TR("common.enabled") : TR("common.disabled"); };
+	autoIdleItem.onUpdate = [](int val) { Config::getInstance().setAutoIdle(val == 1); };
+	allItems.push_back(autoIdleItem);
+
 	SettingItem lowBattery;
 	lowBattery.label = TR("settings.low_battery");
 	lowBattery.description = TR("settings.desc.low_battery");

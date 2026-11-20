@@ -1079,6 +1079,8 @@
     "message.menu.mention": "Mention",
     "message.mention_added": "Added to your message: write the rest and send",
     "settings.notification_led": "Notification LED",
+    "settings.auto_idle": "Auto Idle",
+    "settings.desc.auto_idle": "Shows you as Idle on Discord after a minute in the HOME Menu, and Online again when you come back (only if you were Online).",
     "settings.desc.notification_led": "Pulses the light of the console when a message that should notify you arrives, also while you use the app.",
     "list.export_chat": "Save This Chat",
     "list.tools.export_chat": "Saves the last 100 messages of this chat as a text file on the SD card.",

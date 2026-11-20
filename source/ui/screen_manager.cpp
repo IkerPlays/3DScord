@@ -509,6 +509,29 @@ void ScreenManager::update() {
 	Utils::BackgroundNotifier::getInstance().tick();
 
 	{
+		// Idle on Discord while the app waits in the HOME Menu (Settings > Auto Idle), Online again on return.
+		static bool wasBackground = false;
+		static bool madeIdle = false;
+		static u64 backgroundSince = 0;
+		auto &discord = Discord::DiscordClient::getInstance();
+		const bool background = Utils::BackgroundNotifier::getInstance().inBackground();
+		if (background && !wasBackground) {
+			backgroundSince = osGetTime();
+		}
+		wasBackground = background;
+		if (background && !madeIdle && Config::getInstance().isAutoIdle() && osGetTime() - backgroundSince > 60000 &&
+		    discord.getCurrentUser().status == Discord::UserStatus::ONLINE) {
+			discord.updatePresence(Discord::UserStatus::IDLE);
+			madeIdle = true;
+		} else if (!background && madeIdle) {
+			if (discord.getCurrentUser().status == Discord::UserStatus::IDLE) {
+				discord.updatePresence(Discord::UserStatus::ONLINE);
+			}
+			madeIdle = false;
+		}
+	}
+
+	{
 		const std::string alert = Discord::DiscordClient::getInstance().takeAlert();
 		if (!alert.empty()) {
 			showToast(alert);

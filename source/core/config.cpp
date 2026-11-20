@@ -522,6 +522,9 @@ void Config::loadSettings() {
 			if (doc.HasMember("stream_sound") && doc["stream_sound"].IsBool()) {
 				streamSound = doc["stream_sound"].GetBool();
 			}
+			if (doc.HasMember("auto_idle") && doc["auto_idle"].IsBool()) {
+				autoIdle = doc["auto_idle"].GetBool();
+			}
 			if (doc.HasMember("notification_led") && doc["notification_led"].IsBool()) {
 				notificationLed = doc["notification_led"].GetBool();
 			}
@@ -654,6 +657,8 @@ void Config::saveSettings() {
 	writer.Int(videoQuality);
 	writer.Key("video_helper");
 	writer.Bool(videoHelper);
+	writer.Key("auto_idle");
+	writer.Bool(autoIdle);
 	writer.Key("notification_led");
 	writer.Bool(notificationLed);
 	writer.Key("clock_12h");
@@ -922,6 +927,11 @@ void Config::setVideoHelper(bool enabled) {
 
 void Config::setStreamSound(bool enabled) {
 	streamSound = enabled;
+	saveSettings();
+}
+
+void Config::setAutoIdle(bool enabled) {
+	autoIdle = enabled;
 	saveSettings();
 }
 

@@ -1079,6 +1079,8 @@
     "message.menu.mention": "Mencionar",
     "message.mention_added": "Añadido a tu mensaje: escribe el resto y envía",
     "settings.notification_led": "LED de notificaciones",
+    "settings.auto_idle": "Ausente automático",
+    "settings.desc.auto_idle": "Te muestra como Ausente en Discord tras un minuto en el menú HOME, y En línea otra vez al volver (solo si estabas En línea).",
     "settings.desc.notification_led": "Hace pulsar la luz de la consola cuando llega un mensaje que debe avisarte, también mientras usas la app.",
     "list.export_chat": "Guardar este chat",
     "list.tools.export_chat": "Guarda los últimos 100 mensajes de este chat como archivo de texto en la tarjeta SD.",

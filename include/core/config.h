@@ -180,6 +180,9 @@ class Config {
 	// Pulse the notification LED when a message that should notify you arrives (in the app too).
 	bool isNotificationLed() const { return notificationLed; }
 	void setNotificationLed(bool enabled);
+	// Becomes Idle on Discord after a minute in the HOME Menu, and Online again when you come back (only if you were Online).
+	bool isAutoIdle() const { return autoIdle; }
+	void setAutoIdle(bool enabled);
 	bool isKeepCallsAwake() const { return keepCallsAwake; }
 	void setKeepCallsAwake(bool enabled);
 
@@ -275,6 +278,7 @@ class Config {
 	bool clock12h = false;
 	bool notificationLed = true;
 	bool autoWatchStreams = true;
+	bool autoIdle = true;
 	bool streamSound = true;
 	bool videoHelper = true;
 	bool showStatusBar = false;
