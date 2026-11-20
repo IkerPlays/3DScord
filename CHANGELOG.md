@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.35.0
 - **Ignore a person:** the message menu has **Ignore This Person** (and **Stop Ignoring**). Their messages show as a short notice, with no pictures, embeds or reactions, and they make no sound or notification. It is only on this console; nothing changes on Discord.
 - **Video Quality setting:** Settings > Voice > Video Quality (Light, Balanced, Sharp, on a New 3DS) chooses the size where your camera and your screen share start. The picture still goes down by itself when the console cannot keep up.
 
