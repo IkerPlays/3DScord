@@ -1066,7 +1066,9 @@ void MessageScreen::update() {
 			} else if (action == "Ignore") {
 				if (selectedIndex >= 0 && selectedIndex < (int)messages.size()) {
 					const std::string who = messages[selectedIndex].author.id;
-					const bool now = Core::LocalStore::getInstance().toggleIgnored(who);
+					const auto &author = messages[selectedIndex].author;
+					const bool now = Core::LocalStore::getInstance().toggleIgnored(
+					    who, author.global_name.empty() ? author.username : author.global_name);
 					if (now) {
 						// What is on the screen is hidden at once; the next messages are hidden as they arrive.
 						const std::string self = Discord::DiscordClient::getInstance().getCurrentUser().id;

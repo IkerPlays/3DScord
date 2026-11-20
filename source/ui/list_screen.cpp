@@ -354,6 +354,11 @@ void ListScreen::loadLocal() {
 			                m.content});
 		}
 		break;
+	case Mode::IGNORED:
+		for (const auto &person : store.ignoredPeople()) {
+			list.push_back({person.first, "", person.second, ""});
+		}
+		break;
 	case Mode::FORWARD:
 	case Mode::FAVORITES:
 		for (const auto &id : store.favoriteChannels()) {
@@ -578,6 +583,7 @@ void ListScreen::loadLocal() {
 		        {"people", channelId, TR("list.voice_people"), TR("list.hub.people")},
 		        {"saved", channelId, TR("list.saved"), TR("list.hub.saved")},
 		        {"favorites", channelId, TR("list.favorites"), TR("list.hub.favorites")},
+		        {"ignored", channelId, TR("list.ignored"), TR("list.hub.ignored")},
 		        {"mentions", channelId, TR("list.mentions"), TR("list.hub.mentions")}};
 		break;
 	case Mode::TOOLS:
@@ -1207,6 +1213,8 @@ std::string ListScreen::headerTitle() const {
 		return TR("list.favorites");
 	case Mode::FORWARD:
 		return TR("list.forward");
+	case Mode::IGNORED:
+		return TR("list.ignored");
 	case Mode::DRAFTS:
 		return TR("list.drafts");
 	case Mode::QUICK_REPLIES:
@@ -1269,6 +1277,8 @@ std::string ListScreen::hintLine() const {
 		return TR("list.hint.favorites");
 	case Mode::FORWARD:
 		return TR("list.hint.forward");
+	case Mode::IGNORED:
+		return TR("list.hint.ignored");
 	case Mode::MENTIONS:
 	case Mode::SAVED:
 		return TR(mode == Mode::SAVED ? "list.hint.saved" : "list.hint.mentions");
@@ -1559,6 +1569,8 @@ void ListScreen::primaryAction(const Entry &entry) {
 			openReplacing(Mode::SAVED);
 		} else if (entry.id == "favorites") {
 			openReplacing(Mode::FAVORITES);
+		} else if (entry.id == "ignored") {
+			openReplacing(Mode::IGNORED);
 		} else if (entry.id == "mentions") {
 			openReplacing(Mode::MENTIONS);
 		}
@@ -1955,6 +1967,10 @@ void ListScreen::secondaryAction(const Entry &entry) {
 		break;
 	case Mode::FAVORITES:
 		store.toggleFavoriteChannel(entry.id);
+		load();
+		break;
+	case Mode::IGNORED:
+		store.toggleIgnored(entry.id);
 		load();
 		break;
 	case Mode::DRAFTS:

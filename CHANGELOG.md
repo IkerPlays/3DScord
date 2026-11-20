@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- **Ignored People list:** Quick Access has a new **Ignored People** list with the names of the people you ignore; X stops ignoring one.
+
 ## 1.0.0
 - **1.0.0:** the first stable "complete" version of 3DScord: chat, voice, camera, Go Live (screen sharing) together with the camera, video links, favorites and many comforts. The About screen has up to date credits and libraries; the README, the wiki and the roadmap describe the final feature set. (See the versions below for each feature.) the About screen has up to date credits and libraries; the README, the wiki and the roadmap describe the final feature set.
 

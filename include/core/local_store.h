@@ -49,7 +49,8 @@ class LocalStore {
 	void setPersistedDrafts(const std::map<std::string, std::string> &drafts);
 	// People whose messages are hidden here (a local mute: nothing is changed on Discord).
 	bool isIgnored(const std::string &userId);
-	bool toggleIgnored(const std::string &userId); // returns the new state
+	bool toggleIgnored(const std::string &userId, const std::string &name = ""); // returns the new state
+	std::vector<std::pair<std::string, std::string>> ignoredPeople(); // id and name
 	const std::vector<std::string> &recentEmojis();
 	void pushRecentEmoji(const std::string &hex);
 
@@ -75,6 +76,7 @@ class LocalStore {
 	std::vector<std::string> favorites;
 	std::vector<std::string> recents;
 	std::vector<std::string> ignored;
+	std::map<std::string, std::string> ignoredNames;
 	std::map<std::string, std::string> channelDraftsSaved;
 	std::map<std::string, int> soundOverrides;
 };

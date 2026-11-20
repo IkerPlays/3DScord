@@ -104,6 +104,13 @@ void LocalStore::ensureLoaded() {
 					}
 				}
 			}
+			if (doc.HasMember("ignored_names") && doc["ignored_names"].IsObject()) {
+				for (auto it = doc["ignored_names"].MemberBegin(); it != doc["ignored_names"].MemberEnd(); ++it) {
+					if (it->value.IsString()) {
+						ignoredNames[it->name.GetString()] = it->value.GetString();
+					}
+				}
+			}
 			if (doc.HasMember("sound_overrides") && doc["sound_overrides"].IsObject()) {
 				for (auto it = doc["sound_overrides"].MemberBegin(); it != doc["sound_overrides"].MemberEnd(); ++it) {
 					if (it->value.IsInt()) {
@@ -181,6 +188,13 @@ void LocalStore::save() {
 	for (const auto &d : channelDraftsSaved) {
 		w.Key(d.first.c_str());
 		w.String(d.second.c_str());
+	}
+	w.EndObject();
+	w.Key("ignored_names");
+	w.StartObject();
+	for (const auto &n : ignoredNames) {
+		w.Key(n.first.c_str());
+		w.String(n.second.c_str());
 	}
 	w.EndObject();
 	w.Key("ignored_users");
@@ -307,20 +321,35 @@ bool LocalStore::isIgnored(const std::string &userId) {
 	return !userId.empty() && std::find(ignored.begin(), ignored.end(), userId) != ignored.end();
 }
 
-bool LocalStore::toggleIgnored(const std::string &userId) {
+bool LocalStore::toggleIgnored(const std::string &userId, const std::string &name) {
 	ensureLoaded();
 	auto it = std::find(ignored.begin(), ignored.end(), userId);
 	const bool now = it == ignored.end();
 	if (now) {
 		if (ignored.size() >= 100) {
+			ignoredNames.erase(ignored.front());
 			ignored.erase(ignored.begin());
 		}
 		ignored.push_back(userId);
+		if (!name.empty()) {
+			ignoredNames[userId] = name;
+		}
 	} else {
 		ignored.erase(it);
+		ignoredNames.erase(userId);
 	}
 	save();
 	return now;
+}
+
+std::vector<std::pair<std::string, std::string>> LocalStore::ignoredPeople() {
+	ensureLoaded();
+	std::vector<std::pair<std::string, std::string>> list;
+	for (const auto &id : ignored) {
+		auto n = ignoredNames.find(id);
+		list.emplace_back(id, n == ignoredNames.end() ? id : n->second);
+	}
+	return list;
 }
 
 const std::vector<std::string> &LocalStore::recentEmojis() {
