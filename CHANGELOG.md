@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.34.0
 - **More translated texts:** French, German, Italian, Portuguese (Brazil) and Polish get the account settings (58), and the video player, calls, camera, PIN lock, previews, sessions, sounds, transfers, tips and chat export (106), so most of the app now reads in those languages.
 
 ## 0.33.0
