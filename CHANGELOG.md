@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.33.0
 - **Play YouTube links (Video Link Helper):** the message menu now has **Play Video** for YouTube links too (watch, youtu.be, shorts, embed). The app asks public Piped / Invidious servers for a small MP4 (H.264 with sound, up to 360p) and plays it like any MP4 (no sound on the console, up to 16 MB). Only the video id is sent to those servers, and only when you touch Play Video. Settings > **Video Link Helper** turns it off, and `sdmc:/3ds/3DScord/video_servers.txt` adds your own servers (one per line, `piped https://...` or `invidious https://...`) because public servers come and go.
 
 ## 0.32.0
